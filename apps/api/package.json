@@ -14,9 +14,17 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.1.12",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.12",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.12",
+    "@prisma/client": "^6.19.2",
     "@rpgforce-ai/shared": "workspace:*",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -24,6 +32,8 @@
     "@nestjs/cli": "^11.0.16",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.10",
+    "@types/passport-jwt": "^4.0.1",
+    "prisma": "^6.19.2",
     "typescript": "^5.9.3"
   }
 }

@@ -20,7 +20,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./src/*"],
       "@rpgforce-ai/shared": ["../../packages/shared/src"],
       "@rpgforce-ai/shared/*": ["../../packages/shared/src/*"]
     }
