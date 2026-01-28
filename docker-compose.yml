@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rpgforge-ai-pg
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: rpgforge
+      POSTGRES_PASSWORD: rpgforge_dev
+      POSTGRES_DB: rpgforge_ai
+    volumes:
+      - rpgforge_ai_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rpgforge -d rpgforge_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rpgforge_ai_pg_data:

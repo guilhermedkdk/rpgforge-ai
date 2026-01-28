@@ -12,7 +12,10 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "turbo run test",
     "clean": "turbo run clean",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @rpgforce-ai/api exec prisma migrate dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
