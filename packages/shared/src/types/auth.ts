@@ -6,13 +6,6 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface TokensResponse {
-  accessToken: string;
-  refreshToken: string;
 }
 
 export interface RegisterRequest {
@@ -23,8 +16,4 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string;
   password: string;
-}
-
-export interface RefreshTokenRequest {
-  refreshToken: string;
 }

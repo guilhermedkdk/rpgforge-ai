@@ -1,19 +1,16 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../shared/prisma.service';
+import { getAccessTokenExpiresIn, getRefreshTokenExpiresIn } from './auth.config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService
   ) {}
 
   async register(email: string, password: string) {
@@ -83,13 +80,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
+    const user = await this.validateUser(tokenRecord.userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
     const tokens = await this.generateTokens(tokenRecord.userId);
 
     await this.prisma.refreshToken.delete({
       where: { id: tokenRecord.id },
     });
 
-    return tokens;
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        createdAt: user.createdAt,
+      },
+    };
   }
 
   async logout(refreshToken: string) {
@@ -102,15 +111,9 @@ export class AuthService {
 
   private async generateTokens(userId: string) {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
-    const jwtExpiresInSeconds =
-      parseInt(this.configService.get<string>('JWT_EXPIRES_IN') ?? '900', 10) ||
-      900;
+    const jwtExpiresInSeconds = getAccessTokenExpiresIn(this.configService);
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
-    const refreshExpiresInSeconds =
-      parseInt(
-        this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '604800',
-        10,
-      ) || 604800;
+    const refreshExpiresInSeconds = getRefreshTokenExpiresIn(this.configService);
 
     const payload = { sub: userId };
 

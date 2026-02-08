@@ -1,3 +1,3 @@
-export const APP_NAME = 'ForgeSheet AI';
+export const APP_NAME = 'RPGForge AI';
 
 export * from './types/auth';
