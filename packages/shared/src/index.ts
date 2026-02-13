@@ -1,3 +1,2 @@
-export const APP_NAME = 'RPGForge AI';
-
 export * from './types/auth';
+export * from './types/pack';

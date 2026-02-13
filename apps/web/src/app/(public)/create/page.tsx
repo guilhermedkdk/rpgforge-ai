@@ -1,103 +1,92 @@
 'use client';
 
-import { Sparkles, Pen, Flame } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import { Header } from '@/components/layout/header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StepNavigator, type CreationStep } from '@/components/create/step-navigator';
+import { StepActions } from '@/components/create/step-actions';
+import { PackSelector } from '@/components/create/pack-selector';
+import { StepModeSelect, type CreationMode } from '@/components/create/step-mode-select';
 
 export default function CreatePage() {
+  const [step, setStep] = useState<CreationStep>('pack');
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
+  const [selectedMode, setSelectedMode] = useState<CreationMode>(null);
+
+  const handleNavigate = useCallback((targetStep: CreationStep) => {
+    if (targetStep === 'pack') {
+      setStep('pack');
+      setSelectedPackId(null);
+      setSelectedMode(null);
+    } else if (targetStep === 'mode') {
+      setStep('mode');
+      setSelectedMode(null);
+    } else {
+      setStep('editor');
+    }
+  }, []);
+
+  const handleContinue = useCallback(() => {
+    if (step === 'pack' && selectedPackId) {
+      setStep('mode');
+    } else if (step === 'mode' && selectedMode) {
+      setStep('editor');
+    }
+  }, [step, selectedPackId, selectedMode]);
+
+  const handleBack = useCallback(() => {
+    if (step === 'mode') {
+      setStep('pack');
+      setSelectedPackId(null);
+    } else if (step === 'editor') {
+      setStep('mode');
+      setSelectedMode(null);
+    }
+  }, [step]);
+
+  const canContinue =
+    (step === 'pack' && selectedPackId !== null) ||
+    (step === 'mode' && selectedMode !== null);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background overflow-y-auto">
       <Header />
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
-        {/* Page Title */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            <Flame className="h-12 w-12 text-primary" aria-hidden="true" />
-          </div>
-          <h1 className="font-serif text-3xl font-bold text-foreground">Forjar Nova Ficha</h1>
-          <p className="mt-2 text-muted-foreground">Escolha como deseja criar seu personagem</p>
+      <main className="mx-auto flex w-full max-w-5xl flex-col pb-12">
+        <div className="flex flex-col px-4 py-8 pb-6">
+          <StepNavigator currentStep={step} onNavigate={handleNavigate} />
+
+          {step === 'pack' && (
+            <PackSelector
+              selectedPackId={selectedPackId}
+              onSelect={setSelectedPackId}
+            />
+          )}
+
+          {(step === 'mode' || step === 'editor') && (
+            <>
+              {step === 'mode' && selectedPackId && (
+                <StepModeSelect selectedMode={selectedMode} onSelect={setSelectedMode} />
+              )}
+              {step === 'editor' && selectedPackId && selectedMode && (
+                <div className="rounded-lg border border-border bg-card p-12 text-center">
+                  <p className="text-muted-foreground">
+                    Editor em breve. Modo: {selectedMode === 'ai' ? 'IA' : 'Manual'}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Creation Options */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* AI Creation */}
-          <Card className="cursor-pointer transition-[box-shadow] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10">
-            <CardHeader>
-              <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/20">
-                <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
-              </div>
-              <CardTitle className="font-serif text-xl">Criar com IA</CardTitle>
-              <CardDescription>
-                Descreva seu conceito e deixe a inteligência artificial forjar seu personagem com
-                base em suas ideias.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="mb-4 space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-                  Geração automática de atributos
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-                  Sugestões de backstory e personalidade
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-                  Otimização para seu sistema de RPG
-                </li>
-              </ul>
-              <Button className="w-full" disabled>
-                <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                Em breve
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Manual Creation */}
-          <Card className="cursor-pointer transition-[box-shadow] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10">
-            <CardHeader>
-              <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-icon-bg">
-                <Pen className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-              </div>
-              <CardTitle className="font-serif text-xl">Criar Manualmente</CardTitle>
-              <CardDescription>
-                Controle total sobre cada detalhe do seu personagem. Preencha cada campo do seu
-                jeito.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="mb-4 space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <span
-                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  Liberdade criativa completa
-                </li>
-                <li className="flex items-center gap-2">
-                  <span
-                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  Formulário guiado passo a passo
-                </li>
-                <li className="flex items-center gap-2">
-                  <span
-                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  Validação de regras em tempo real
-                </li>
-              </ul>
-              <Button variant="outline" className="w-full bg-transparent" disabled>
-                <Pen className="mr-2 h-4 w-4" aria-hidden="true" />
-                Em breve
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="fixed bottom-0 left-0 right-0 z-10 flex justify-center">
+          <div className="w-full max-w-5xl border-t border-border bg-background px-4 py-1.5">
+            <StepActions
+              currentStep={step}
+              canContinue={canContinue}
+              onBack={handleBack}
+              onContinue={handleContinue}
+            />
+          </div>
         </div>
       </main>
     </div>

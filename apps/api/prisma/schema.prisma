@@ -32,3 +32,20 @@ model RefreshToken {
   @@index([token])
   @@map("refresh_tokens")
 }
+
+model Pack {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  name            String
+  version         String
+  description     String?
+  systemName      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  licenseType     String
+  licenseUrl      String?
+  attributionText String   @db.Text
+
+  @@index([slug])
+  @@map("packs")
+}
