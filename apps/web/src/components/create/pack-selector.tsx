@@ -14,6 +14,8 @@ import {
   DrawerClose,
 } from '@/components/ui/drawer';
 import { packsApi } from '@/lib/api/packs';
+import { systemRegistry } from '@/components/systems/registry';
+import { LoadingState } from '@/components/ui/loading-state';
 import type { PackResponse } from '@rpgforce-ai/shared';
 
 const packIcons: Record<string, React.ReactNode> = {
@@ -56,10 +58,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="mt-4 text-sm text-muted-foreground">Carregando sistemas disponíveis...</p>
-      </div>
+      <LoadingState label="Carregando sistemas..." />
     );
   }
 
@@ -67,7 +66,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
         <p className="text-sm text-destructive">
-          Não foi possível carregar os sistemas. Tente novamente.
+          Could not load systems. Please try again.
         </p>
       </div>
     );
@@ -77,7 +76,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
         <Shield className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" aria-hidden="true" />
-        <p className="text-sm text-muted-foreground">Nenhum sistema disponível no momento.</p>
+        <p className="text-sm text-muted-foreground">No systems available at this time.</p>
       </div>
     );
   }
@@ -99,60 +98,65 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
       <div className="grid gap-6 lg:grid-cols-5 lg:grid-rows-1">
         <div className="flex min-h-0 flex-col lg:col-span-3">
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1 max-h-[48vh]">
-            {Array.from({ length: 5 }, () => packs)
-              .flat()
-              .map((pack, index) => {
-                const isSelected = selectedPackId === pack.id;
-                return (
-                  <button
-                    key={`${pack.id}-${index}`}
-                    type="button"
-                    className="w-full text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    onClick={() => handleSelect(pack.id)}
-                    onMouseEnter={() => setHoveredPack(pack.id)}
-                    onMouseLeave={() => setHoveredPack(null)}
+            {packs.map((pack) => {
+              const isSelected = selectedPackId === pack.id;
+              const isSupported = !!systemRegistry[pack.slug];
+              return (
+                <button
+                  key={pack.id}
+                  type="button"
+                  className={`w-full text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!isSupported ? 'cursor-not-allowed' : ''}`}
+                  onClick={() => isSupported && handleSelect(pack.id)}
+                  onMouseEnter={() => setHoveredPack(pack.id)}
+                  onMouseLeave={() => setHoveredPack(null)}
+                >
+                  <Card
+                    className={`transition-all ${
+                      !isSupported
+                        ? 'opacity-50'
+                        : isSelected
+                          ? 'cursor-pointer border-primary bg-primary/5 ring-1 ring-primary/30'
+                          : 'cursor-pointer hover:border-primary/30 hover:bg-card/80'
+                    }`}
                   >
-                    <Card
-                      className={`cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                          : 'hover:border-primary/30 hover:bg-card/80'
-                      }`}
-                    >
-                      <CardContent className="flex items-center gap-4 p-4">
-                        <div
-                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors ${
-                            isSelected
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-secondary text-muted-foreground'
-                          }`}
-                        >
-                          {getPackIcon(pack.slug)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-serif text-base font-semibold text-foreground">
-                            {pack.name}
-                          </h3>
-                          <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
-                            {pack.description ?? pack.systemName}
-                          </p>
-                        </div>
-                        <div className="hidden shrink-0 sm:flex">
-                          {isSelected ? (
-                            <Badge variant="default" className="text-xs">
-                              Selecionado
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">
-                              {pack.systemName}
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </button>
-                );
-              })}
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                          isSelected
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-secondary text-muted-foreground'
+                        }`}
+                      >
+                        {getPackIcon(pack.slug)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-serif text-base font-semibold text-foreground">
+                          {pack.name}
+                        </h3>
+                        <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
+                          {pack.description ?? pack.systemName}
+                        </p>
+                      </div>
+                      <div className="hidden shrink-0 sm:flex">
+                        {!isSupported ? (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            Em breve
+                          </Badge>
+                        ) : isSelected ? (
+                          <Badge variant="default" className="text-xs">
+                            Selecionado
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            {pack.systemName}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </button>
+              );
+            })}
           </div>
           {selectedPackId && (
             <button
@@ -205,6 +209,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
 };
 
 const PackPreview = ({ pack }: { pack: PackResponse }) => {
+  const isSupported = !!systemRegistry[pack.slug];
   return (
     <>
       <div className="mb-4 flex items-center gap-3">
@@ -220,7 +225,7 @@ const PackPreview = ({ pack }: { pack: PackResponse }) => {
       </div>
 
       <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-        {pack.description ?? 'Sistema de RPG disponível para criação de fichas.'}
+        {pack.description ?? 'RPG system available for character creation.'}
       </p>
 
       <div className="flex flex-wrap gap-1.5">
@@ -230,6 +235,11 @@ const PackPreview = ({ pack }: { pack: PackResponse }) => {
         <Badge variant="outline" className="bg-transparent text-xs">
           v{pack.version}
         </Badge>
+        {!isSupported && (
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            Ficha em breve
+          </Badge>
+        )}
       </div>
     </>
   );

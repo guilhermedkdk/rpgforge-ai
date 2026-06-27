@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from './theme-provider';
@@ -15,7 +16,10 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Toaster richColors position="bottom-right" closeButton />
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

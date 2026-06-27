@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { isAxiosError } from 'axios';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -101,8 +102,8 @@ export const RegisterForm = () => {
         )}
       </div>
 
-      <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? 'Criando conta...' : 'Criar conta'}
+      <Button type="submit" disabled={isLoading} className="w-full" aria-label={isLoading ? 'Criando conta' : undefined}>
+        {isLoading ? <Spinner size="sm" /> : 'Criar conta'}
       </Button>
 
       <div className="text-center text-sm">

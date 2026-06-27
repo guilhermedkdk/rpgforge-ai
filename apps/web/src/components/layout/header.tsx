@@ -33,15 +33,12 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
-        {/* Logo */}
         <Link href={user ? '/sheets' : '/'} className="flex items-center gap-2">
           <Flame className="h-7 w-7 text-primary" aria-hidden="true" />
           <span className="font-serif text-xl font-bold tracking-wide text-foreground">
             RPGForge <span className="text-primary">AI</span>
           </span>
         </Link>
-
-        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-6 md:flex" aria-label="Navegação principal">
           <Link
             href="/sheets"
@@ -65,8 +62,6 @@ export const Header = () => {
             Criar
           </Link>
         </nav>
-
-        {/* Search Bar */}
         <div className="hidden flex-1 max-w-md lg:flex">
           <div className="relative w-full">
             <Search
@@ -83,23 +78,18 @@ export const Header = () => {
             />
           </div>
         </div>
-
-        {/* Right side actions */}
         <div className="flex items-center gap-3">
-          {/* Theme Toggle */}
           <ThemeToggle />
 
           {user ? (
             <>
-              {/* Create Sheet Button (Desktop) */}
+              {' '}
               <Button asChild className="hidden sm:flex hover:bg-primary/90" size="sm">
                 <Link href="/create">
                   <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                   Criar Ficha
                 </Link>
               </Button>
-
-              {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -142,7 +132,7 @@ export const Header = () => {
             </>
           ) : (
             <>
-              {/* Auth Buttons (Desktop) */}
+              {' '}
               <div className="hidden items-center gap-2 sm:flex">
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/auth/login">Entrar</Link>
@@ -153,8 +143,6 @@ export const Header = () => {
               </div>
             </>
           )}
-
-          {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
@@ -164,7 +152,7 @@ export const Header = () => {
             <SheetContent side="right" className="w-72">
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
               <div className="flex flex-col gap-6 px-4 pt-14 pb-6">
-                {/* Mobile Search */}
+                {' '}
                 <div className="relative">
                   <Search
                     className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -177,8 +165,6 @@ export const Header = () => {
                     aria-label="Buscar fichas"
                   />
                 </div>
-
-                {/* Mobile Navigation */}
                 <nav className="flex flex-col gap-4" aria-label="Menu mobile">
                   <Link
                     href="/sheets"
@@ -202,8 +188,6 @@ export const Header = () => {
                     Criar
                   </Link>
                 </nav>
-
-                {/* Mobile Create Button */}
                 <Button asChild className="w-full hover:bg-primary/90">
                   <Link href="/create">
                     <Flame className="mr-2 h-4 w-4" aria-hidden="true" />

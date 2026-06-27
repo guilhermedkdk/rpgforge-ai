@@ -1,13 +1,11 @@
-'use client';
+import { LoadingState } from '@/components/ui/loading-state';
 
-export const LoadingScreen = () => (
+type LoadingScreenProps = {
+  label?: string;
+};
+
+export const LoadingScreen = ({ label = 'Carregando...' }: LoadingScreenProps) => (
   <div className="flex min-h-screen items-center justify-center bg-background">
-    <div className="text-center">
-      <div
-        className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-        aria-hidden
-      />
-      <p className="mt-4 text-muted-foreground">Carregando...</p>
-    </div>
+    <LoadingState label={label} />
   </div>
 );

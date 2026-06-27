@@ -19,15 +19,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  // Carrega usuário ao montar (verifica se tem sessão válida)
   useEffect(() => {
     const loadUser = async () => {
       try {
         const { user } = await authApi.me();
         setUser(user);
       } catch {
-        // Sem sessão válida, usuário permanece null
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -47,12 +44,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { user: currentUser } = await authApi.me();
         setUser(currentUser);
       } catch {
-        // Sessão inválida (logout em outra aba ou cookies removidos)
         setUser(null);
       }
     };
-
-    // Verifica apenas quando a aba ganha foco (detecta logout em outra aba)
     const handleFocus = () => {
       checkSession();
     };
@@ -66,8 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     const { user } = await authApi.login({ email, password });
     setUser(user);
-
-    // Redireciona para a página que o usuário tentou acessar ou para /sheets (evita passar pela home)
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get('redirect') || '/sheets';
     router.push(redirect);
@@ -76,8 +68,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (email: string, password: string) => {
     const { user } = await authApi.register({ email, password });
     setUser(user);
-
-    // Após registro, redireciona para a página que tentou acessar ou para /sheets
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get('redirect') || '/sheets';
     router.push(redirect);

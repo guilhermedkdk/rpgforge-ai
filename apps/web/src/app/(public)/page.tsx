@@ -24,16 +24,14 @@ export default function Home() {
   }
 
   if (user) {
-    return null; // Redirecting
+    return null;
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
 
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-16">
-        {/* Hero Section */}
-        <div className="text-center">
+      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-16">        <div className="text-center">
           <div className="mb-6 flex justify-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
               <Sparkles className="h-10 w-10 text-primary" aria-hidden="true" />
@@ -58,8 +56,6 @@ export default function Home() {
             </Button>
           </div>
         </div>
-
-        {/* Features Section */}
         <div className="mt-24 grid gap-8 md:grid-cols-3">
           <div className="text-center">
             <div className="mb-4 flex justify-center">
@@ -107,8 +103,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
       <footer className="mt-auto border-t border-border bg-card/50 py-8">
         <div className="mx-auto max-w-7xl px-4 text-center">
           <p className="text-sm text-muted-foreground">

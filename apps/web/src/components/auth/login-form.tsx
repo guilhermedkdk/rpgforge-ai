@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { isAxiosError } from 'axios';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -81,8 +82,8 @@ export const LoginForm = () => {
         {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
       </div>
 
-      <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? 'Entrando...' : 'Entrar'}
+      <Button type="submit" disabled={isLoading} className="w-full" aria-label={isLoading ? 'Entrando' : undefined}>
+        {isLoading ? <Spinner size="sm" /> : 'Entrar'}
       </Button>
 
       <div className="text-center text-sm">

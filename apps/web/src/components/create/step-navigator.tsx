@@ -50,7 +50,7 @@ export const StepNavigator = ({ currentStep, onNavigate }: StepNavigatorProps) =
                 isClickable ? 'cursor-pointer' : 'cursor-default'
               }`}
               aria-current={isCurrent ? 'step' : undefined}
-              aria-label={`${step.label}${isCompleted ? ' (concluído, clique para voltar)' : isCurrent ? ' (atual)' : ''}`}
+              aria-label={`${step.label}${isCompleted ? ' (concluída, clique para voltar)' : isCurrent ? ' (atual)' : ''}`}
             >
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${

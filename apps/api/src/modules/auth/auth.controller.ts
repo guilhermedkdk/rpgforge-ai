@@ -35,11 +35,11 @@ export class AuthController {
   ) {}
 
   private getAccessTokenMaxAge(): number {
-    return getAccessTokenExpiresIn(this.configService) * 1000; // maxAge em ms
+    return getAccessTokenExpiresIn(this.configService) * 1000;
   }
 
   private getRefreshTokenMaxAge(): number {
-    return getRefreshTokenExpiresIn(this.configService) * 1000; // maxAge em ms
+    return getRefreshTokenExpiresIn(this.configService) * 1000;
   }
 
   private setAuthCookies(response: Response, accessToken: string, refreshToken: string) {
@@ -60,7 +60,6 @@ export class AuthController {
 
     this.setAuthCookies(response, result.accessToken, result.refreshToken);
 
-    // Retorna apenas user (tokens estão em cookies)
     return { user: result.user };
   }
 
@@ -71,14 +70,12 @@ export class AuthController {
 
     this.setAuthCookies(response, result.accessToken, result.refreshToken);
 
-    // Retorna apenas user (tokens estão em cookies)
     return { user: result.user };
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
-    // Lê refresh token do cookie
     const refreshToken = request.cookies['refreshToken'];
 
     if (!refreshToken) {
@@ -89,7 +86,6 @@ export class AuthController {
 
     this.setAuthCookies(response, result.accessToken, result.refreshToken);
 
-    // Retorna apenas user
     return { user: result.user };
   }
 
@@ -109,7 +105,6 @@ export class AuthController {
       await this.authService.logout(refreshToken);
     }
 
-    // Limpa cookies de autenticação
     response.clearCookie('accessToken', { path: '/' });
     response.clearCookie('refreshToken', { path: '/' });
 

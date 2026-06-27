@@ -14,7 +14,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  refreshTokens RefreshToken[]
+  refreshTokens    RefreshToken[]
+  characterSheets  CharacterSheet[]
 
   @@map("users")
 }
@@ -33,6 +34,29 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+enum RuleItemKind {
+  CLASS
+  SUBCLASS
+  CLASS_FEATURE
+  SPELL
+  FEAT
+  BACKGROUND
+  RACE
+  ABILITY
+  RULESET
+  RULE
+  ITEM
+  OTHER
+}
+
+enum RuleRelationType {
+  SUBCLASS_OF
+  CLASS_HAS_FEATURE
+  SUBCLASS_HAS_FEATURE
+  SPELL_AVAILABLE_TO_CLASS
+  RULESET_HAS_RULE
+}
+
 model Pack {
   id              String   @id @default(uuid())
   slug            String   @unique
@@ -40,12 +64,106 @@ model Pack {
   version         String
   description     String?
   systemName      String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  externalKey     String?
+  apiVersionHint  String?
+  publisherName   String?
+  permalink       String?
   licenseType     String
   licenseUrl      String?
   attributionText String   @db.Text
+  isEnabled       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ruleItems        RuleItem[]
+  characterSheets  CharacterSheet[]
 
   @@index([slug])
+  @@index([systemName])
   @@map("packs")
+}
+
+model CharacterSheet {
+  id             String   @id @default(uuid())
+  userId         String
+  packId         String
+  name           String
+  data           Json
+  schemaVersion  Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack Pack @relation(fields: [packId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("character_sheets")
+}
+
+model RuleItem {
+  id            String       @id @default(uuid())
+  packId        String
+  kind          RuleItemKind
+  source        String       @default("open5e")
+  sourceKey     String
+  sourceUrl     String?
+  sourceVersion String?
+  name          String
+  slug          String?
+  contentMd     String?      @db.Text
+  raw           Json
+  normalized    Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  pack     Pack               @relation(fields: [packId], references: [id], onDelete: Cascade)
+  outgoing RuleItemRelation[] @relation("RuleItemFrom")
+  incoming RuleItemRelation[] @relation("RuleItemTo")
+  tags     RuleItemTag[]
+
+  @@unique([packId, kind, sourceKey])
+  @@index([packId, kind])
+  @@index([name])
+  @@map("rule_items")
+}
+
+model RuleItemRelation {
+  id        String           @id @default(uuid())
+  fromId    String
+  toId      String
+  type      RuleRelationType
+  meta      Json?
+  createdAt DateTime         @default(now())
+
+  from RuleItem @relation("RuleItemFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   RuleItem @relation("RuleItemTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, type])
+  @@index([fromId, type])
+  @@index([toId, type])
+  @@map("rule_item_relations")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  items RuleItemTag[]
+
+  @@map("tags")
+}
+
+model RuleItemTag {
+  ruleItemId String
+  tagId      String
+
+  ruleItem RuleItem @relation(fields: [ruleItemId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([ruleItemId, tagId])
+  @@index([tagId])
+  @@map("rule_item_tags")
 }

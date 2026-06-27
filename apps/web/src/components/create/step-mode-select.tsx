@@ -61,14 +61,14 @@ export const StepModeSelect = ({ selectedMode, onSelect }: StepModeSelectProps) 
                     className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
                     aria-hidden="true"
                   />
-                  Sugestões de backstory e personalidade
+                  Sugestões de história e personalidade
                 </li>
                 <li className="flex items-center gap-2">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
                     aria-hidden="true"
                   />
-                  Otimização para seu sistema de RPG
+                  Otimização para o seu sistema de RPG
                 </li>
               </ul>
               <span
@@ -135,7 +135,7 @@ export const StepModeSelect = ({ selectedMode, onSelect }: StepModeSelectProps) 
                 aria-hidden="true"
               >
                 <Pen className="mr-2 h-4 w-4" aria-hidden="true" />
-                Em breve
+                Criar do Zero
               </span>
             </CardContent>
           </Card>

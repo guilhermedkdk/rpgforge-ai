@@ -11,9 +11,14 @@ const mapToPackResponse = (pack: {
   version: string;
   description: string | null;
   systemName: string;
+  externalKey: string | null;
+  apiVersionHint: string | null;
+  publisherName: string | null;
+  permalink: string | null;
   licenseType: string;
   licenseUrl: string | null;
   attributionText: string;
+  isEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): PackResponse => ({
@@ -23,9 +28,14 @@ const mapToPackResponse = (pack: {
   version: pack.version,
   description: pack.description ?? undefined,
   systemName: pack.systemName,
+  externalKey: pack.externalKey ?? undefined,
+  apiVersionHint: pack.apiVersionHint ?? undefined,
+  publisherName: pack.publisherName ?? undefined,
+  permalink: pack.permalink ?? undefined,
   licenseType: pack.licenseType as PackResponse['licenseType'],
   licenseUrl: pack.licenseUrl ?? undefined,
   attributionText: pack.attributionText,
+  isEnabled: pack.isEnabled,
   createdAt: pack.createdAt.toISOString(),
   updatedAt: pack.updatedAt.toISOString(),
 });

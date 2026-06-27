@@ -18,7 +18,10 @@ out
 *.pem
 
 # Documentation
-*.md
+docs/
+
+# Claude Code
+.claude/settings.local.json
 
 # Debug
 npm-debug.log*
@@ -57,3 +60,7 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Local-only (not versioned)
+apps/api/scripts/
+context.md

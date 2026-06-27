@@ -162,3 +162,12 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Read-only character sheet: block all form interaction except elements marked data-editable */
+.sheet-readonly input:not([data-editable]),
+.sheet-readonly textarea:not([data-editable]),
+.sheet-readonly select:not([data-editable]),
+.sheet-readonly button:not([data-editable]) {
+  pointer-events: none;
+  cursor: default;
+}
