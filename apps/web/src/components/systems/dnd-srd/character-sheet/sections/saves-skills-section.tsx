@@ -305,7 +305,7 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
         className="min-w-0 w-full"
       >
         {abilitiesLoading ? (
-          <LoadingState inline label="Loading skills…" />
+          <LoadingState inline />
         ) : skillsList.length === 0 ? (
           <div
             className="rounded-md border border-border bg-muted/40 px-2 py-2"

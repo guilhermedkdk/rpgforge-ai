@@ -417,7 +417,7 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
                             <div key={`${weaponName}-prop-${idx}`} className="space-y-0.5">
                               <div className="font-semibold text-foreground">
                                 {name}
-                                {detail ? ` — ${detail}` : ''}
+                                {detail ? ` (${detail})` : ''}
                               </div>
                               {desc && (
                                 <div className="text-[11px] leading-snug text-muted-foreground">

@@ -198,7 +198,7 @@ export function PactOfTomeDialog({
             </div>
 
             {spellsLoading ? (
-              <LoadingState inline label="Loading spells…" className="shrink-0 justify-center py-8" />
+              <LoadingState inline className="shrink-0 justify-center py-8" />
             ) : (
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
                 <SpellSection

@@ -150,7 +150,7 @@ export function WizardSpellbookDialog({
             </div>
 
             {spellsLoading && (
-              <LoadingState inline label="Loading spells…" className="shrink-0 justify-center py-8" />
+              <LoadingState inline className="shrink-0 justify-center py-8" />
             )}
 
             {!spellsLoading &&

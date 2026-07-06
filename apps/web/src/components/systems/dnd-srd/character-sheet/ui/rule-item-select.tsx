@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { ChevronDown } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { normalizeFeatureDesc } from '@/lib/dnd-srd/derived-character-stats';
+import { getDetailSnippets, getPreviewFromNormalized } from '@/lib/dnd-srd/rule-item-presentation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,111 +19,6 @@ import type { RuleItemResponse } from '@rpgforce-ai/shared';
 
 const triggerClassName =
   'mt-1 flex h-9 w-full items-center justify-between rounded-md border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:opacity-50 disabled:pointer-events-none';
-
-function getDetailSnippets(item: RuleItemResponse): { label: string; value: string }[] {
-  const raw = item.raw ?? {};
-  const snippets: { label: string; value: string }[] = [];
-
-  const hitDice = raw.hit_dice as string | undefined;
-  if (hitDice && item.kind !== 'CLASS') snippets.push({ label: 'Hit Dice', value: hitDice });
-
-  const speed = raw.speed as string | undefined;
-  if (speed) snippets.push({ label: 'Speed', value: speed });
-
-  const size = raw.size as string | undefined;
-  if (size) snippets.push({ label: 'Size', value: size });
-
-  const skillProficiencies = raw.skill_proficiencies as string | undefined;
-  if (skillProficiencies) snippets.push({ label: 'Proficiencies', value: skillProficiencies });
-
-  const languages = raw.languages as string | undefined;
-  if (languages) snippets.push({ label: 'Languages', value: languages });
-
-  const weaponProficiencies = raw.weapon_proficiencies as string | undefined;
-  if (weaponProficiencies) snippets.push({ label: 'Weapons', value: weaponProficiencies });
-
-  const armorProficiencies = raw.armor_proficiencies as string | undefined;
-  if (armorProficiencies) snippets.push({ label: 'Armor', value: armorProficiencies });
-
-  return snippets;
-}
-
-function tableLikeToBullets(text: string): string {
-  if (!text?.trim()) return '';
-  const lines = text.replace(/^\s*\|\|\|?\s*\n?/, '').trim().split(/\n/);
-  const bullets: string[] = [];
-  for (const line of lines) {
-    if (!line.includes('|')) continue;
-    const cells = line.split('|').map((c) => c.trim()).filter(Boolean);
-    if (cells.length < 2) continue;
-    if (cells.every((c) => /^-+$/.test(c))) continue;
-    const label = cells[0];
-    const value = cells.slice(1).join(' — ').trim();
-    if (label && value) bullets.push(`- **${label}**: ${value}`);
-  }
-  return bullets.join('\n');
-}
-
-const PREVIEW_SECTION_TITLES: Record<string, string> = {
-  CLASS: 'Core Traits',
-  RACE: 'Traits',
-  BACKGROUND: 'Benefits',
-};
-
-function getPreviewFromNormalized(item: RuleItemResponse): { content: string; sectionTitle: string } {
-  const norm = item.normalized;
-  const sectionTitle = PREVIEW_SECTION_TITLES[item.kind] ?? 'Details';
-  if (!norm || typeof norm !== 'object') return { content: '', sectionTitle };
-
-  if (item.kind === 'CLASS') {
-    const sourceKey = item.sourceKey ?? '';
-    const coreTraitsKey = `${sourceKey}_core-traits`;
-    const features = norm.features as Array<{ key?: string; desc?: string }> | undefined;
-    if (!Array.isArray(features)) return { content: '', sectionTitle };
-    const core =
-      features.find((f) => f.key === coreTraitsKey) ??
-      features.find((f) => (f.key ?? '').endsWith('_core-traits'));
-    const desc = core?.desc;
-    if (typeof desc === 'string' && desc.trim())
-      return { content: tableLikeToBullets(desc), sectionTitle };
-  }
-
-  if (item.kind === 'RACE') {
-    const traits = norm.traits as Array<{ name?: string; desc?: string; order?: number }> | undefined;
-    if (!Array.isArray(traits) || traits.length === 0) return { content: '', sectionTitle };
-    const sorted = [...traits].sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
-    const parts = sorted
-      .filter((t) => t.name || t.desc)
-      .map((t) => {
-        const name = typeof t.name === 'string' ? t.name : 'Trait';
-        const desc = typeof t.desc === 'string' ? t.desc : '';
-        return desc.trim() ? `### ${name}\n\n${desc.trim()}` : `### ${name}`;
-      });
-    if (parts.length > 0) return { content: parts.join('\n\n'), sectionTitle };
-  }
-
-  if (item.kind === 'BACKGROUND') {
-    const benefits = norm.benefits as Array<{ name?: string; type?: string; desc?: string }> | undefined;
-    if (!Array.isArray(benefits) || benefits.length === 0) return { content: '', sectionTitle };
-    const typeOrder = ['abilityScore', 'skillProficiency', 'toolProficiency', 'feat', 'equipment'];
-    const sorted = [...benefits].sort((a, b) => {
-      const ia = typeOrder.indexOf((a.type as string) ?? '');
-      const ib = typeOrder.indexOf((b.type as string) ?? '');
-      if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-      return ((a.type as string) ?? '').localeCompare((b.type as string) ?? '');
-    });
-    const parts = sorted
-      .filter((b) => b.name || b.desc)
-      .map((b) => {
-        const name = (b.name as string) ?? (b.type as string) ?? 'Benefit';
-        const desc = (b.desc as string) ?? '';
-        return desc.trim() ? `### ${name}\n\n${desc.trim()}` : `### ${name}`;
-      });
-    if (parts.length > 0) return { content: parts.join('\n\n'), sectionTitle };
-  }
-
-  return { content: '', sectionTitle };
-}
 
 export interface RuleItemSelectProps {
   id: string;

@@ -297,19 +297,19 @@ export function SpellLevelBlock({
                     {spellRule ? (
                       <SpellRuleItemDetailBody spell={spellRule} showNameAndTags />
                     ) : catalogLoading ? (
-                      <LoadingState inline label="Loading spells…" className="justify-center py-4" />
+                      <LoadingState inline className="justify-center py-4" />
                     ) : !spellPackId ? (
                       <p className="text-muted-foreground">
                         Spell details need a pack (select class or race).
                       </p>
                     ) : demandLoading ? (
-                      <LoadingState inline label="Loading spell details…" className="justify-center py-4" />
+                      <LoadingState inline className="justify-center py-4" />
                     ) : demandFailed ? (
                       <p className="text-muted-foreground">
                         Spell details are not available (could not load this spell from the pack).
                       </p>
                     ) : (
-                      <LoadingState inline label="Loading spell details…" className="justify-center py-4" />
+                      <LoadingState inline className="justify-center py-4" />
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>

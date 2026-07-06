@@ -57,9 +57,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
   const selectedPackData = packs.find((p) => p.id === selectedPackId);
 
   if (isLoading) {
-    return (
-      <LoadingState label="Carregando sistemas..." />
-    );
+    return <LoadingState />;
   }
 
   if (error) {

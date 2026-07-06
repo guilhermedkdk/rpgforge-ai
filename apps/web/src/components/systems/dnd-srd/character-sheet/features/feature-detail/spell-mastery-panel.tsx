@@ -140,7 +140,7 @@ export function SpellMasterySpellPickerPanel({
   return (
     <SelectionSection className="flex min-h-0 min-w-0 flex-1 flex-col">
       {loading ? (
-        <LoadingState inline label="Loading spells…" className="justify-center py-4" />
+        <LoadingState inline className="justify-center py-4" />
       ) : (
         <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden pr-1">
           {SPELL_MASTERY_LEVELS.map((lvl) => {

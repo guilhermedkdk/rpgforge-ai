@@ -560,9 +560,7 @@ export function SheetEditor({ pack, initialSheetId = null }: SheetEditorProps) {
   }
 
   if (catalogLoading) {
-    return (
-      <LoadingState label="Loading editor…" />
-    );
+    return <LoadingState />;
   }
 
   return (
@@ -614,7 +612,7 @@ export function SheetEditor({ pack, initialSheetId = null }: SheetEditorProps) {
         </div>
       </div>
 
-      {sheetLoading ? <LoadingState inline label="Loading sheet…" className="mb-4" /> : null}
+      {sheetLoading ? <LoadingState inline className="mb-4" /> : null}
 
       <CharacterSheet
         data={data}

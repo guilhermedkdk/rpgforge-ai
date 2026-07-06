@@ -73,7 +73,7 @@ export function HighElfCantripSwapDialog({
             </div>
 
             {loading && (
-              <LoadingState inline label="Loading cantrips…" className="justify-center py-8" />
+              <LoadingState inline className="justify-center py-8" />
             )}
 
             {!loading && cantrips.length === 0 && (

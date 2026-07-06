@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/header';
+import { SiteFooter } from '@/components/layout/footer';
 import { Sparkles, Scroll, Zap } from 'lucide-react';
 
 export default function Home() {
@@ -19,6 +20,7 @@ export default function Home() {
     }
   }, [user, isLoading, router]);
 
+  // Redirect guard, not a data-loading gate: avoids a flash of the marketing page before /sheets.
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -30,8 +32,8 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-16">        <div className="text-center">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+        <div className="pt-8 text-center">
           <div className="mb-6 flex justify-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
               <Sparkles className="h-10 w-10 text-primary" aria-hidden="true" />
@@ -103,13 +105,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="mt-auto border-t border-border bg-card/50 py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            RPGForge AI — Forje seus personagens, viva suas histórias.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

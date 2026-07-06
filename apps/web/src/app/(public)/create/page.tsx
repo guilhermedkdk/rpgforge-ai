@@ -87,11 +87,10 @@ function CreatePageContent() {
     (step === 'pack' && selectedPackId !== null) || (step === 'mode' && selectedMode !== null);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background overflow-y-auto">
+    <div className="flex min-h-screen flex-col bg-background">
       <Header />
-
-      <main className="mx-auto flex w-full max-w-5xl flex-col pb-8">
-        <div className="flex flex-col px-3 py-4 pb-4">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        <div className="flex flex-col">
           <StepNavigator currentStep={step} onNavigate={handleNavigate} />
 
           {step === 'pack' && (
@@ -106,7 +105,7 @@ function CreatePageContent() {
               {step === 'editor' && selectedMode === 'manual' && (
                 <>
                   {packsLoading || !selectedPack ? (
-                    <LoadingState label="Carregando sistema..." />
+                    <LoadingState />
                   ) : (() => {
                     const entry = systemRegistry[selectedPack.slug];
                     if (!entry) {
@@ -163,8 +162,8 @@ export default function CreatePage() {
       fallback={
         <div className="flex min-h-screen flex-col bg-background">
           <Header />
-          <main className="mx-auto flex w-full max-w-5xl flex-col items-center justify-center">
-            <LoadingState label="Carregando..." />
+          <main className="mx-auto flex w-full max-w-5xl flex-1 items-center justify-center px-4 py-8">
+            <LoadingState />
           </main>
         </div>
       }

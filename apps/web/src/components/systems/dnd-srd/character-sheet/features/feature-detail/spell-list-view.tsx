@@ -90,7 +90,7 @@ export function SpellListView({ feat, classItem }: SpellListViewProps) {
           ) : null}
 
           {spellsLoading && (
-            <LoadingState inline label="Loading spells…" className="justify-center py-10" />
+            <LoadingState inline className="justify-center py-10" />
           )}
 
           {!spellsLoading && levelGroups.length === 0 && (

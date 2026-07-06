@@ -68,7 +68,7 @@ export function SpellPickerDialog({
             </div>
 
             {spellsLoading && (
-              <LoadingState inline label="Loading spells…" className="justify-center py-8" />
+              <LoadingState inline className="justify-center py-8" />
             )}
 
             {!spellsLoading && filtered.length === 0 && (

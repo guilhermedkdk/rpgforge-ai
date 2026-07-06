@@ -152,7 +152,7 @@ export function MysticArcanumSpellPickerPanel({
       )}
 
       {loading ? (
-        <LoadingState inline label="Loading spells…" className="justify-center py-4" />
+        <LoadingState inline className="justify-center py-4" />
       ) : spellsForSlot.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           No level {requiredSpellLevel} Warlock spells found in this pack.

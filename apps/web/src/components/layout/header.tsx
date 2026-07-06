@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Plus, Menu, User, Settings, LogOut, Scroll, Compass, Flame } from 'lucide-react';
+import { Search, Plus, Menu, User, Settings, LogOut, Scroll, BookOpen, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,11 +48,11 @@ export const Header = () => {
             Minhas Fichas
           </Link>
           <Link
-            href="/explore"
+            href="/library"
             className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary"
           >
-            <Compass className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
-            Explorar
+            <BookOpen className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
+            Biblioteca
           </Link>
           <Link
             href="/create"
@@ -174,11 +174,11 @@ export const Header = () => {
                     Minhas Fichas
                   </Link>
                   <Link
-                    href="/explore"
+                    href="/library"
                     className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
                   >
-                    <Compass className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
-                    Explorar
+                    <BookOpen className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                    Biblioteca
                   </Link>
                   <Link
                     href="/create"

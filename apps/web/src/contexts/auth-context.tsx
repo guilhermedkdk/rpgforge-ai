@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@rpgforce-ai/shared';
 import { authApi } from '@/lib/api/auth';
 
@@ -94,4 +94,18 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
+};
+
+/** Redirects to /auth/login if unauthenticated; page renders its own Header, gating only content on `ready`. */
+export const useRequireAuth = () => {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+  }, [user, isLoading, router, pathname]);
+
+  return { ready: !isLoading && !!user, isLoading };
 };

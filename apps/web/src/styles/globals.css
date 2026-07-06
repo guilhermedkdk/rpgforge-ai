@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family:
@@ -163,7 +167,6 @@ body {
   }
 }
 
-/* Read-only character sheet: block all form interaction except elements marked data-editable */
 .sheet-readonly input:not([data-editable]),
 .sheet-readonly textarea:not([data-editable]),
 .sheet-readonly select:not([data-editable]),

@@ -1,30 +1,31 @@
 'use client';
 
+import { Scroll } from 'lucide-react';
+import { useRequireAuth } from '@/contexts/auth-context';
 import { Header } from '@/components/layout/header';
+import { SiteFooter } from '@/components/layout/footer';
+import { LoadingState } from '@/components/ui/loading-state';
 import { MySheetsSection } from '@/components/sheets/my-sheets-section';
 
 export default function SheetsPage() {
+  const { ready } = useRequireAuth();
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-8">
-        <div className="flex flex-col gap-8 lg:flex-row lg:gap-8">
-          {/* Main Content - My Sheets */}
-          <div className="flex-1 min-w-0">
-            <MySheetsSection isLoading={false} />
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+        <div className="mb-6 flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <Scroll className="h-6 w-6 text-primary" aria-hidden="true" />
+            <h1 className="font-serif text-2xl font-bold text-foreground">Minhas Fichas</h1>
           </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-auto border-t border-border bg-card/50 py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center">
           <p className="text-sm text-muted-foreground">
-            RPGForge AI — Forje seus personagens, viva suas histórias.
+            Acompanhe os personagens que você já criou e continue de onde parou.
           </p>
         </div>
-      </footer>
+        {ready ? <MySheetsSection /> : <LoadingState />}
+      </main>
+      <SiteFooter />
     </div>
   );
 }

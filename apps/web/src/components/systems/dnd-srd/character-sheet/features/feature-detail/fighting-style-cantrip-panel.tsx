@@ -66,7 +66,7 @@ export function FightingStyleCantripPanel({
   return (
     <SelectionSection>
       {loading ? (
-        <LoadingState inline label="Loading cantrips…" className="justify-center py-4" />
+        <LoadingState inline className="justify-center py-4" />
       ) : cantrips.length === 0 ? (
         <p className="py-4 text-center text-xs text-muted-foreground">No cantrips available.</p>
       ) : (

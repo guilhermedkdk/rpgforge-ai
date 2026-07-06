@@ -142,7 +142,7 @@ export function SignatureSpellsSpellPickerPanel({
   return (
     <SelectionSection className="flex min-h-0 min-w-0 flex-1 flex-col">
       {loading ? (
-        <LoadingState inline label="Loading spells…" className="justify-center py-4" />
+        <LoadingState inline className="justify-center py-4" />
       ) : spellbookLevel3NameSet.size === 0 ? (
         <div className="overflow-hidden rounded-lg border border-border/60">
           <div className="bg-muted/40 px-3 py-2">
