@@ -95,6 +95,14 @@ export async function fetchItems(documentKey: string): Promise<unknown[]> {
   return results.filter((item) => isAllowedDocument(item as { document?: Open5eDocument }));
 }
 
+/** Magic items (same shape as `items`, plus `rarity`/`requires_attunement`) — mapped as kind ITEM too. */
+export async function fetchMagicItems(documentKey: string): Promise<unknown[]> {
+  const results = await fetchAllPaginated<unknown>('magicitems', {
+    document__key__iexact: documentKey,
+  });
+  return results.filter((item) => isAllowedDocument(item as { document?: Open5eDocument }));
+}
+
 export async function fetchClasses(documentKey: string): Promise<unknown[]> {
   const results = await fetchAllPaginated<unknown>('classes', {
     document__key: documentKey,

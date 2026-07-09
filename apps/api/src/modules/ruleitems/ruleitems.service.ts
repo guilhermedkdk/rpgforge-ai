@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RuleItemKind as PrismaRuleItemKind } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
+import { EmbeddingsService } from '../embeddings/embeddings.service';
 import type {
   RuleItemResponse,
   RuleItemListParams,
   RuleItemListResult,
   RuleItemKind,
+  RuleItemSearchParams,
+  RuleItemSearchResult,
 } from '@rpgforce-ai/shared';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,7 +51,10 @@ export function mapToRuleItemResponse(item: {
 
 @Injectable()
 export class RuleitemsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly embeddingsService: EmbeddingsService
+  ) {}
 
   async findManyBatch(
     packId: string | undefined,
@@ -166,6 +172,61 @@ export class RuleitemsService {
       ),
       total,
     };
+  }
+
+  /** Semantic search: embed the query, rank by vector similarity, then fetch+map full rows. */
+  async search(params: RuleItemSearchParams): Promise<RuleItemSearchResult[]> {
+    const [queryEmbedding] = await this.embeddingsService.embedTexts([params.query]);
+    const kinds = params.kind
+      ? Array.isArray(params.kind)
+        ? params.kind
+        : [params.kind]
+      : undefined;
+
+    const hits = await this.embeddingsService.searchSimilar({
+      queryEmbedding,
+      packId: params.packId,
+      kinds,
+      limit: params.limit ?? 10,
+    });
+
+    const items = await this.prisma.ruleItem.findMany({
+      where: { id: { in: hits.map((h) => h.id) } },
+      select: {
+        id: true,
+        packId: true,
+        kind: true,
+        source: true,
+        sourceKey: true,
+        sourceUrl: true,
+        sourceVersion: true,
+        name: true,
+        slug: true,
+        contentMd: true,
+        normalized: true,
+        raw: false,
+        createdAt: true,
+        updatedAt: true,
+        tags: { select: { tag: { select: { key: true } } } },
+      },
+    });
+
+    const byId = new Map(
+      items.map((item) => [
+        item.id,
+        mapToRuleItemResponse({
+          ...item,
+          tags: item.tags.map((t) => ({ tag: { key: t.tag.key } })),
+        }),
+      ])
+    );
+
+    return hits
+      .map((hit) => {
+        const item = byId.get(hit.id);
+        return item ? { ...item, similarity: 1 - hit.distance } : null;
+      })
+      .filter((item): item is RuleItemSearchResult => item !== null);
   }
 
   async findByIdOrSlug(idOrSlug: string, packId?: string): Promise<RuleItemResponse> {

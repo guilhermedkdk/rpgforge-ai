@@ -19,7 +19,10 @@
     "ingest:srd:races": "pnpm run ingest:srd -- races",
     "ingest:srd:abilities": "pnpm run ingest:srd -- abilities",
     "ingest:srd:classes": "pnpm run ingest:srd -- classes",
-    "ingest:srd:rulesets": "pnpm run ingest:srd -- rulesets"
+    "ingest:srd:rulesets": "pnpm run ingest:srd -- rulesets",
+    "ingest:srd:languages": "pnpm run ingest:srd -- languages",
+    "ingest:srd:synthetic": "pnpm run ingest:srd -- synthetic",
+    "embed:srd": "pnpm --filter @rpgforce-ai/shared run build && nest build && node dist/embed-srd.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.12",
@@ -35,6 +38,7 @@
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
     "express": "^5.2.1",
+    "openai": "^6.45.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",

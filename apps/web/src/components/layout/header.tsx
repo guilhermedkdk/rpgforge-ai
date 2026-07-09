@@ -83,13 +83,6 @@ export const Header = () => {
 
           {user ? (
             <>
-              {' '}
-              <Button asChild className="hidden sm:flex hover:bg-primary/90" size="sm">
-                <Link href="/create">
-                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Criar Ficha
-                </Link>
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

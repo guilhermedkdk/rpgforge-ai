@@ -98,6 +98,7 @@ export const EDITOR_LIBRARY_KEYS: readonly RuleLibraryKey[] = RULE_LIBRARY_QUERI
 /** The session viewer preloads everything sheet-specific; only item catalogs are fetched. */
 export const SESSION_LIBRARY_KEYS: readonly RuleLibraryKey[] = [
   'weapons',
+  'unarmedStrike',
   'armors',
   ...ADVENTURING_GEAR_GROUP_KEYS,
 ];

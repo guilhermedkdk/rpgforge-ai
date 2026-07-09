@@ -64,6 +64,16 @@ export interface RuleItemListResult {
   total: number;
 }
 
+/** Semantic (embedding-based) search over rule items, filtered by pack/kind. */
+export interface RuleItemSearchParams {
+  query: string;
+  packId?: string;
+  kind?: RuleItemKind | RuleItemKind[];
+  limit?: number;
+}
+
+export type RuleItemSearchResult = RuleItemResponse & { similarity: number };
+
 /** One named query inside a batch request; mirrors a single `GET /rule-items` call. */
 export interface RuleItemBatchQuery {
   key: string;

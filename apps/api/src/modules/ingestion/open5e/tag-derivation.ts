@@ -74,7 +74,9 @@ export function deriveTagKeys(kind: TaggedRuleItemKind, raw: Record<string, unkn
       const isWeapon =
         raw.is_weapon === true || (weaponObj != null && typeof weaponObj === 'object');
       const isArmor = raw.is_armor === true || (armorObj != null && typeof armorObj === 'object');
-      const isMagic = raw.is_magic_item === true;
+      // Open5e has no `is_magic_item` flag; magic items are the ones with a `rarity` (mundane
+      // items never have it), sourced only from the /magicitems/ endpoint.
+      const isMagic = raw.is_magic_item === true || raw.rarity != null;
 
       keys.push(`item:weapon:${isWeapon ? 'yes' : 'no'}`);
       keys.push(`item:armor:${isArmor ? 'yes' : 'no'}`);
@@ -150,6 +152,18 @@ export function deriveTagKeys(kind: TaggedRuleItemKind, raw: Record<string, unkn
       if (rulesetKey) keys.push(`rule:ruleset:${rulesetKey}`);
       const index = raw.index as number | undefined;
       if (typeof index === 'number') keys.push(`rule:index:${index}`);
+      break;
+    }
+    case 'OTHER': {
+      // Languages (packages/shared-independent SRD 5.2 list, see synthetic-items.ts) are
+      // distinguished by `languageRarity`; anything else falls back to a bare "other" tag.
+      const languageRarity = raw.languageRarity as string | undefined;
+      if (languageRarity) {
+        keys.push('language');
+        keys.push(`language:rarity:${languageRarity}`);
+      } else {
+        keys.push('other');
+      }
       break;
     }
     default:

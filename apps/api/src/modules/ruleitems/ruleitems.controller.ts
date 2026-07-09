@@ -11,6 +11,7 @@ import {
 import { RuleitemsService } from './ruleitems.service';
 import { RuleItemQueryDto } from './dto/ruleitem-query.dto';
 import { RuleItemBatchDto } from './dto/ruleitem-batch.dto';
+import { RuleItemSearchDto } from './dto/ruleitem-search.dto';
 
 type RuleItemKind = import('@rpgforce-ai/shared').RuleItemKind;
 
@@ -57,6 +58,17 @@ export class RuleitemsController {
         includeRaw: q.includeRaw,
       })),
     );
+  }
+
+  @Post('search')
+  @HttpCode(HttpStatus.OK)
+  async search(@Body() body: RuleItemSearchDto) {
+    return this.ruleitemsService.search({
+      query: body.query,
+      packId: body.packId,
+      kind: body.kind as RuleItemKind[] | undefined,
+      limit: body.limit,
+    });
   }
 
   @Get(':idOrSlug')

@@ -8,6 +8,7 @@ import {
   fetchSpells,
   fetchFeats,
   fetchItems,
+  fetchMagicItems,
   fetchClasses,
   fetchBackgrounds,
   fetchRaces,
@@ -17,6 +18,11 @@ import {
 } from './open5e-client';
 import { deriveTagKeys } from './tag-derivation';
 import { mapOpen5eToRuleItemPayload } from './mappers';
+import {
+  SYNTHETIC_OTHER_ITEMS,
+  SYNTHETIC_ITEM_ITEMS,
+  SYNTHETIC_LANGUAGES,
+} from './synthetic-items';
 
 const SOURCE_VERSION = 'v2';
 
@@ -30,7 +36,9 @@ export type IngestionScope =
   | 'races'
   | 'abilities'
   | 'classes'
-  | 'rulesets';
+  | 'rulesets'
+  | 'languages'
+  | 'synthetic';
 
 export const INGESTION_SCOPES: IngestionScope[] = [
   'all',
@@ -42,6 +50,8 @@ export const INGESTION_SCOPES: IngestionScope[] = [
   'abilities',
   'classes',
   'rulesets',
+  'languages',
+  'synthetic',
 ];
 
 @Injectable()
@@ -109,6 +119,17 @@ export class Open5eIngestionService {
       }
       counts['items'] = items.length;
       this.logger.log(`  ✓ ${items.length} itens`);
+      this.logger.log('');
+
+      this.logger.log('Buscando itens mágicos...');
+      const magicItems = await fetchMagicItems(docKey);
+      this.logger.log(`  Fetch: ${magicItems.length} itens mágicos`);
+      this.logger.log('Inserindo itens mágicos...');
+      for (const raw of magicItems as Record<string, unknown>[]) {
+        await this.upsertRuleItem('ITEM' as RuleItemKind, raw, pack.id);
+      }
+      counts['magicitems'] = magicItems.length;
+      this.logger.log(`  ✓ ${magicItems.length} itens mágicos`);
       this.logger.log('');
     }
 
@@ -194,6 +215,32 @@ export class Open5eIngestionService {
       this.logger.log('');
     }
 
+    if (scope === 'all' || scope === 'languages') {
+      this.logger.log('Inserindo idiomas (SRD 5.2, sem endpoint confiável na Open5e)...');
+      for (const raw of SYNTHETIC_LANGUAGES) {
+        await this.upsertRuleItem('OTHER' as RuleItemKind, raw, pack.id, 'seed');
+      }
+      counts['languages'] = SYNTHETIC_LANGUAGES.length;
+      this.logger.log(`  ✓ ${SYNTHETIC_LANGUAGES.length} idiomas`);
+      this.logger.log('');
+    }
+
+    if (scope === 'all' || scope === 'synthetic') {
+      this.logger.log(
+        'Inserindo conteúdo sem endpoint na Open5e (Unarmed Strike, Arcane Focus)...'
+      );
+      for (const raw of SYNTHETIC_OTHER_ITEMS) {
+        await this.upsertRuleItem('OTHER' as RuleItemKind, raw, pack.id, 'manual');
+      }
+      for (const raw of SYNTHETIC_ITEM_ITEMS) {
+        await this.upsertRuleItem('ITEM' as RuleItemKind, raw, pack.id, 'manual');
+      }
+      const syntheticCount = SYNTHETIC_OTHER_ITEMS.length + SYNTHETIC_ITEM_ITEMS.length;
+      counts['synthetic'] = syntheticCount;
+      this.logger.log(`  ✓ ${syntheticCount} itens sintéticos`);
+      this.logger.log('');
+    }
+
     const durationMs = Date.now() - startMs;
     const totalItems = Object.values(counts).reduce((sum, n) => sum + (n ?? 0), 0);
 
@@ -212,8 +259,9 @@ export class Open5eIngestionService {
     const PACK_DESCRIPTION =
       'Documento de Referência do Sistema oficial de Dungeons & Dragons 5ª Edição. Contém as regras essenciais, classes, magias, equipamentos e conteúdo de criação de personagens lançado sob Creative Commons Atribuição 4.0, adequado para criar personagens e ferramentas compatíveis.';
     const ATTRIBUTION_TEXT =
-      'This work includes material taken from the System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC and has been modified. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License.';
+      'This work includes material taken from the System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC and has been modified. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License. See https://dnd.wizards.com/resources/systems-reference-document';
     const LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/';
+    const PUBLISHER_NAME = 'Wizards of the Coast';
 
     const pack = await this.prisma.pack.upsert({
       where: { slug: PACK_SLUG },
@@ -226,6 +274,7 @@ export class Open5eIngestionService {
         externalKey: doc.key,
         apiVersionHint: 'v2',
         permalink: doc.permalink ?? null,
+        publisherName: PUBLISHER_NAME,
         licenseType: 'CC_BY_4_0',
         licenseUrl: LICENSE_URL,
         attributionText: ATTRIBUTION_TEXT,
@@ -234,6 +283,7 @@ export class Open5eIngestionService {
       update: {
         externalKey: doc.key,
         permalink: doc.permalink ?? null,
+        publisherName: PUBLISHER_NAME,
       },
     });
     return pack;
@@ -242,14 +292,14 @@ export class Open5eIngestionService {
   private async upsertRuleItem(
     kind: RuleItemKind,
     item: Record<string, unknown>,
-    packId: string
+    packId: string,
+    source: string = 'open5e'
   ): Promise<string> {
     const payload = mapOpen5eToRuleItemPayload(
       kind as unknown as import('@rpgforce-ai/shared').RuleItemKind,
       item,
       packId
     );
-    // Use payload.raw so tags match persisted data (e.g. ITEM category overrides in mapper).
     const tagKeys = deriveTagKeys(
       kind as unknown as import('@rpgforce-ai/shared').RuleItemKind,
       payload.raw as Record<string, unknown>
@@ -266,7 +316,7 @@ export class Open5eIngestionService {
       create: {
         packId: payload.packId,
         kind: payload.kind,
-        source: 'open5e',
+        source,
         sourceKey: payload.sourceKey,
         sourceUrl: payload.sourceUrl,
         sourceVersion: SOURCE_VERSION,

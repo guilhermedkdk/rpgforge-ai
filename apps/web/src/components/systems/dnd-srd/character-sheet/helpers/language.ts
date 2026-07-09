@@ -2,13 +2,9 @@ import type { RuleItemResponse } from '@rpgforce-ai/shared';
 import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
 import { MAX_STANDARD_LANGUAGES_TOTAL } from '../constants';
 
-/** Canonical "Common" row from seeded standard languages (sourceKey or name). */
+/** Canonical "Common" row from the standard languages catalog. */
 export function getCommonLanguageItem(options: RuleItemResponse[]): RuleItemResponse | null {
-  return (
-    options.find((o) => o.sourceKey === 'manual-lang-common') ??
-    options.find((o) => o.name.trim().toLowerCase() === 'common') ??
-    null
-  );
+  return options.find((o) => o.name.trim().toLowerCase() === 'common') ?? null;
 }
 
 /** Ensures Common is first when present; dedupes; max MAX_STANDARD_LANGUAGES_TOTAL. */

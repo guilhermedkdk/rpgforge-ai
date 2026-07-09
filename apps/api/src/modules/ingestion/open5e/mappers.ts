@@ -187,7 +187,8 @@ export function mapOpen5eToRuleItemPayload(
     kind === 'CLASS_FEATURE' ||
     kind === 'BACKGROUND' ||
     kind === 'RACE' ||
-    kind === 'ABILITY'
+    kind === 'ABILITY' ||
+    kind === 'OTHER'
   ) {
     normalized = rawToNormalized(raw, ['document']);
   }

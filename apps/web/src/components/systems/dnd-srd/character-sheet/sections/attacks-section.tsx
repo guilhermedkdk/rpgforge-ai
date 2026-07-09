@@ -243,7 +243,7 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
               const dice = typeof weaponNorm.damageDice === 'string' ? weaponNorm.damageDice : '';
               baseDamageDisplay = dice;
             }
-            let damageTypeName =
+            const damageTypeName =
               (weaponNorm?.damageType?.name as string | undefined) ??
               (normRecord.damageType as string | undefined) ??
               ((normRecord.damage_type as { name?: unknown } | undefined)?.name as
@@ -284,11 +284,6 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
               weaponTagKeys
             );
             const baseMod = martialArtsApplies ? Math.max(strMod, dexMod) : baseModFromRules;
-
-            if (isUnarmedStrike) {
-              if (!baseDamageDisplay) baseDamageDisplay = '1';
-              if (!damageTypeName) damageTypeName = 'Bludgeoning';
-            }
 
             if (martialArtsApplies && martialArtsDie) {
               const martialFaces = parseDiceFaces(martialArtsDie);

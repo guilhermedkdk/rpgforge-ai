@@ -131,7 +131,7 @@ function CreatePageContent() {
               {step === 'editor' && selectedPackId && selectedMode === 'ai' && (
                 <div className="rounded-lg border border-border bg-card p-12 text-center">
                   <p className="text-muted-foreground">
-                    AI creation coming soon. For now, use manual creation.
+                    Criação com IA em breve. Por enquanto, use a criação manual.
                   </p>
                 </div>
               )}

@@ -64,7 +64,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
         <p className="text-sm text-destructive">
-          Could not load systems. Please try again.
+          Não foi possível carregar os sistemas. Tente novamente.
         </p>
       </div>
     );
@@ -74,7 +74,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
         <Shield className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" aria-hidden="true" />
-        <p className="text-sm text-muted-foreground">No systems available at this time.</p>
+        <p className="text-sm text-muted-foreground">Nenhum sistema disponível no momento.</p>
       </div>
     );
   }
@@ -223,7 +223,7 @@ const PackPreview = ({ pack }: { pack: PackResponse }) => {
       </div>
 
       <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-        {pack.description ?? 'RPG system available for character creation.'}
+        {pack.description ?? 'Sistema de RPG disponível para criação de fichas.'}
       </p>
 
       <div className="flex flex-wrap gap-1.5">

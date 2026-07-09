@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:0.8.4-pg16
     container_name: rpgforge-ai-pg
     restart: unless-stopped
     ports:

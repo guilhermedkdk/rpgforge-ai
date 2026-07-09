@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Scroll, Sparkles } from 'lucide-react';
+import { Plus, Scroll } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const EmptyState = () => {
@@ -17,10 +17,10 @@ export const EmptyState = () => {
         Comece sua jornada criando seu primeiro personagem. Use a IA para gerar um herói único ou
         crie do zero.
       </p>
-      <Button asChild size="lg">
+      <Button asChild size="sm">
         <Link href="/create">
-          <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-          Criar Minha Primeira Ficha
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+          Criar Ficha
         </Link>
       </Button>
     </div>

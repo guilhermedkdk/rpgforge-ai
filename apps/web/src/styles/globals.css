@@ -7,6 +7,13 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Radix scroll-lock's margin-right assumes the scrollbar is still visible, but
+   scrollbar-gutter: stable already reserved that space, so it doubles the shift
+   instead of compensating for it */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
 body {
   margin: 0;
   font-family:

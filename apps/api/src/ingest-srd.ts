@@ -23,6 +23,7 @@ const SUMMARY_LABELS: Record<string, string> = {
   spells: 'Magias',
   feats: 'Talentos',
   items: 'Itens',
+  magicitems: 'Itens mágicos',
   backgrounds: 'Antecedentes',
   races: 'Raças',
   abilities: 'Habilidades',
@@ -31,6 +32,8 @@ const SUMMARY_LABELS: Record<string, string> = {
   class_features: 'Características de classe',
   rulesets: 'Rulesets (capítulos)',
   rules: 'Rules (tópicos)',
+  languages: 'Idiomas',
+  synthetic: 'Conteúdo sintético',
 };
 
 const TABLE_WIDTH = 48;
