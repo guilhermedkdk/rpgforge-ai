@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Languages } from 'lucide-react';
 
 import { Swords, Shield, Wrench, BookOpen, Check, ChevronRight, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -12,35 +13,31 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCharacterComputed } from '../context';
+import type { SheetLocks } from '../locks';
+import type { PendingFlags } from '../pending-flags';
 import { Section } from '../ui/section';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import {
-  MAX_STANDARD_LANGUAGES_TOTAL,
-  needsChoiceAccent,
-  needsChoiceHighlightSoft,
-} from '../constants';
-import {
-  DRUIDIC_DISPLAY_NAME,
-  THIEVES_CANT_DISPLAY_NAME,
-  isDruidicFeatureName,
-  isThievesCantFeatureName,
-} from '@/lib/dnd-srd/character-state';
-import { getEffectiveProficiencies } from '@/lib/dnd-srd/derived-character-stats';
 import {
   dedupeProficiencyLabelsPreserveOrder,
   dedupeRuleItemsByToolDisplay,
+  DRUIDIC_DISPLAY_NAME,
   getCommonLanguageItem,
+  getEffectiveProficiencies,
   getKnownLanguageNamesExcept,
   getSkillsFromAbilities,
+  isDruidicFeature,
+  isThievesCantFeature,
+  MAX_STANDARD_LANGUAGES_TOTAL,
   normalizeStandardLanguageNames,
   parseProficiencyValueItems,
   parseToolProficiencyChoose,
   skilledToolChoiceKey,
   stripToolItemPriceSuffix,
-  toggleStandardLanguageSelection,
+  THIEVES_CANT_DISPLAY_NAME,
   toolDisplayKey,
-  updateToolProficiencyChoices,
-} from '../helpers';
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
+import { needsChoiceAccent, needsChoiceHighlightSoft } from '../constants';
+import { toggleStandardLanguageSelection, updateToolProficiencyChoices } from '../helpers';
 
 function mergeToolItemsByTags(
   categoryTags: string[],
@@ -61,22 +58,18 @@ function mergeToolItemsByTags(
 interface ProficienciesSectionProps {
   data: import('../types').CharacterFormData;
   onChange: (data: import('../types').CharacterFormData) => void;
-  readOnly?: boolean;
-  saveAttempted?: boolean;
+  locks: SheetLocks;
+  pendingFlags: PendingFlags;
 }
 
 export function ProficienciesSection({
   data,
   onChange,
-  readOnly = false,
-  saveAttempted = false,
+  locks,
+  pendingFlags,
 }: ProficienciesSectionProps) {
-  const {
-    abilities,
-    toolItemsByCategory,
-    standardLanguageOptions,
-    featureDetails,
-  } = useCharacterComputed();
+  const { abilities, toolItemsByCategory, standardLanguageOptions, featureDetails } =
+    useCharacterComputed();
 
   const lines = getEffectiveProficiencies(data)
     .split(/\n/)
@@ -126,7 +119,7 @@ export function ProficienciesSection({
     {
       key: 'languages',
       label: 'Languages',
-      icon: BookOpen,
+      icon: Languages,
       fallbackMessage: '',
       matches: (l) => /language|idiom|idioma|idiomas/i.test(l),
     },
@@ -144,8 +137,8 @@ export function ProficienciesSection({
     const selectedLower = new Set(normalizedSelection.map((n) => n.trim().toLowerCase()));
     const filteredBadges = badgeItems.filter((b) => !selectedLower.has(b.trim().toLowerCase()));
     const chooseComplete = normalizedSelection.length >= MAX_STANDARD_LANGUAGES_TOTAL;
-    /** Badges-only layout only on sheet view; creation keeps the Choose languages control */
-    const showLanguagesAsBadgesOnly = readOnly;
+    // Badges-only once the picks are committed; an unfilled selection keeps its Choose control.
+    const showLanguagesAsBadgesOnly = locks.languages;
     const commonItem = getCommonLanguageItem(standardLanguageOptions);
     const restSorted = [...standardLanguageOptions]
       .filter((o) => o.id !== commonItem?.id)
@@ -170,7 +163,7 @@ export function ProficienciesSection({
             {stripToolItemPriceSuffix(langName.trim())}
           </Badge>
         ))}
-        {featureDetails.some((f) => f.source === 'class' && isThievesCantFeatureName(f.name)) ? (
+        {featureDetails.some((f) => f.source === 'class' && isThievesCantFeature(f)) ? (
           <>
             <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-normal">
               {THIEVES_CANT_DISPLAY_NAME}
@@ -186,7 +179,7 @@ export function ProficienciesSection({
             ) : null}
           </>
         ) : null}
-        {featureDetails.some((f) => f.source === 'class' && isDruidicFeatureName(f.name)) ? (
+        {featureDetails.some((f) => f.source === 'class' && isDruidicFeature(f)) ? (
           <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-normal">
             {DRUIDIC_DISPLAY_NAME}
           </Badge>
@@ -239,22 +232,18 @@ export function ProficienciesSection({
                 'flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 chooseComplete
                   ? 'border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80'
-                  : needsChoiceHighlightSoft(saveAttempted)
+                  : needsChoiceHighlightSoft(pendingFlags.isFlagged('languages'))
               )}
               aria-label={`Choose languages, ${normalizedSelection.length} of ${MAX_STANDARD_LANGUAGES_TOTAL} selected`}
+              onPointerDown={() => pendingFlags.dismiss('languages')}
             >
-              <BookOpen
-                className={cn(
-                  'h-3 w-3 shrink-0',
-                  chooseComplete ? 'text-muted-foreground' : needsChoiceAccent(saveAttempted)
-                )}
-                aria-hidden
-              />
               {`Choose languages (${normalizedSelection.length}/${MAX_STANDARD_LANGUAGES_TOTAL})`}
               <ChevronRight
                 className={cn(
                   'h-3 w-3 shrink-0',
-                  chooseComplete ? 'text-muted-foreground' : needsChoiceAccent(saveAttempted)
+                  chooseComplete
+                    ? 'text-muted-foreground'
+                    : needsChoiceAccent(pendingFlags.isFlagged('languages'))
                 )}
                 aria-hidden
               />
@@ -414,7 +403,7 @@ export function ProficienciesSection({
           const chooseN = toolChoose.chooseN;
           const toolChoiceComplete = chooseN != null && chooseN > 0 && selectedCount >= chooseN;
 
-          if (readOnly) {
+          if (locks.tools) {
             if (chosen.length > 0) {
               chosen.forEach((chosenName) => {
                 const displayName = stripToolItemPriceSuffix(chosenName.trim());
@@ -430,134 +419,135 @@ export function ProficienciesSection({
               });
             }
           } else {
-          toolElements.push(
-            <DropdownMenu key={`choose-${lineIndex}-${ti}-${segment}`}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    toolChoiceComplete
-                      ? 'border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80'
-                      : needsChoiceHighlightSoft(saveAttempted)
-                  )}
-                  aria-label={`Choose ${chooseN} ${toolChoose.categoryLabel}`}
-                >
-                  <Wrench
+            toolElements.push(
+              <DropdownMenu key={`choose-${lineIndex}-${ti}-${segment}`}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
                     className={cn(
-                      'h-3 w-3 shrink-0',
-                      toolChoiceComplete ? 'text-muted-foreground' : needsChoiceAccent(saveAttempted)
+                      'flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      toolChoiceComplete
+                        ? 'border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80'
+                        : needsChoiceHighlightSoft(pendingFlags.isFlagged(`tool:${segment}`))
                     )}
-                    aria-hidden
-                  />
-                  {chooseN != null
-                    ? `${selectedCount}/${chooseN} ${toolChoose.categoryLabel}`
-                    : `Choose ${toolChoose.categoryLabel}`}
-                  <ChevronRight
-                    className={cn(
-                      'h-3 w-3 shrink-0',
-                      toolChoiceComplete ? 'text-muted-foreground' : needsChoiceAccent(saveAttempted)
-                    )}
-                    aria-hidden
-                  />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                side="right"
-                className="min-w-[280px] max-w-[320px] p-0"
-                sideOffset={6}
-                onCloseAutoFocus={(e) => e.preventDefault()}
-              >
-                <div className="p-3">
-                  <p className="mb-2 text-sm font-medium text-foreground">
-                    {toolChoose.categoryLabel}
-                  </p>
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    {chooseN != null
-                      ? `Choose ${chooseN} from the list below.`
-                      : 'Choose from the list below.'}
-                  </p>
-                  <ul
-                    className="max-h-64 space-y-2 overflow-y-auto"
-                    role="list"
-                    aria-label={`${toolChoose.categoryLabel} options`}
+                    aria-label={`Choose ${chooseN} ${toolChoose.categoryLabel}`}
+                    onPointerDown={() => pendingFlags.dismiss(`tool:${segment}`)}
                   >
-                    {toolItems
-                      .filter((item) => {
-                        const k = toolDisplayKey(item.name);
-                        const pickedHere = chosen.some(
-                          (n) =>
-                            toolDisplayKey(n) === k ||
-                            stripToolItemPriceSuffix(n) === stripToolItemPriceSuffix(item.name)
-                        );
-                        if (pickedHere) return true;
-                        return !takenElsewhere.has(k);
-                      })
-                      .map((item) => {
-                        const displayName = stripToolItemPriceSuffix(item.name);
-                        const selected = chosen.some(
-                          (n) => stripToolItemPriceSuffix(n) === displayName || n === item.name
-                        );
-                        const maxReached = chooseN != null && chosen.length >= chooseN && !selected;
-                        return (
-                          <li key={item.id} role="listitem">
-                            <button
-                              type="button"
-                              disabled={maxReached}
-                              onClick={() => {
-                                let next: string[];
-                                if (selected) {
-                                  next = chosen.filter(
-                                    (n) =>
-                                      stripToolItemPriceSuffix(n) !== displayName && n !== item.name
-                                  );
-                                } else if (!maxReached) {
-                                  const withoutDupes = chosen.filter(
-                                    (n) =>
-                                      stripToolItemPriceSuffix(n) !== displayName && n !== item.name
-                                  );
-                                  next = [...withoutDupes, displayName];
-                                } else {
-                                  return;
-                                }
-                                updateToolProficiencyChoices(data, onChange, segment, next);
-                              }}
-                              className={cn(
-                                'flex w-full items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                maxReached
-                                  ? 'cursor-not-allowed opacity-40'
-                                  : 'cursor-pointer hover:border-primary/50 hover:bg-muted/40'
-                              )}
-                              aria-label={
-                                selected ? `Uncheck ${displayName}` : `Check ${displayName}`
-                              }
-                              aria-pressed={selected}
-                              aria-disabled={maxReached}
-                            >
-                              <span
+                    {chooseN != null
+                      ? `${selectedCount}/${chooseN} ${toolChoose.categoryLabel}`
+                      : `Choose ${toolChoose.categoryLabel}`}
+                    <ChevronRight
+                      className={cn(
+                        'h-3 w-3 shrink-0',
+                        toolChoiceComplete
+                          ? 'text-muted-foreground'
+                          : needsChoiceAccent(pendingFlags.isFlagged(`tool:${segment}`))
+                      )}
+                      aria-hidden
+                    />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  side="right"
+                  className="min-w-[280px] max-w-[320px] p-0"
+                  sideOffset={6}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  <div className="p-3">
+                    <p className="mb-2 text-sm font-medium text-foreground">
+                      {toolChoose.categoryLabel}
+                    </p>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      {chooseN != null
+                        ? `Choose ${chooseN} from the list below.`
+                        : 'Choose from the list below.'}
+                    </p>
+                    <ul
+                      className="max-h-64 space-y-2 overflow-y-auto"
+                      role="list"
+                      aria-label={`${toolChoose.categoryLabel} options`}
+                    >
+                      {toolItems
+                        .filter((item) => {
+                          const k = toolDisplayKey(item.name);
+                          const pickedHere = chosen.some(
+                            (n) =>
+                              toolDisplayKey(n) === k ||
+                              stripToolItemPriceSuffix(n) === stripToolItemPriceSuffix(item.name)
+                          );
+                          if (pickedHere) return true;
+                          return !takenElsewhere.has(k);
+                        })
+                        .map((item) => {
+                          const displayName = stripToolItemPriceSuffix(item.name);
+                          const selected = chosen.some(
+                            (n) => stripToolItemPriceSuffix(n) === displayName || n === item.name
+                          );
+                          const maxReached =
+                            chooseN != null && chosen.length >= chooseN && !selected;
+                          return (
+                            <li key={item.id} role="listitem">
+                              <button
+                                type="button"
+                                disabled={maxReached}
+                                onClick={() => {
+                                  let next: string[];
+                                  if (selected) {
+                                    next = chosen.filter(
+                                      (n) =>
+                                        stripToolItemPriceSuffix(n) !== displayName &&
+                                        n !== item.name
+                                    );
+                                  } else if (!maxReached) {
+                                    const withoutDupes = chosen.filter(
+                                      (n) =>
+                                        stripToolItemPriceSuffix(n) !== displayName &&
+                                        n !== item.name
+                                    );
+                                    next = [...withoutDupes, displayName];
+                                  } else {
+                                    return;
+                                  }
+                                  updateToolProficiencyChoices(data, onChange, segment, next);
+                                }}
                                 className={cn(
-                                  'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
-                                  selected
-                                    ? 'bg-primary border-primary text-primary-foreground'
-                                    : 'text-muted-foreground/50'
+                                  'flex w-full items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  maxReached
+                                    ? 'cursor-not-allowed opacity-40'
+                                    : 'cursor-pointer hover:border-primary/50 hover:bg-muted/40'
                                 )}
-                                aria-hidden
+                                aria-label={
+                                  selected ? `Uncheck ${displayName}` : `Check ${displayName}`
+                                }
+                                aria-pressed={selected}
+                                aria-disabled={maxReached}
                               >
-                                {selected ? <Check className="h-3 w-3" strokeWidth={2.5} /> : null}
-                              </span>
-                              <span className="text-xs font-medium text-foreground">
-                                {displayName}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
+                                <span
+                                  className={cn(
+                                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                                    selected
+                                      ? 'bg-primary border-primary text-primary-foreground'
+                                      : 'text-muted-foreground/50'
+                                  )}
+                                  aria-hidden
+                                >
+                                  {selected ? (
+                                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                                  ) : null}
+                                </span>
+                                <span className="text-xs font-medium text-foreground">
+                                  {displayName}
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
           }
         } else {
           toolElements.push(
@@ -594,6 +584,7 @@ export function ProficienciesSection({
     <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-2">
       <Section
         title="Languages & Proficiencies"
+        aiHintArea="languages"
         icon={<BookOpen className="h-4 w-4" />}
         className="flex min-h-0 min-w-0 flex-1 flex-col self-stretch"
       >
@@ -657,7 +648,10 @@ export function ProficienciesSection({
               content != null && (Array.isArray(content) ? content.length > 0 : true);
             const hasSkilledToolBadges = skilledToolBadges != null;
             const showFallback =
-              !hasContent && !hasSkilledToolBadges && key !== 'languages' && fallbackMessage.trim().length > 0;
+              !hasContent &&
+              !hasSkilledToolBadges &&
+              key !== 'languages' &&
+              fallbackMessage.trim().length > 0;
 
             return (
               <div
@@ -673,7 +667,9 @@ export function ProficienciesSection({
                   <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 px-2 py-2 pl-4">
-                  {hasContent ? content : showFallback ? (
+                  {hasContent ? (
+                    content
+                  ) : showFallback ? (
                     <p className="text-xs text-muted-foreground">{fallbackMessage}</p>
                   ) : null}
                   {skilledToolBadges}

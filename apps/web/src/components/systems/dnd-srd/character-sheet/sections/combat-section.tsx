@@ -8,21 +8,20 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useCharacterComputed } from '../context';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCharacterComputed, useCharacterData } from '../context';
 import { Section } from '../ui/section';
 import { DeferredNumberInput } from '../ui/deferred-number-input';
 import { updateField } from '../helpers';
-import { numberInputNoSpinner, SHEET_TEMPORARY_HP_INPUT_MAX } from '../constants';
+import {
+  numberInputNoSpinner,
+  SHEET_TEMPORARY_HP_INPUT_MAX,
+  unacknowledgedCueBorder,
+} from '../constants';
 
 interface CombatSectionProps {
   data: import('../types').CharacterFormData;
   onChange: (data: import('../types').CharacterFormData) => void;
-  readOnly?: boolean;
 }
 
 export function CombatSection({ data, onChange }: CombatSectionProps) {
@@ -35,6 +34,10 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
     strengthScore,
     isArmorItemProficient,
   } = useCharacterComputed();
+  // HP tracking (current/temp HP, death saves) is play-only: on creation a character is at full
+  // health, so the fields render read-only and currentHp follows maxHp (seeded by the recompute).
+  const { mode } = useCharacterData();
+  const inPlay = mode === 'play';
 
   const [combatEquipmentMenuOpen, setCombatEquipmentMenuOpen] = useState(false);
   const [combatEquipmentAcknowledged, setCombatEquipmentAcknowledged] = useState(false);
@@ -119,11 +122,10 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                data-editable="true"
                 className={cn(
                   'flex cursor-pointer items-center justify-center rounded-md border bg-transparent px-1.5 py-1.5 text-foreground shadow-[0_0_0_1px_rgba(250,250,250,0.03)] outline-none transition-colors hover:border-primary hover:bg-secondary/40 focus-visible:ring-2 focus-visible:ring-ring',
                   hasCombatEquipment && !combatEquipmentAcknowledged
-                    ? 'border-dashed border-primary/70'
+                    ? unacknowledgedCueBorder
                     : 'border-transparent'
                 )}
                 aria-label="View and adjust combat equipment"
@@ -153,15 +155,11 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             >
               <div className="p-3 space-y-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    Combat Equipment
-                  </p>
+                  <p className="text-sm font-medium text-foreground">Combat Equipment</p>
                   <p className="text-xs text-muted-foreground">
                     Choose which armor and shield from your equipment are considered{' '}
-                    <span className="font-semibold text-foreground">
-                      equipped for combat
-                    </span>
-                    . The displayed AC uses these choices.
+                    <span className="font-semibold text-foreground">equipped for combat</span>. The
+                    displayed AC uses these choices.
                   </p>
                 </div>
                 <div className="space-y-3">
@@ -182,13 +180,10 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                         <li role="listitem">
                           <button
                             type="button"
-                            onClick={() =>
-                              onChange({ ...data, equippedArmorId: null })
-                            }
+                            onClick={() => onChange({ ...data, equippedArmorId: null })}
                             className={cn(
                               'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                              data.equippedArmorId == null &&
-                                'border-primary/60 bg-primary/10'
+                              data.equippedArmorId == null && 'border-primary/60 bg-primary/10'
                             )}
                             aria-label="No armor equipped"
                             aria-pressed={data.equippedArmorId == null}
@@ -215,9 +210,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                           const canUse = isProficient && meetsStrength;
                           const tooltipParts: string[] = [];
                           if (!isProficient) {
-                            tooltipParts.push(
-                              'You are not proficient with this armor category.'
-                            );
+                            tooltipParts.push('You are not proficient with this armor category.');
                           }
                           if (!meetsStrength && requiredStr != null) {
                             tooltipParts.push(
@@ -230,9 +223,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                               {canUse ? (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    onChange({ ...data, equippedArmorId: armor.id })
-                                  }
+                                  onClick={() => onChange({ ...data, equippedArmorId: armor.id })}
                                   className={cn(
                                     'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     isSelected && 'border-primary/60 bg-primary/10'
@@ -286,13 +277,10 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                         <li role="listitem">
                           <button
                             type="button"
-                            onClick={() =>
-                              onChange({ ...data, equippedShieldId: null })
-                            }
+                            onClick={() => onChange({ ...data, equippedShieldId: null })}
                             className={cn(
                               'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                              data.equippedShieldId == null &&
-                                'border-primary/60 bg-primary/10'
+                              data.equippedShieldId == null && 'border-primary/60 bg-primary/10'
                             )}
                             aria-label="No shield equipped"
                             aria-pressed={data.equippedShieldId == null}
@@ -309,9 +297,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                               {canUse ? (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    onChange({ ...data, equippedShieldId: shield.id })
-                                  }
+                                  onClick={() => onChange({ ...data, equippedShieldId: shield.id })}
                                   className={cn(
                                     'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     isSelected && 'border-primary/60 bg-primary/10'
@@ -358,9 +344,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             </span>
             <input
               type="number"
-              value={
-                data.initiative !== '' && data.initiative != null ? data.initiative : '0'
-              }
+              value={data.initiative !== '' && data.initiative != null ? data.initiative : '0'}
               readOnly
               className={cn(
                 numberInputNoSpinner,
@@ -393,29 +377,37 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
               Hit Points
             </span>
             <div className="flex min-w-0 items-center gap-1.5">
-              <Heart
-                className="ml-1 h-5 w-5 shrink-0 text-primary"
-                strokeWidth={2}
-                aria-hidden
-              />
+              <Heart className="ml-1 h-5 w-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
               <div className="flex min-w-0 flex-1 items-center gap-1">
-                <DeferredNumberInput
-                  value={data.currentHp}
-                  data-editable="true"
-                  onCommit={(raw) => {
-                    const n = raw === '' ? 0 : parseInt(raw, 10);
-                    const clamped = Math.min(n, data.maxHp ?? 0);
-                    if (clamped !== data.currentHp) {
-                      updateField(data, onChange, 'currentHp', clamped);
-                    }
-                    return clamped;
-                  }}
-                  className={cn(
-                    numberInputNoSpinner,
-                    'h-9 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-center text-sm font-bold text-foreground outline-none focus:border-primary'
-                  )}
-                  aria-label="Current Hit Points"
-                />
+                {inPlay ? (
+                  <DeferredNumberInput
+                    value={data.currentHp}
+                    onCommit={(raw) => {
+                      const n = raw === '' ? 0 : parseInt(raw, 10);
+                      const clamped = Math.min(n, data.maxHp ?? 0);
+                      if (clamped !== data.currentHp) {
+                        updateField(data, onChange, 'currentHp', clamped);
+                      }
+                      return clamped;
+                    }}
+                    className={cn(
+                      numberInputNoSpinner,
+                      'h-9 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-center text-sm font-bold text-foreground outline-none focus-visible:border-ring'
+                    )}
+                    aria-label="Current Hit Points"
+                  />
+                ) : (
+                  <input
+                    type="number"
+                    value={data.currentHp}
+                    readOnly
+                    className={cn(
+                      numberInputNoSpinner,
+                      'h-9 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-center text-sm font-bold text-foreground outline-none cursor-default'
+                    )}
+                    aria-label="Current Hit Points"
+                  />
+                )}
                 <span
                   className="shrink-0 text-xl font-semibold text-muted-foreground leading-none"
                   aria-hidden
@@ -445,35 +437,56 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                 strokeWidth={2}
                 aria-hidden
               />
-              <DeferredNumberInput
-                value={data.temporaryHp}
-                data-editable="true"
-                onCommit={(raw) => {
-                  const n = raw === '' ? 0 : parseInt(raw, 10);
-                  const clamped = Math.min(n, SHEET_TEMPORARY_HP_INPUT_MAX);
-                  if (clamped !== data.temporaryHp) {
-                    updateField(data, onChange, 'temporaryHp', clamped);
-                  }
-                  return clamped;
-                }}
-                className={cn(
-                  numberInputNoSpinner,
-                  'h-9 w-full rounded-md border border-border bg-card px-2 text-center text-sm font-semibold text-foreground outline-none focus:border-primary'
-                )}
-                aria-label="Temporary Hit Points"
-              />
+              {inPlay ? (
+                <DeferredNumberInput
+                  value={data.temporaryHp}
+                  onCommit={(raw) => {
+                    const n = raw === '' ? 0 : parseInt(raw, 10);
+                    const clamped = Math.min(n, SHEET_TEMPORARY_HP_INPUT_MAX);
+                    if (clamped !== data.temporaryHp) {
+                      updateField(data, onChange, 'temporaryHp', clamped);
+                    }
+                    return clamped;
+                  }}
+                  className={cn(
+                    numberInputNoSpinner,
+                    'h-9 w-full rounded-md border border-border bg-card px-2 text-center text-sm font-semibold text-foreground outline-none focus-visible:border-ring'
+                  )}
+                  aria-label="Temporary Hit Points"
+                />
+              ) : (
+                <input
+                  type="number"
+                  value={data.temporaryHp}
+                  readOnly
+                  className={cn(
+                    numberInputNoSpinner,
+                    'h-9 w-full rounded-md border border-border bg-card px-2 text-center text-sm font-semibold text-foreground outline-none cursor-default'
+                  )}
+                  aria-label="Temporary Hit Points"
+                />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Row 3: Hit Dice | Death Saving Throws */}
-        <div className="grid grid-cols-[1.2fr_1.8fr] gap-2">
-          <div className="flex flex-col gap-0.5">
+        {/* Row 3: Hit Dice | Death Saving Throws.
+            minmax(0,…): a multiclass pool ("3d10 + 5d6 + 2d8") is wider than one die, and a bare
+            `fr` grows to fit its content, which squeezed Death Saving Throws out of its share. */}
+        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)] gap-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Hit Dice
             </span>
-            <div className="flex h-7 items-center justify-center rounded-md border border-border bg-card">
-              <span className="text-center text-sm font-bold text-foreground">
+            {/* The column is width-capped so it can't push Death Saving Throws, so a multiclass
+                pool ("1d12 + 1d10 + 1d8") wraps and shrinks instead of being cut off. */}
+            <div className="flex min-h-7 items-center justify-center rounded-md border border-border bg-card px-1 py-0.5">
+              <span
+                className={cn(
+                  'text-center font-bold leading-tight text-foreground',
+                  (data.hitDicePool?.length ?? 0) > 1 ? 'text-[11px]' : 'text-sm'
+                )}
+              >
                 {data.classRuleItemId ? data.hitDice || '' : '0'}
               </span>
             </div>
@@ -482,24 +495,28 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Death Saving Throws
             </span>
-              <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-muted-foreground">Successes</span>
               <div className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <button
                     key={i}
                     type="button"
-                    data-editable="true"
-                    onClick={() =>
-                      updateField(
-                        data,
-                        onChange,
-                        'deathSaveSuccesses',
-                        i < data.deathSaveSuccesses ? i : i + 1
-                      )
+                    disabled={!inPlay}
+                    onClick={
+                      inPlay
+                        ? () =>
+                            updateField(
+                              data,
+                              onChange,
+                              'deathSaveSuccesses',
+                              i < data.deathSaveSuccesses ? i : i + 1
+                            )
+                        : undefined
                     }
                     className={cn(
-                      'h-4 w-4 cursor-pointer rounded-full border-2 border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'h-4 w-4 rounded-full border-2 border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      inPlay ? 'cursor-pointer' : 'cursor-default',
                       i < data.deathSaveSuccesses
                         ? 'bg-foreground border-foreground'
                         : 'bg-transparent'
@@ -516,17 +533,21 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                   <button
                     key={i}
                     type="button"
-                    data-editable="true"
-                    onClick={() =>
-                      updateField(
-                        data,
-                        onChange,
-                        'deathSaveFailures',
-                        i < data.deathSaveFailures ? i : i + 1
-                      )
+                    disabled={!inPlay}
+                    onClick={
+                      inPlay
+                        ? () =>
+                            updateField(
+                              data,
+                              onChange,
+                              'deathSaveFailures',
+                              i < data.deathSaveFailures ? i : i + 1
+                            )
+                        : undefined
                     }
                     className={cn(
-                      'h-4 w-4 cursor-pointer rounded-full border-2 border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'h-4 w-4 rounded-full border-2 border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      inPlay ? 'cursor-pointer' : 'cursor-default',
                       i < data.deathSaveFailures
                         ? 'bg-foreground border-foreground'
                         : 'bg-transparent'

@@ -3,14 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { BookOpen, Search } from 'lucide-react';
-import type { PackResponse, RuleItemResponse } from '@rpgforce-ai/shared';
+import { BookOpen, Search, SearchX } from 'lucide-react';
+import { ruleItemSpellLevel, type PackResponse, type RuleItemResponse } from '@rpgforce-ai/shared';
 import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { LoadingState } from '@/components/ui/loading-state';
 import { cn } from '@/lib/utils';
-import { ruleItemSpellLevel } from '../../character-sheet/sections/spellcasting/spell-utils';
 import { useBrowseLibrary } from './use-browse-library';
 import { BrowseCard } from './browse-card';
 import { FilterChipRow } from './filter-chip-row';
@@ -328,7 +328,7 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
       {library.isLoading ? (
         <LoadingState />
       ) : (
-        <>
+        <div className="flex flex-col gap-6 content-reveal">
           <nav className="flex flex-wrap gap-2" aria-label="Categorias da biblioteca">
             {BROWSE_CATEGORIES.map(({ key, label, icon: Icon }) => {
               const active = key === cat;
@@ -430,15 +430,19 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
           </div>
 
           {searched.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-16 text-center">
-              <p className="text-sm text-muted-foreground">Nenhum resultado para a busca atual.</p>
-              <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
-                Limpar filtros
-              </Button>
-            </div>
+            <EmptyState
+              icon={SearchX}
+              title="Nenhum resultado"
+              description="Nada corresponde à busca e aos filtros atuais."
+              action={
+                <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+                  Limpar filtros
+                </Button>
+              }
+            />
           ) : (
             <>
-              <ul className="grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
                 {visible.map(({ item, chips, snippet }) => (
                   <li key={item.id} className="min-w-0">
                     <BrowseCard
@@ -463,7 +467,7 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
               )}
             </>
           )}
-        </>
+        </div>
       )}
     </div>
   );

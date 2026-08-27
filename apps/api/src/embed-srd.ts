@@ -11,10 +11,9 @@ import { NestFactory } from '@nestjs/core';
 import { Prisma } from '@prisma/client';
 import { AppModule } from './app.module';
 import { PrismaService } from './shared/prisma.service';
-import { EmbeddingsService } from './modules/embeddings/embeddings.service';
+import { EmbeddingsService, EMBEDDING_MODEL } from './modules/embeddings/embeddings.service';
 import { buildEmbeddingText, toVectorLiteral } from './modules/embeddings/embedding-text-builder';
 
-const EMBEDDING_MODEL = 'text-embedding-3-small';
 const TABLE_WIDTH = 48;
 const WRITE_PROGRESS_EVERY = 200;
 
@@ -109,11 +108,14 @@ const run = async () => {
   console.log('Gerando embeddings via OpenAI...');
   const texts = rows.map((row) => buildEmbeddingText(row));
   const embedStartMs = Date.now();
-  const vectors = await embeddings.embedTexts(texts, ({ batchIndex, totalBatches, batchSize, elapsedMs }) => {
-    console.log(
-      `  Lote ${batchIndex}/${totalBatches}: ${batchSize} item(s) em ${(elapsedMs / 1000).toFixed(2)}s`
-    );
-  });
+  const vectors = await embeddings.embedTexts(
+    texts,
+    ({ batchIndex, totalBatches, batchSize, elapsedMs }) => {
+      console.log(
+        `  Lote ${batchIndex}/${totalBatches}: ${batchSize} item(s) em ${(elapsedMs / 1000).toFixed(2)}s`
+      );
+    }
+  );
   const embedMs = Date.now() - embedStartMs;
   console.log(`  ✓ ${rows.length} embeddings gerados em ${(embedMs / 1000).toFixed(2)}s`);
   console.log('');

@@ -1,5 +1,3 @@
-import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
-
 export const ATTRIBUTES = [
   'Strength',
   'Dexterity',
@@ -19,51 +17,6 @@ export const ABILITY_KEY_TO_ATTR: Record<string, string> = {
   cha: 'Charisma',
 };
 
-/** Known tool category labels (from SRD) -> tag value used in API (item:category:<slug>). */
-export const TOOL_CATEGORY_TO_TAG: Record<string, string> = {
-  'musical instruments': 'musical-instrument',
-  'musical instrument': 'musical-instrument',
-  'gaming set': 'gaming-set',
-  'gaming sets': 'gaming-set',
-  "artisan's tools": 'artisan',
-  'artisans tools': 'artisan',
-  'artisan tools': 'artisan',
-};
-
-/** Rule item tag for seed “standard” languages (Common, Elvish, …). */
-export const STANDARD_LANGUAGE_TAG = 'language:rarity:standard';
-
-/** Player picks Common (always) + up to 2 other standard languages. */
-export const MAX_STANDARD_LANGUAGES_TOTAL = 3;
-
-/** Sheet view: manual available GP input max (clamp on change, same pattern as current HP). */
-export const SHEET_AVAILABLE_GP_INPUT_MAX = 99999;
-
-/**
- * Fields editable in session (view) mode: HP, death saves, equipment, and personality text.
- * Used by SheetSession and SheetEditor (readOnly mode) to filter onChange patches.
- */
-export const SESSION_EDITABLE_FIELDS = new Set<keyof CharacterFormData>([
-  'currentHp',
-  'temporaryHp',
-  'deathSaveSuccesses',
-  'deathSaveFailures',
-  'equippedArmorId',
-  'equippedShieldId',
-  'equipment',
-  'equipmentSpentGP',
-  'purchasedEquipment',
-  'startingEquipmentSelectedIndex',
-  'backgroundEquipmentSelectedIndex',
-  'walletGP',
-  'walletSP',
-  'walletCP',
-  'personality',
-  'ideals',
-  'bonds',
-  'flaws',
-]);
-
 /** Temporary hit points field max (clamp on change, same pattern as current HP). */
 export const SHEET_TEMPORARY_HP_INPUT_MAX = 999;
 
@@ -73,7 +26,8 @@ export const numberInputNoSpinner =
 /**
  * "Needs a choice" highlight for sheet controls. Ambient state is orange (primary); once a save was
  * attempted with this field still incomplete it turns red (destructive) to flag exactly what blocks
- * saving. Callers render this only in the incomplete branch, so `error` is just `saveAttempted`.
+ * saving. Callers render this only in the incomplete branch, so `error` is just that field's flag
+ * (`pendingFlags.isFlagged(key)`), which stands down per field once the player acts on it.
  *
  * Class strings are written out in full because Tailwind only generates classes it can find literally.
  */
@@ -89,11 +43,18 @@ export const needsChoiceHighlightSoft = (error: boolean): string =>
     : 'border-dashed border-primary/60 bg-primary/5 text-primary hover:bg-primary/10';
 
 /** Icon/text accent that pairs with the highlights above. */
-export const needsChoiceAccent = (error: boolean): string => (error ? 'text-destructive' : 'text-primary');
+export const needsChoiceAccent = (error: boolean): string =>
+  error ? 'text-destructive' : 'text-primary';
 
 /** Dashed container border for inline pickers (musical instrument / holy symbol). */
 export const needsChoiceBorder = (error: boolean): string =>
   error ? 'border-destructive/60' : 'border-primary/60';
+
+/**
+ * Dashed cue for "new content to acknowledge" (combat equipment / weapon just granted). Unlike the
+ * needsChoice* family, it never escalates to red: clicking the control dismisses it.
+ */
+export const unacknowledgedCueBorder = 'border-dashed border-primary/70';
 
 /** Solid border for required inputs/selects (header name, species, class, background). */
 export const requiredFieldErrorBorder = 'border-destructive focus-visible:border-destructive';

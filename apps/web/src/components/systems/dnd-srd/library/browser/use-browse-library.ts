@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ruleItemsApi } from '@/lib/api/rule-items';
 import type { RuleItemBatchQuery, RuleItemResponse } from '@rpgforce-ai/shared';
-import { useAllSpells } from '../../character-sheet/sections/spellcasting/use-all-spells';
+import { useAllSpells } from '../../character-sheet/sections/spellcasting/hooks/use-all-spells';
 
 const EMPTY_ITEMS: RuleItemResponse[] = [];
 

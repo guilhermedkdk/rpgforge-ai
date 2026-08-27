@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import type { AiDecisionArea } from '@rpgforce-ai/shared';
+import { AiHint } from './ai-hint';
 
 export interface SectionProps {
   title: React.ReactNode;
@@ -7,6 +9,8 @@ export interface SectionProps {
   headerAction?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** Sheet area for the AI-decision hint icon (renders only when the AI draft has one). */
+  aiHintArea?: AiDecisionArea;
 }
 
 export function Section({
@@ -15,9 +19,13 @@ export function Section({
   headerAction,
   children,
   className = '',
+  aiHintArea,
 }: SectionProps) {
   return (
-    <div className={cn('rounded-lg border border-border bg-card p-4', className)}>
+    <div className={cn('relative rounded-lg border border-border bg-card p-4', className)}>
+      {aiHintArea && (
+        <AiHint area={aiHintArea} className="absolute -right-2 -top-2 z-10 h-6 w-6 text-[13px]" />
+      )}
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {icon && <span className="text-primary">{icon}</span>}

@@ -5,9 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/layout/header';
 import { StepNavigator, type CreationStep } from '@/components/create/step-navigator';
-import { StepActions } from '@/components/create/step-actions';
+import { StepActions, type StepActionsProps } from '@/components/create/step-actions';
+import { StepActionsSlotProvider, useStepActionsSlot } from '@/components/create/step-actions-slot';
 import { PackSelector } from '@/components/create/pack-selector';
 import { StepModeSelect, type CreationMode } from '@/components/create/step-mode-select';
+import { AiWizard } from '@/components/create/ai/ai-wizard';
 import { packsApi } from '@/lib/api/packs';
 import { systemRegistry } from '@/components/systems/registry';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -16,36 +18,30 @@ import type { PackResponse } from '@rpgforce-ai/shared';
 function CreatePageContent() {
   const searchParams = useSearchParams();
   const packIdFromUrl = searchParams.get('packId');
-  const sheetIdFromUrl = searchParams.get('sheetId');
 
   const [step, setStep] = useState<CreationStep>('pack');
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
-  const [selectedMode, setSelectedMode] = useState<CreationMode>(null);
+  const [selectedMode, setSelectedMode] = useState<CreationMode>('ai');
+  const { slot, props: publishedActions } = useStepActionsSlot();
 
   const { data: packs = [], isLoading: packsLoading } = useQuery({
     queryKey: ['packs'],
     queryFn: packsApi.getAll,
   });
 
-  const urlHydratedKeyRef = useRef<string | null>(null);
-  const urlKey = `${packIdFromUrl ?? ''}|${sheetIdFromUrl ?? ''}`;
+  const urlHydratedPackRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!packs.length) return;
     if (!packIdFromUrl) {
-      urlHydratedKeyRef.current = null;
+      urlHydratedPackRef.current = null;
       return;
     }
-    const packExists = packs.some((p) => p.id === packIdFromUrl);
-    if (!packExists) return;
-    if (urlHydratedKeyRef.current === urlKey) return;
-    urlHydratedKeyRef.current = urlKey;
+    if (!packs.some((p) => p.id === packIdFromUrl)) return;
+    if (urlHydratedPackRef.current === packIdFromUrl) return;
+    urlHydratedPackRef.current = packIdFromUrl;
     setSelectedPackId(packIdFromUrl);
-    if (sheetIdFromUrl) {
-      setSelectedMode('manual');
-      setStep('editor');
-    }
-  }, [packs, packIdFromUrl, sheetIdFromUrl, urlKey]);
+  }, [packs, packIdFromUrl]);
 
   const selectedPack = useMemo<PackResponse | null>(() => {
     if (!selectedPackId) return null;
@@ -56,10 +52,10 @@ function CreatePageContent() {
     if (targetStep === 'pack') {
       setStep('pack');
       setSelectedPackId(null);
-      setSelectedMode(null);
+      setSelectedMode('ai');
     } else if (targetStep === 'mode') {
       setStep('mode');
-      setSelectedMode(null);
+      setSelectedMode('ai');
     } else {
       setStep('editor');
     }
@@ -68,10 +64,10 @@ function CreatePageContent() {
   const handleContinue = useCallback(() => {
     if (step === 'pack' && selectedPackId) {
       setStep('mode');
-    } else if (step === 'mode' && selectedMode) {
+    } else if (step === 'mode') {
       setStep('editor');
     }
-  }, [step, selectedPackId, selectedMode]);
+  }, [step, selectedPackId]);
 
   const handleBack = useCallback(() => {
     if (step === 'mode') {
@@ -79,78 +75,79 @@ function CreatePageContent() {
       setSelectedPackId(null);
     } else if (step === 'editor') {
       setStep('mode');
-      setSelectedMode(null);
+      setSelectedMode('ai');
     }
   }, [step]);
 
-  const canContinue =
-    (step === 'pack' && selectedPackId !== null) || (step === 'mode' && selectedMode !== null);
+  const canContinue = (step === 'pack' && selectedPackId !== null) || step === 'mode';
+
+  // Used until a step claims the slot. The editor step needs one because it is a dynamic chunk behind
+  // a Suspense boundary React throttles ~300ms: without this the bar would blink out on the way in.
+  const defaultActions: StepActionsProps =
+    step === 'editor'
+      ? { onBack: handleBack, continueLabel: 'Salvar Ficha', continueIcon: 'none', loading: true }
+      : {
+          onBack: step === 'pack' ? undefined : handleBack,
+          onContinue: handleContinue,
+          canContinue,
+        };
+  const actions = publishedActions === undefined ? defaultActions : publishedActions;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        <div className="flex flex-col">
-          <StepNavigator currentStep={step} onNavigate={handleNavigate} />
+        <StepActionsSlotProvider value={slot}>
+          <div className="flex flex-col">
+            <StepNavigator currentStep={step} onNavigate={handleNavigate} />
 
-          {step === 'pack' && (
-            <PackSelector selectedPackId={selectedPackId} onSelect={setSelectedPackId} />
-          )}
+            {step === 'pack' && (
+              <PackSelector selectedPackId={selectedPackId} onSelect={setSelectedPackId} />
+            )}
 
-          {(step === 'mode' || step === 'editor') && (
-            <>
-              {step === 'mode' && selectedPackId && (
-                <StepModeSelect selectedMode={selectedMode} onSelect={setSelectedMode} />
-              )}
-              {step === 'editor' && selectedMode === 'manual' && (
-                <>
-                  {packsLoading || !selectedPack ? (
-                    <LoadingState />
-                  ) : (() => {
-                    const entry = systemRegistry[selectedPack.slug];
-                    if (!entry) {
-                      return (
-                        <div className="rounded-lg border border-border bg-card p-12 text-center">
-                          <p className="font-medium text-foreground">
-                            O sistema <span className="font-bold">{selectedPack.name}</span> ainda não possui uma ficha de personagem disponível.
-                          </p>
-                        </div>
-                      );
-                    }
-                    const SheetEditor = entry.editor;
-                    return (
-                      <SheetEditor
-                        pack={selectedPack}
-                        onBack={handleBack}
-                        initialSheetId={sheetIdFromUrl}
-                      />
-                    );
-                  })()}
-                </>
-              )}
-              {step === 'editor' && selectedPackId && selectedMode === 'ai' && (
-                <div className="rounded-lg border border-border bg-card p-12 text-center">
-                  <p className="text-muted-foreground">
-                    Criação com IA em breve. Por enquanto, use a criação manual.
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {step !== 'editor' && (
-          <div className="fixed bottom-0 left-0 right-0 z-10 flex justify-center">
-            <div className="w-full max-w-5xl border-t border-border bg-background px-4 py-1.5">
-              <StepActions
-                currentStep={step}
-                canContinue={canContinue}
-                onBack={handleBack}
-                onContinue={handleContinue}
-              />
-            </div>
+            {(step === 'mode' || step === 'editor') && (
+              <>
+                {step === 'mode' && selectedPackId && (
+                  <StepModeSelect selectedMode={selectedMode} onSelect={setSelectedMode} />
+                )}
+                {step === 'editor' && selectedMode === 'manual' && (
+                  <>
+                    {packsLoading || !selectedPack ? (
+                      <LoadingState />
+                    ) : (
+                      (() => {
+                        const entry = systemRegistry[selectedPack.slug];
+                        if (!entry) {
+                          return (
+                            <div className="rounded-lg border border-border bg-card p-12 text-center">
+                              <p className="font-medium text-foreground">
+                                O sistema <span className="font-bold">{selectedPack.name}</span>{' '}
+                                ainda não possui uma ficha de personagem disponível.
+                              </p>
+                            </div>
+                          );
+                        }
+                        const SheetEditor = entry.editor;
+                        return <SheetEditor pack={selectedPack} onBack={handleBack} />;
+                      })()
+                    )}
+                  </>
+                )}
+                {step === 'editor' && selectedMode === 'ai' && (
+                  <>
+                    {packsLoading || !selectedPack ? (
+                      <LoadingState />
+                    ) : (
+                      <AiWizard pack={selectedPack} onExit={handleBack} />
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </div>
-        )}
+
+          {actions && <StepActions {...actions} />}
+        </StepActionsSlotProvider>
       </main>
     </div>
   );

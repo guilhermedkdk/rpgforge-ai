@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  // Ignorar padrões
+  // Ignore patterns
   {
     ignores: [
       '**/node_modules/**',
@@ -18,7 +18,7 @@ export default tseslint.config(
       'apps/web/out/**',
     ],
   },
-  // Configuração base
+  // Base config
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,

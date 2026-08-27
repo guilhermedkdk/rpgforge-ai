@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { batchByTokenBudget, toVectorLiteral } from './embedding-text-builder';
 
-const EMBEDDING_MODEL = 'text-embedding-3-small';
+export const EMBEDDING_MODEL = 'text-embedding-3-small';
 
 export interface SimilarityHit {
   id: string;

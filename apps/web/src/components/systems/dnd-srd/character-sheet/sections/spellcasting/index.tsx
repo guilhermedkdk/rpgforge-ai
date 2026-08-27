@@ -2,44 +2,150 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
 import {
-  isBlessedStrikesPotentSpellcasting,
-  isElementalFuryPotentSpellcasting,
-  isImprovedElementalFuryPotentSpellcasting,
-  isMagicalSecretsFeatureName,
-} from '@/lib/dnd-srd/character-state';
-import {
+  computeSpellModifiers,
+  getCastingClasses,
+  isMagicalSecretsFeature,
   isBardClassItem,
   isHighElfLineageSelected,
   isWizardClassItem,
-} from '@/lib/dnd-srd/class-detection';
-import { isEldritchInvocationsFeature } from '@/lib/dnd-srd/feature-mechanics';
-import {
+  isEldritchInvocationsFeature,
   isPactOfTomeOption,
   pruneEldritchInvocationSelections,
-} from '@/lib/dnd-srd/eldritch-invocations';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { needsChoiceHighlight } from '../../constants';
-import { buildSpellModifierBadge, type SpellBadge } from './spell-badge';
-import { HighElfCantripSwapDialog } from './high-elf-cantrip-swap-dialog';
-import { PactOfTomeDialog } from './pact-of-tome-dialog';
-import { SpellLevelBlock } from './spell-level-block';
-import { SpellPickerDialog } from './spell-picker-dialog';
-import {
   clampSpellSlotsExpended,
-  ruleItemDealsDamage,
   ruleItemIsRitual,
-  ruleItemRangeFeet,
   ruleItemSpellLevel,
-} from './spell-utils';
-import { useGrantedSpells } from './use-granted-spells';
-import { usePactOfTome } from './use-pact-of-tome';
-import { useSpellCatalog } from './use-spell-catalog';
-import { useSpellcastingModel } from './use-spellcasting-model';
-import { useWizardSpellbook } from './use-wizard-spellbook';
-import { WizardSpellbookDialog } from './wizard-spellbook-dialog';
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
+import { ChevronDown } from 'lucide-react';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { needsChoiceHighlight } from '../../constants';
+import type { PendingFlags } from '../../pending-flags';
+import { HighElfCantripSwapDialog } from './dialogs/high-elf-cantrip-swap-dialog';
+import { PactOfTomeDialog } from './dialogs/pact-of-tome-dialog';
+import { SpellLevelBlock } from './spell-level-block';
+import { SpellPickerDialog } from './dialogs/spell-picker-dialog';
+import { useGrantedSpells } from './hooks/use-granted-spells';
+import { usePactOfTome } from './hooks/use-pact-of-tome';
+import { useSpellCatalog } from './hooks/use-spell-catalog';
+import { useSpellcastingModel } from './hooks/use-spellcasting-model';
+import { useWizardSpellbook } from './hooks/use-wizard-spellbook';
+import { WizardSpellbookDialog } from './dialogs/wizard-spellbook-dialog';
+
+const allowanceLabelClass =
+  'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground';
+const allowanceChipClass =
+  'rounded border border-border bg-secondary/50 px-1.5 py-0.5 text-xs font-bold tabular-nums text-foreground';
+
+/** One class's share of an allowance, listed inside the counter's breakdown. */
+interface SpellAllowanceShare {
+  className: string;
+  picked: number;
+  max: number;
+}
+
+/**
+ * One "picked / allowance" read-out. Shared by the cantrip and the level 1+ counters.
+ *
+ * The row stays ONE line at any class count: the chip shows the total and the per-class split opens
+ * from it. Rendering the split inline does not scale, and a five-class caster is legal: laying out
+ * "BARD 0/2 SORCERER 0/4 WARLOCK 0/2 CLERIC 0/3 DRUID 0/2" twice buried the sheet under a wall of
+ * numbers. The split is also already visible where it is actionable, as the picker's class tabs.
+ */
+function SpellAllowanceCounter({
+  label,
+  picked,
+  max,
+  title,
+  breakdown,
+}: {
+  label: string;
+  picked: number;
+  max: number;
+  title: string;
+  /** Per-class shares; only rendered with 2+ casters, where the total alone hides the split. */
+  breakdown?: SpellAllowanceShare[];
+}) {
+  if (max <= 0) return null;
+  if (!breakdown || breakdown.length < 2) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className={allowanceLabelClass}>{label}</span>
+        <span className={allowanceChipClass} title={title}>
+          {picked}/{max}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <span className={allowanceLabelClass}>{label}</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              allowanceChipClass,
+              'flex cursor-pointer items-center gap-1 transition-colors hover:border-primary'
+            )}
+            aria-label={`${label}: ${picked} of ${max}. Show the split per class`}
+          >
+            {picked}/{max}
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56 p-2 text-xs">
+          <p className={cn(allowanceLabelClass, 'mb-1.5 block')}>{label} per class</p>
+          <ul className="space-y-1">
+            {breakdown.map((share) => {
+              const done = share.picked >= share.max;
+              return (
+                <li key={share.className} className="flex items-center justify-between gap-3">
+                  <span
+                    className={cn('truncate', done ? 'text-muted-foreground' : 'text-foreground')}
+                  >
+                    {share.className}
+                  </span>
+                  <span
+                    className={cn(
+                      'shrink-0 tabular-nums',
+                      done ? 'text-muted-foreground' : 'font-semibold text-primary'
+                    )}
+                  >
+                    {share.picked}/{share.max}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 border-t border-border pt-1.5 text-[11px] leading-snug text-muted-foreground">
+            Each class draws from its own list and its own allowance; one can&apos;t pay for
+            another.
+          </p>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+function HeaderFieldLabel({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <span className="flex h-5 items-center gap-1.5">
+      <span
+        className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+        id={id}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
 
 interface SpellcastingProps {
   data: CharacterFormData;
@@ -47,8 +153,44 @@ interface SpellcastingProps {
   proficiencyBonus: number | undefined;
   classes: RuleItemResponse[];
   races: RuleItemResponse[];
-  saveAttempted?: boolean;
+  pendingFlags: PendingFlags;
 }
+
+const SPELL_LEVELS_1_TO_9 = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/**
+ * Prunes player-picked (non-granted) spells across `levels` down to `cap`, dropping the
+ * highest-level, most-recently-added picks first (granted rows are always kept). Returns the SAME
+ * object when nothing changes so callers can skip the update. `cap <= 0` is treated as "don't touch"
+ * to avoid wiping a pool when the cap hasn't settled. Shared by the cantrip (level 0) and
+ * prepared/known (level 1+) caps so both shrink the same way.
+ */
+const prunePickedSpellsToCap = (
+  byLevel: CharacterFormData['spellsByLevel'],
+  levels: number[],
+  cap: number
+): CharacterFormData['spellsByLevel'] => {
+  let picked = 0;
+  for (const lvl of levels) picked += (byLevel[lvl] ?? []).filter((s) => !s.granted).length;
+  if (cap <= 0 || picked <= cap) return byLevel;
+  let toDrop = picked - cap;
+  const next = { ...byLevel };
+  for (const lvl of [...levels].sort((a, b) => b - a)) {
+    if (toDrop <= 0) break;
+    const rows = next[lvl] ?? [];
+    if (rows.length === 0) continue;
+    const kept: typeof rows = [];
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (toDrop > 0 && !rows[i].granted) {
+        toDrop--;
+        continue;
+      }
+      kept.unshift(rows[i]);
+    }
+    next[lvl] = kept;
+  }
+  return next;
+};
 
 export function SpellcastingSection({
   data,
@@ -56,22 +198,34 @@ export function SpellcastingSection({
   proficiencyBonus,
   classes,
   races,
-  saveAttempted = false,
+  pendingFlags,
 }: SpellcastingProps) {
-  const model = useSpellcastingModel({ data, onChange, proficiencyBonus });
+  // Resolved before the catalog: it needs the same list to slice each class's own spell list, and
+  // the model needs the catalog's lookup to attribute spells. One shared resolution, no second copy.
+  const castingClasses = React.useMemo(() => getCastingClasses(data, classes), [data, classes]);
+  const castingClassIds = React.useMemo(
+    () => castingClasses.map((c) => c.classRuleItemId),
+    [castingClasses]
+  );
 
   const selectedClassItem = React.useMemo(
     () => classes.find((c) => c.id === data.classRuleItemId) ?? null,
     [classes, data.classRuleItemId]
   );
-  const isWizardSheetClass = isWizardClassItem(selectedClassItem);
-  const wizardSpellbookEnabled = isWizardSheetClass;
+  // The Wizard among the casting classes, not just the sheet's initial class: a Cleric 4 / Wizard 3
+  // owns a spellbook, and its capacity follows the WIZARD level (10 at Wizard 3, not 18 at total 7).
+  const wizardCastingClass = React.useMemo(
+    () =>
+      castingClasses.find((c) =>
+        isWizardClassItem(classes.find((ci) => ci.id === c.classRuleItemId) ?? null)
+      ) ?? null,
+    [castingClasses, classes]
+  );
+  const wizardSpellbookEnabled = wizardCastingClass != null;
 
   const hasMagicalSecrets = React.useMemo(
     () =>
-      (data.featureDetails ?? []).some(
-        (f) => f.source === 'class' && isMagicalSecretsFeatureName(f.name)
-      ),
+      (data.featureDetails ?? []).some((f) => f.source === 'class' && isMagicalSecretsFeature(f)),
     [data.featureDetails]
   );
   const mergeMagicalSecretsSpellLists = hasMagicalSecrets && isBardClassItem(selectedClassItem);
@@ -81,6 +235,15 @@ export function SpellcastingSection({
     classes,
     races,
     mergeMagicalSecrets: mergeMagicalSecretsSpellLists,
+    castingClassIds,
+  });
+
+  const model = useSpellcastingModel({
+    data,
+    onChange,
+    proficiencyBonus,
+    castingClasses,
+    resolveSpell: catalog.resolveSpellRule,
   });
 
   const granted = useGrantedSpells({
@@ -94,7 +257,11 @@ export function SpellcastingSection({
   });
   const selectedSpells = granted.selectedSpells;
 
-  const spellbook = useWizardSpellbook({ data, onChange });
+  const spellbook = useWizardSpellbook({
+    data,
+    onChange,
+    wizardLevel: wizardCastingClass?.level ?? data.level ?? 1,
+  });
 
   const pactOfTome = usePactOfTome({ data, onChange });
   const eldritchFeat = React.useMemo(
@@ -114,93 +281,16 @@ export function SpellcastingSection({
   }, [eldritchFeat, data.eldritchInvocationSelections]);
   const [pactOfTomeOpen, setPactOfTomeOpen] = React.useState(false);
 
-  // Map of spell-name (lowercase) → invocation labels, so the spells page can badge any spell/cantrip
-  // tied to an Eldritch Invocation (e.g. Eldritch Blast chosen for Agonizing Blast / Repelling Blast).
-  const invocationLabelsBySpellName = React.useMemo(() => {
-    const map = new Map<string, string[]>();
-    const optionByKey = new Map((eldritchFeat?.options ?? []).map((o) => [o.key, o]));
-    for (const sel of data.eldritchInvocationSelections ?? []) {
-      const name = sel.spellName?.trim().toLowerCase();
-      if (!name) continue;
-      const label = optionByKey.get(sel.key)?.label ?? 'Eldritch Invocation';
-      const labels = map.get(name) ?? [];
-      if (!labels.includes(label)) labels.push(label);
-      map.set(name, labels);
-    }
-    return map;
-  }, [eldritchFeat, data.eldritchInvocationSelections]);
-
-  // Potent Spellcasting (Cleric Blessed Strikes / Druid Elemental Fury) adds the Wisdom modifier to
-  // the damage of any class cantrip — badge the damage-dealing cantrips on the sheet. The badge label
-  // names the source feat ("Blessed" / "Elemental").
-  const potentSpellcastingSource = isBlessedStrikesPotentSpellcasting(data)
-    ? 'Blessed'
-    : isElementalFuryPotentSpellcasting(data)
-      ? 'Elemental'
-      : null;
-  const potentSpellcastingDamageCantrips = React.useMemo(() => {
-    const set = new Set<string>();
-    if (!potentSpellcastingSource) return set;
-    for (const s of selectedSpells[0] ?? []) {
-      const rule = catalog.resolveSpellRule(s.name);
-      if (rule && ruleItemDealsDamage(rule)) set.add(s.name.trim().toLowerCase());
-    }
-    return set;
-  }, [potentSpellcastingSource, selectedSpells, catalog.resolveSpellRule]);
-
-  // Druid Improved Elemental Fury (Potent Spellcasting) extends the range of any Druid cantrip with a
-  // range of 10+ ft by 300 ft — badge those cantrips too (aggregated under the same "Elemental" feat).
-  const improvedElementalFury = isImprovedElementalFuryPotentSpellcasting(data);
-  const improvedElementalFuryRangeCantrips = React.useMemo(() => {
-    const set = new Set<string>();
-    if (!improvedElementalFury) return set;
-    for (const s of selectedSpells[0] ?? []) {
-      const rule = catalog.resolveSpellRule(s.name);
-      const feet = rule ? ruleItemRangeFeet(rule) : null;
-      if (feet != null && feet >= 10) set.add(s.name.trim().toLowerCase());
-    }
-    return set;
-  }, [improvedElementalFury, selectedSpells, catalog.resolveSpellRule]);
-
-  // Unified spell-row badges: every feature that modifies a spell contributes here, aggregated by
-  // source feat so each feat renders one badge (label = feat) with a `Modified by: …` tooltip listing
-  // the specific modifiers (see spell-badge.tsx for the shared convention).
-  const spellBadgesBySpellName = React.useMemo(() => {
-    const bySpellThenLabel = new Map<string, Map<string, string[]>>();
-    const add = (name: string, label: string, source: string) => {
-      let byLabel = bySpellThenLabel.get(name);
-      if (!byLabel) {
-        byLabel = new Map();
-        bySpellThenLabel.set(name, byLabel);
-      }
-      const sources = byLabel.get(label) ?? [];
-      if (!sources.includes(source)) sources.push(source);
-      byLabel.set(label, sources);
-    };
-    for (const [name, labels] of invocationLabelsBySpellName) {
-      for (const label of labels) add(name, 'Invocation', label);
-    }
-    if (potentSpellcastingSource) {
-      for (const name of potentSpellcastingDamageCantrips) {
-        add(name, potentSpellcastingSource, 'Potent Spellcasting');
-      }
-    }
-    for (const name of improvedElementalFuryRangeCantrips) {
-      add(name, 'Elemental', 'Improved Elemental Fury');
-    }
-    const map = new Map<string, SpellBadge[]>();
-    for (const [name, byLabel] of bySpellThenLabel) {
-      const badges: SpellBadge[] = [];
-      for (const [label, sources] of byLabel) badges.push(buildSpellModifierBadge(label, sources));
-      map.set(name, badges);
-    }
-    return map;
-  }, [
-    invocationLabelsBySpellName,
-    potentSpellcastingSource,
-    potentSpellcastingDamageCantrips,
-    improvedElementalFuryRangeCantrips,
-  ]);
+  // Per-spell modifier badges: which features change a spell and WHAT they change, with the
+  // character's numbers already resolved (see shared `computeSpellModifiers` for the rules).
+  const spellModifiersBySpellName = React.useMemo(
+    () =>
+      computeSpellModifiers({
+        data: { ...data, spellsByLevel: selectedSpells },
+        resolveSpell: catalog.resolveSpellRule,
+      }),
+    [data, selectedSpells, catalog.resolveSpellRule]
+  );
 
   // Reset an Eldritch Invocation's spell pick when that cantrip/spell leaves the sheet — covers any
   // disappearance (a race-granted cantrip vanishing after a sub-race change, a manual removal, etc.),
@@ -232,17 +322,47 @@ export function SpellcastingSection({
     );
     emit({
       ...d,
-      eldritchInvocationSelections: pruneEldritchInvocationSelections(stillValid, feat?.options ?? [], {
-        characterLevel: d.level,
-        featureNamesLower: (d.featureDetails ?? []).map((f) => f.name.trim().toLowerCase()),
-      }),
+      eldritchInvocationSelections: pruneEldritchInvocationSelections(
+        stillValid,
+        feat?.options ?? [],
+        {
+          characterLevel: d.level,
+          featureNamesLower: (d.featureDetails ?? []).map((f) => f.name.trim().toLowerCase()),
+        }
+      ),
     });
   }, [knownSpellNamesKey, catalog.packSpellsLoading, catalog.spellsLoading]);
+
+  // When a cap shrinks — a class-feature option that granted an extra cantrip is removed (Cleric
+  // Thaumaturge / Druid Magician), OR the character's level drops — prune the excess player-picked
+  // spells so the count follows the cap, like every other feature-driven grant. Cantrips (level 0,
+  // maxCantrips) and prepared/known spells (levels 1+, maxPreparedSpells) shrink the SAME way.
+  // Guarded on the DERIVED spellcasting feature (never null mid-hydration) so it can't wipe valid
+  // spells before the sheet settles.
+  React.useEffect(() => {
+    if (catalog.packSpellsLoading || catalog.spellsLoading) return;
+    if (!model.spellcastingFeature) return;
+    const { data: d, onChange: emit } = invocationSyncRef.current;
+    const current = d.spellsByLevel ?? {};
+    let next = prunePickedSpellsToCap(current, [0], model.maxCantrips);
+    next = prunePickedSpellsToCap(next, SPELL_LEVELS_1_TO_9, model.maxPreparedSpells);
+    if (next === current) return;
+    emit({ ...d, spellsByLevel: next });
+  }, [
+    model.maxCantrips,
+    model.maxPreparedSpells,
+    model.spellcastingFeature,
+    knownSpellNamesKey,
+    catalog.packSpellsLoading,
+    catalog.spellsLoading,
+  ]);
 
   const isHighElfLineage = React.useMemo(() => isHighElfLineageSelected(data), [data]);
   // The single swappable High Elf cantrip (Prestidigitation by default). Only this row gets the
   // swap control — other race-granted cantrips (e.g. Magic Initiate) are not swappable.
-  const highElfCantripName = isHighElfLineage ? (data.highElfCantripName ?? 'Prestidigitation') : null;
+  const highElfCantripName = isHighElfLineage
+    ? (data.highElfCantripName ?? 'Prestidigitation')
+    : null;
   const [highElfSwapOpen, setHighElfSwapOpen] = React.useState(false);
 
   const handleSelectHighElfCantrip = React.useCallback(
@@ -250,21 +370,30 @@ export function SpellcastingSection({
       onChange({ ...data, highElfCantripName: spellName });
       setHighElfSwapOpen(false);
     },
-    [data, onChange],
+    [data, onChange]
   );
 
-  const spellsBySpellLevel = React.useMemo(() => {
+  const groupBySpellLevel = (spells: RuleItemResponse[]): Record<number, RuleItemResponse[]> => {
     const map: Record<number, RuleItemResponse[]> = {};
-    for (const s of catalog.classSpells) {
+    for (const s of spells) {
       const lvl = ruleItemSpellLevel(s);
-      if (!map[lvl]) map[lvl] = [];
-      map[lvl].push(s);
+      (map[lvl] ??= []).push(s);
     }
-    for (const key of Object.keys(map)) {
-      map[Number(key)].sort((a, b) => a.name.localeCompare(b.name));
-    }
+    for (const rows of Object.values(map)) rows.sort((a, b) => a.name.localeCompare(b.name));
     return map;
-  }, [catalog.classSpells]);
+  };
+
+  const spellsBySpellLevel = React.useMemo(
+    () => groupBySpellLevel(catalog.classSpells),
+    [catalog.classSpells]
+  );
+
+  // The spellbook is stocked from the WIZARD's list, which on a multiclass sheet is not the union.
+  const wizardSpellsBySpellLevel = React.useMemo(() => {
+    const wizardId = wizardCastingClass?.classRuleItemId;
+    if (!wizardId) return spellsBySpellLevel;
+    return groupBySpellLevel(catalog.classSpellsByClass[wizardId] ?? []);
+  }, [wizardCastingClass, catalog.classSpellsByClass, spellsBySpellLevel]);
 
   // Book of Shadows picks: any class's cantrips / level-1 ritual spells, minus spells already on
   // the sheet from other sources (the pact's own picks stay visible so they can be removed).
@@ -272,9 +401,7 @@ export function SpellcastingSection({
     if (!pactOfTomeEnabled) return [];
     const own = new Set(pactOfTome.cantrips.map((n) => n.toLowerCase()));
     const knownOther = new Set(
-      (selectedSpells[0] ?? [])
-        .map((s) => s.name.trim().toLowerCase())
-        .filter((n) => !own.has(n))
+      (selectedSpells[0] ?? []).map((s) => s.name.trim().toLowerCase()).filter((n) => !own.has(n))
     );
     return catalog.packSpells
       .filter((s) => ruleItemSpellLevel(s) === 0 && !knownOther.has(s.name.trim().toLowerCase()))
@@ -285,9 +412,7 @@ export function SpellcastingSection({
     if (!pactOfTomeEnabled) return [];
     const own = new Set(pactOfTome.rituals.map((n) => n.toLowerCase()));
     const knownOther = new Set(
-      (selectedSpells[1] ?? [])
-        .map((s) => s.name.trim().toLowerCase())
-        .filter((n) => !own.has(n))
+      (selectedSpells[1] ?? []).map((s) => s.name.trim().toLowerCase()).filter((n) => !own.has(n))
     );
     return catalog.packSpells
       .filter(
@@ -299,44 +424,126 @@ export function SpellcastingSection({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [pactOfTomeEnabled, pactOfTome.rituals, selectedSpells, catalog.packSpells]);
 
-  const spellsBySpellLevelForSelection = React.useMemo(() => {
-    if (!wizardSpellbookEnabled) return spellsBySpellLevel;
-    const out: Record<number, RuleItemResponse[]> = { ...spellsBySpellLevel };
-    for (let lvl = 1; lvl <= 9; lvl++) {
-      const allow = spellbook.allNameSetByLevel[lvl] ?? new Set<string>();
-      out[lvl] = (spellsBySpellLevel[lvl] ?? []).filter((s) =>
-        allow.has(s.name.trim().toLowerCase())
-      );
-    }
-    return out;
-  }, [wizardSpellbookEnabled, spellsBySpellLevel, spellbook.allNameSetByLevel]);
   // Raw data: used for add/remove operations that write back to data.spellsByLevel.
   const rawSpells = data.spellsByLevel ?? {};
 
+  const catalogLoading = catalog.spellsLoading || catalog.packSpellsLoading;
+
+  /**
+   * One picking budget per casting class: the spells it can still add (its OWN list, minus what the
+   * sheet already has) and how much of its own allowance is left. Multiclassing makes a single flat
+   * budget wrong: a Cleric 4 / Wizard 3 owes 4 Cleric cantrips AND 3 Wizard ones, and neither pool
+   * may pay for the other.
+   */
+  const classBudgets = React.useMemo(() => {
+    return model.allowanceByClass.map((c) => {
+      const isWizard = c.classRuleItemId === wizardCastingClass?.classRuleItemId;
+      const availableByLevel: Record<number, RuleItemResponse[]> = {};
+      for (const spell of catalog.classSpellsByClass[c.classRuleItemId] ?? []) {
+        const lvl = ruleItemSpellLevel(spell);
+        // The multiclass slot table hands out slots this class's own progression never would, and
+        // those only upcast: a Ranger 4 / Sorcerer 3 has level-3 slots but prepares Ranger spells at
+        // level 1 and Sorcerer spells at level 2.
+        if (lvl > c.maxSpellLevel) continue;
+        // A Wizard prepares only what is in the spellbook; other classes prepare off the full list.
+        if (
+          isWizard &&
+          lvl >= 1 &&
+          !spellbook.allNameSetByLevel[lvl]?.has(spell.name.trim().toLowerCase())
+        ) {
+          continue;
+        }
+        if ((selectedSpells[lvl] ?? []).some((ms) => ms.name === spell.name)) continue;
+        (availableByLevel[lvl] ??= []).push(spell);
+      }
+      for (const rows of Object.values(availableByLevel)) {
+        rows.sort((a, b) => a.name.localeCompare(b.name));
+      }
+      let leveledOpen = 0;
+      for (let lvl = 1; lvl <= 9; lvl++) leveledOpen += availableByLevel[lvl]?.length ?? 0;
+      // Cap each allowance at what its own pool can still offer, so a class whose list is exhausted
+      // never keeps the section red (nor blocks a save) with nothing left to pick.
+      return {
+        ...c,
+        availableByLevel,
+        maxCantrips: Math.min(c.cantrips, c.pickedCantrips + (availableByLevel[0]?.length ?? 0)),
+        maxPrepared: Math.min(c.prepared, c.pickedPrepared + leveledOpen),
+      };
+    });
+  }, [
+    model.allowanceByClass,
+    catalog.classSpellsByClass,
+    selectedSpells,
+    spellbook.allNameSetByLevel,
+    wizardCastingClass,
+  ]);
+
+  const classPickedCantripCount = (selectedSpells[0] ?? []).filter((s) => !s.granted).length;
   const totalSelectedLevel1Plus = React.useMemo(() => {
     let count = 0;
     for (const [lvlStr, spells] of Object.entries(selectedSpells)) {
-      if (Number(lvlStr) >= 1) {
-        count += spells.filter((s) => !s.granted).length;
-      }
+      if (Number(lvlStr) >= 1) count += spells.filter((s) => !s.granted).length;
     }
     return count;
   }, [selectedSpells]);
 
-  const catalogLoading = catalog.spellsLoading || catalog.packSpellsLoading;
+  // With no casting class resolved (mid-hydration) fall back to the aggregate, so the section keeps
+  // working exactly as it did before per-class budgets existed.
+  const hasClassBudgets = classBudgets.length > 0;
+  const effectiveMaxCantrips = hasClassBudgets
+    ? classBudgets.reduce((sum, c) => sum + c.maxCantrips, 0)
+    : model.maxCantrips;
+  const effectiveMaxPrepared = hasClassBudgets
+    ? classBudgets.reduce((sum, c) => sum + c.maxPrepared, 0)
+    : model.maxPreparedSpells;
 
-  const canSelectMoreLevel1Plus = totalSelectedLevel1Plus < model.maxPreparedSpells;
-  const classPickedCantripCount = (selectedSpells[0] ?? []).filter((s) => !s.granted).length;
-  const canSelectMoreCantrips = classPickedCantripCount < model.maxCantrips;
+  /** Classes that may still add a spell at this level, in sheet order. */
+  const budgetsWithRoomAt = React.useCallback(
+    (level: number) =>
+      classBudgets.filter((c) => {
+        const room =
+          level === 0 ? c.pickedCantrips < c.maxCantrips : c.pickedPrepared < c.maxPrepared;
+        return room && (c.availableByLevel[level]?.length ?? 0) > 0;
+      }),
+    [classBudgets]
+  );
 
-  const addSpell = (level: number, spell: RuleItemResponse) => {
+  /**
+   * Whether the `+` on a given level block does anything. Per level, because a class's allowance is
+   * useless where its list has nothing left: the multiclass slot table opens levels no class can
+   * prepare at yet, and the global "can I still pick?" flag made those open an empty picker.
+   */
+  const canAddAtLevel = React.useCallback(
+    (level: number) => {
+      if (hasClassBudgets) return budgetsWithRoomAt(level).length > 0;
+      return level === 0
+        ? classPickedCantripCount < effectiveMaxCantrips
+        : totalSelectedLevel1Plus < effectiveMaxPrepared;
+    },
+    [
+      hasClassBudgets,
+      budgetsWithRoomAt,
+      classPickedCantripCount,
+      effectiveMaxCantrips,
+      totalSelectedLevel1Plus,
+      effectiveMaxPrepared,
+    ]
+  );
+
+  const addSpell = (level: number, spell: RuleItemResponse, classRuleItemId?: string) => {
     const current = selectedSpells[level] ?? [];
     if (current.some((s) => s.name === spell.name)) return;
+    // The owner is recorded only when it is a real choice; on one casting class it is implied, and
+    // writing it would change what a single-class sheet serializes.
+    const row =
+      classRuleItemId && classBudgets.length > 1
+        ? { name: spell.name, classRuleItemId }
+        : { name: spell.name };
     onChange({
       ...data,
       spellsByLevel: {
         ...rawSpells,
-        [level]: [...(rawSpells[level] ?? []), { name: spell.name }],
+        [level]: [...(rawSpells[level] ?? []), row],
       },
     });
   };
@@ -388,32 +595,77 @@ export function SpellcastingSection({
     });
   };
   const [pickerLevel, setPickerLevel] = React.useState<number | null>(null);
+  // Which class the open picker is buying for. Reset per opening: the classes with room differ by
+  // level, so a tab remembered from another level could be one that cannot pick here.
+  const [pickerClassId, setPickerClassId] = React.useState<string | null>(null);
   const [spellbookPickerOpen, setSpellbookPickerOpen] = React.useState(false);
 
-  const handleTogglePicker = React.useCallback((level: number) => {
-    setPickerLevel((prev) => (prev === level ? null : level));
-  }, []);
+  const handleTogglePicker = React.useCallback(
+    (level: number) => {
+      setPickerLevel((prev) => (prev === level ? null : level));
+      setPickerClassId(budgetsWithRoomAt(level)[0]?.classRuleItemId ?? null);
+    },
+    [budgetsWithRoomAt]
+  );
 
   const modalLevel = pickerLevel;
-  const modalSpellsAll =
-    modalLevel === null ? [] : (spellsBySpellLevelForSelection[modalLevel] ?? []);
-  const modalSelected = modalLevel === null ? [] : (selectedSpells[modalLevel] ?? []);
-  const modalAvailable = modalSpellsAll.filter(
-    (s) => !modalSelected.some((ms) => ms.name === s.name)
-  );
   const modalIsCantrip = modalLevel === 0;
+  /**
+   * The class tabs shown in the picker. A class with nothing to offer AT THIS LEVEL is left out: a
+   * Ranger has no cantrips at all, and a class whose table stops at level 2 has nothing to give on
+   * the level-3 block, so a "Ranger 0/0" tab would only open an empty list. A class that is full but
+   * still has spells in its list stays, so you can see it is done.
+   */
+  const modalClassTabs =
+    modalLevel === null || classBudgets.length < 2
+      ? []
+      : classBudgets
+          .map((c) => ({
+            classRuleItemId: c.classRuleItemId,
+            className: c.className,
+            picked: modalIsCantrip ? c.pickedCantrips : c.pickedPrepared,
+            max: modalIsCantrip ? c.maxCantrips : c.maxPrepared,
+            available: c.availableByLevel[modalLevel]?.length ?? 0,
+          }))
+          .filter((t) => t.max > 0 && t.available > 0);
+  const modalBudget =
+    modalLevel === null
+      ? null
+      : (classBudgets.find((c) => c.classRuleItemId === pickerClassId) ??
+        classBudgets.find((c) => c.classRuleItemId === modalClassTabs[0]?.classRuleItemId) ??
+        classBudgets[0] ??
+        null);
+  const modalSelected = modalLevel === null ? [] : (selectedSpells[modalLevel] ?? []);
+  const modalAvailable =
+    modalLevel === null
+      ? []
+      : (modalBudget?.availableByLevel[modalLevel] ??
+        // No per-class budget (mid-hydration): the union list, minus what is already on the sheet.
+        (spellsBySpellLevel[modalLevel] ?? []).filter(
+          (s) => !modalSelected.some((ms) => ms.name === s.name)
+        ));
   const modalCanAdd =
-    modalLevel != null && (modalIsCantrip ? canSelectMoreCantrips : canSelectMoreLevel1Plus);
+    modalLevel === null
+      ? false
+      : modalBudget
+        ? modalIsCantrip
+          ? modalBudget.pickedCantrips < modalBudget.maxCantrips
+          : modalBudget.pickedPrepared < modalBudget.maxPrepared
+        : canAddAtLevel(modalLevel);
 
   const handleSelectFromPicker = (spell: RuleItemResponse) => {
     if (modalLevel === null) return;
-    addSpell(modalLevel, spell);
-    if (
-      (modalIsCantrip && classPickedCantripCount + 1 >= model.maxCantrips) ||
-      (!modalIsCantrip && totalSelectedLevel1Plus + 1 >= model.maxPreparedSpells)
-    ) {
-      setPickerLevel(null);
-    }
+    addSpell(modalLevel, spell, modalBudget?.classRuleItemId);
+    // Close once THIS class's allowance is spent; with another class still owed, reopening lands on
+    // its tab, so the picker never closes on a sheet that still has picks to make elsewhere.
+    const spent = modalBudget
+      ? modalIsCantrip
+        ? modalBudget.pickedCantrips + 1 >= modalBudget.maxCantrips
+        : modalBudget.pickedPrepared + 1 >= modalBudget.maxPrepared
+      : modalIsCantrip
+        ? classPickedCantripCount + 1 >= effectiveMaxCantrips
+        : totalSelectedLevel1Plus + 1 >= effectiveMaxPrepared;
+    if (spent && modalClassTabs.filter((t) => t.picked < t.max).length <= 1) setPickerLevel(null);
   };
 
   const availableWizardLevels = React.useMemo(
@@ -430,15 +682,14 @@ export function SpellcastingSection({
       slotAvailability={model.slotAvailability}
       slotTotalsByLevel={model.slotTotalsByLevel}
       pactMagicInfo={model.pactMagicInfo}
-      canSelectMoreCantrips={canSelectMoreCantrips}
-      canSelectMoreLevel1Plus={canSelectMoreLevel1Plus}
+      canAddSpell={canAddAtLevel(level)}
       onTogglePicker={handleTogglePicker}
       spellsLoading={catalog.spellsLoading}
       catalogLoading={catalogLoading}
       spellPackId={catalog.spellPackId}
       spellcastingAbility={model.spellcastingAbility}
       spellAbilityMap={model.spellAbilityMap}
-      spellBadgesBySpellName={spellBadgesBySpellName}
+      spellModifiersBySpellName={spellModifiersBySpellName}
       resolveSpellRule={catalog.resolveSpellRule}
       fetchSpellDetailsOnDemand={catalog.fetchSpellDetailsOnDemand}
       onDemandSpellLoading={catalog.onDemandSpellLoading}
@@ -448,7 +699,7 @@ export function SpellcastingSection({
       onOpenHighElfSwap={() => setHighElfSwapOpen(true)}
       onRemoveSpell={removeSpell}
       onSlotChange={handleSlotChange}
-      saveAttempted={saveAttempted}
+      pendingFlags={pendingFlags}
     />
   );
 
@@ -459,15 +710,14 @@ export function SpellcastingSection({
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr]">
               <div>
-                <span
-                  className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
-                  id="spellcasting-class-label"
-                >
-                  Spellcasting Class
-                </span>
+                <HeaderFieldLabel id="spellcasting-class-label">
+                  {model.castingClassNames.length > 1
+                    ? 'Spellcasting Classes'
+                    : 'Spellcasting Class'}
+                </HeaderFieldLabel>
                 <input
                   type="text"
-                  value={data.className ?? ''}
+                  value={model.castingClassNames.join(' · ')}
                   readOnly
                   aria-labelledby="spellcasting-class-label"
                   className="mt-1 h-8 w-full rounded-md border border-border bg-secondary/50 px-2 text-sm font-semibold text-foreground outline-none cursor-default"
@@ -476,12 +726,9 @@ export function SpellcastingSection({
               </div>
 
               <div>
-                <span
-                  className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
-                  id="spellcasting-ability-label"
-                >
+                <HeaderFieldLabel id="spellcasting-ability-label">
                   Spellcasting Ability
-                </span>
+                </HeaderFieldLabel>
                 <input
                   type="text"
                   value={model.allSpellcastingAbilities}
@@ -493,36 +740,22 @@ export function SpellcastingSection({
               </div>
 
               <div>
-                <span
-                  className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
-                  id="spell-dc-label"
-                >
-                  Spell Save DC
-                </span>
+                <HeaderFieldLabel id="spell-dc-label">Spell Save DC</HeaderFieldLabel>
                 <div
                   aria-labelledby="spell-dc-label"
                   className="mt-1 flex h-8 items-center justify-center rounded-md border border-border bg-secondary/50"
                 >
-                  <span className="text-sm font-bold text-foreground">
-                    {model.multiDCStr}
-                  </span>
+                  <span className="text-sm font-bold text-foreground">{model.multiDCStr}</span>
                 </div>
               </div>
 
               <div>
-                <span
-                  className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
-                  id="spell-attack-label"
-                >
-                  Spell Attack Bonus
-                </span>
+                <HeaderFieldLabel id="spell-attack-label">Spell Attack Bonus</HeaderFieldLabel>
                 <div
                   aria-labelledby="spell-attack-label"
                   className="mt-1 flex h-8 items-center justify-center rounded-md border border-border bg-secondary/50"
                 >
-                  <span className="text-sm font-bold text-foreground">
-                    {model.multiAttackStr}
-                  </span>
+                  <span className="text-sm font-bold text-foreground">{model.multiAttackStr}</span>
                 </div>
               </div>
             </div>
@@ -535,11 +768,12 @@ export function SpellcastingSection({
               <span className="text-sm font-semibold text-foreground">Wizard Spellbook</span>
               <button
                 type="button"
+                onPointerDown={() => pendingFlags.dismiss('spells:wizard-spellbook')}
                 onClick={() => setSpellbookPickerOpen(true)}
                 className={cn(
                   'h-8 cursor-pointer rounded-md border px-2 text-xs font-semibold transition-colors',
                   spellbook.canAddMore
-                    ? needsChoiceHighlight(saveAttempted)
+                    ? needsChoiceHighlight(pendingFlags.isFlagged('spells:wizard-spellbook'))
                     : 'border-border bg-secondary/60 text-foreground hover:border-primary hover:bg-secondary/70'
                 )}
               >
@@ -555,11 +789,12 @@ export function SpellcastingSection({
               <span className="text-sm font-semibold text-foreground">Book of Shadows</span>
               <button
                 type="button"
+                onPointerDown={() => pendingFlags.dismiss('spells:pact-of-tome')}
                 onClick={() => setPactOfTomeOpen(true)}
                 className={cn(
                   'h-8 cursor-pointer rounded-md border px-2 text-xs font-semibold transition-colors',
                   pactOfTome.canAddCantrip || pactOfTome.canAddRitual
-                    ? needsChoiceHighlight(saveAttempted)
+                    ? needsChoiceHighlight(pendingFlags.isFlagged('spells:pact-of-tome'))
                     : 'border-border bg-secondary/60 text-foreground hover:border-primary hover:bg-secondary/70'
                 )}
               >
@@ -569,24 +804,61 @@ export function SpellcastingSection({
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-4 min-w-0">
-            {renderLevelBlock(0)}
-            {renderLevelBlock(1)}
-            {renderLevelBlock(2)}
-          </div>
+        {/* Both allowances read out the same way, above the blocks they govern: the card header
+            scrolls away on a ~2000px section. Right-aligned so it isn't read as a column title.
+            Multiclass splits them per class, because the pools are separate: a combined "5/7" hides
+            that the Wizard half is already full while the Cleric half still owes two. */}
+        <div className="flex flex-col gap-2">
+          {(effectiveMaxCantrips > 0 || effectiveMaxPrepared > 0) && (
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+              <SpellAllowanceCounter
+                label="Cantrips"
+                picked={classPickedCantripCount}
+                max={effectiveMaxCantrips}
+                title="Cantrips you picked, out of your allowance (granted ones don't count)"
+                breakdown={classBudgets
+                  .filter((c) => c.maxCantrips > 0)
+                  .map((c) => ({
+                    className: c.className,
+                    picked: c.pickedCantrips,
+                    max: c.maxCantrips,
+                  }))}
+              />
+              <SpellAllowanceCounter
+                label="Spells Prepared"
+                picked={totalSelectedLevel1Plus}
+                max={effectiveMaxPrepared}
+                title="Spells you prepared at levels 1-9, out of your allowance (granted ones don't count)"
+                breakdown={classBudgets
+                  .filter((c) => c.maxPrepared > 0)
+                  .map((c) => ({
+                    className: c.className,
+                    picked: c.pickedPrepared,
+                    max: c.maxPrepared,
+                  }))}
+              />
+            </div>
+          )}
 
-          <div className="flex flex-col gap-4 min-w-0">
-            {renderLevelBlock(3)}
-            {renderLevelBlock(4)}
-            {renderLevelBlock(5)}
-          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex flex-col gap-4 min-w-0">
+              {renderLevelBlock(0)}
+              {renderLevelBlock(1)}
+              {renderLevelBlock(2)}
+            </div>
 
-          <div className="flex flex-col gap-4 min-w-0">
-            {renderLevelBlock(6)}
-            {renderLevelBlock(7)}
-            {renderLevelBlock(8)}
-            {renderLevelBlock(9)}
+            <div className="flex flex-col gap-4 min-w-0">
+              {renderLevelBlock(3)}
+              {renderLevelBlock(4)}
+              {renderLevelBlock(5)}
+            </div>
+
+            <div className="flex flex-col gap-4 min-w-0">
+              {renderLevelBlock(6)}
+              {renderLevelBlock(7)}
+              {renderLevelBlock(8)}
+              {renderLevelBlock(9)}
+            </div>
           </div>
         </div>
 
@@ -595,6 +867,9 @@ export function SpellcastingSection({
           availableSpells={modalAvailable}
           spellsLoading={catalog.spellsLoading}
           canAdd={modalCanAdd}
+          classTabs={modalClassTabs}
+          activeClassId={modalBudget?.classRuleItemId ?? null}
+          onSelectClass={setPickerClassId}
           onSelect={handleSelectFromPicker}
           onClose={() => setPickerLevel(null)}
         />
@@ -604,7 +879,7 @@ export function SpellcastingSection({
           onClose={() => setSpellbookPickerOpen(false)}
           spellsLoading={catalog.spellsLoading}
           availableWizardLevels={availableWizardLevels}
-          spellsBySpellLevel={spellsBySpellLevel}
+          spellsBySpellLevel={wizardSpellsBySpellLevel}
           spellbook={spellbook}
         />
 

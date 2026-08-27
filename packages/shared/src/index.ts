@@ -2,6 +2,8 @@ export * from './types/auth';
 export * from './types/character-sheet';
 export * from './types/pack';
 export * from './types/ruleitem';
+export * from './types/generation';
 export * from './schemas/character-sheet-data';
 export * from './schemas/rule-mechanics';
+export * from './schemas/class-multiclassing';
 export * from './domain/dnd-srd';

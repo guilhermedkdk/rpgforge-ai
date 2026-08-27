@@ -10,7 +10,7 @@ import {
   POINT_BUY_BUDGET,
   POINT_BUY_MIN,
   POINT_BUY_MAX,
-} from '@/lib/dnd-srd/character-state';
+} from '@rpgforce-ai/shared';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +28,8 @@ export interface AbilityScoreBoxProps {
   pointsRemaining?: number;
   backgroundBonus?: number;
   effectiveScore?: number;
-  readOnly?: boolean;
+  /** Committed allocation: shows the score as a static pill instead of a picker. */
+  locked?: boolean;
 }
 
 function AbilityScoreBoxInner({
@@ -40,7 +41,7 @@ function AbilityScoreBoxInner({
   pointsRemaining = POINT_BUY_BUDGET,
   backgroundBonus = 0,
   effectiveScore: effectiveScoreProp,
-  readOnly = false,
+  locked = false,
 }: AbilityScoreBoxProps) {
   const unassigned = score === 0;
   const effectiveScore =
@@ -68,7 +69,7 @@ function AbilityScoreBoxInner({
 
   const displayValue = unassigned && !backgroundBonus ? '—' : effectiveScore;
 
-  // Shared between the read-only pill and the standard-array trigger button.
+  // Shared between the locked pill and the standard-array trigger button.
   const pillBase =
     'absolute bottom-0 inline-flex h-7 min-w-10 w-12 translate-y-1/2 items-center justify-center rounded-full border-2 bg-card px-2.5 py-1.5 text-xs font-bold';
   const pillBorder =
@@ -93,13 +94,13 @@ function AbilityScoreBoxInner({
       >
         <span className={cn('text-lg font-bold', modColor)}>{mod}</span>
 
-        {readOnly && (
+        {locked && (
           <span className={cn(pillBase, pillBorder)} aria-label={`${label} value`}>
             {displayValue}
           </span>
         )}
 
-        {!readOnly && mode === 'standard-array' && (
+        {!locked && mode === 'standard-array' && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -116,7 +117,12 @@ function AbilityScoreBoxInner({
                 <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/70" aria-hidden />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" side="bottom" sideOffset={6} className="min-w-20 p-1">
+            <DropdownMenuContent
+              align="center"
+              side="bottom"
+              sideOffset={6}
+              className="min-w-20 p-1"
+            >
               <ul role="listbox" aria-label={`${label} value`}>
                 {arrayOptions.map((opt) => {
                   const isSelected = score === opt.value;
@@ -142,7 +148,7 @@ function AbilityScoreBoxInner({
           </DropdownMenu>
         )}
 
-        {!readOnly && mode === 'point-buy' && (
+        {!locked && mode === 'point-buy' && (
           <div className="absolute bottom-0 flex translate-y-1/2 items-center justify-center gap-0.5">
             <button
               type="button"

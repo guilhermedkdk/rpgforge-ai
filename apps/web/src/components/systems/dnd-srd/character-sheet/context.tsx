@@ -1,48 +1,41 @@
 'use client';
 
+import { createContext, useContext, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import {
-  createContext,
-  useContext,
-  useMemo,
-  useCallback,
-  useEffect,
-  type ReactNode,
-} from 'react';
-import { proficiencyBonusForLevel, type RuleItemResponse } from '@rpgforce-ai/shared';
-import {
-  type CharacterFormData,
   calcModifier,
+  computeArmorClassFromArmor as computeArmorClassFromArmorShared,
+  computeEffectiveArmorClass,
+  getArmorItemsFromEquipment,
+  getArmorProficiencyCategories,
   getDefaultAttributes,
   getEffectiveAttribute,
   getEffectiveEpicBoonAbilityScore,
   getEffectiveModifier,
+  getExpertiseSelectionPrerequisiteMessage,
   getPrimalChampionBodyAndMindBonusFlags,
+  getSkillsFromAbilities,
   getTotalAbilityScoreImprovementFromGains,
-  isThievesCantFeatureName,
-} from '@/lib/dnd-srd/character-state';
-import { getEffectiveProficiencies } from '@/lib/dnd-srd/derived-character-stats';
-import {
+  isArmorItemProficient as isArmorItemProficientShared,
   isFastMovementFeature,
   isRovingFeature,
-  isUnarmoredMovementFeature,
-} from '@/lib/dnd-srd/feature-mechanics';
-import { computeWeaponMasteryMaxSelections } from '@/lib/dnd-srd/weapon-mastery';
-import type { CharacterSheetProps } from './types';
-import {
-  getSkillsFromAbilities,
-  getArmorItemsFromEquipment,
   isShieldItem,
+  isThievesCantFeature,
+  isUnarmoredMovementFeature,
+  MAX_STANDARD_LANGUAGES_TOTAL,
   normalizeStandardLanguageNames,
-  hasSelectedFightingStyle,
-  equippedItemIsLightMediumOrHeavyArmor,
-  getExpertiseSelectionPrerequisiteMessage,
+  proficiencyBonusForLevel,
   retainSkillProficiencyFromClassOrBackground,
-} from './helpers';
-import { MAX_STANDARD_LANGUAGES_TOTAL } from './constants';
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
+import type { CharacterSheetProps, SheetMode } from './types';
+import { buildSheetLocks, type SheetLocks } from './locks';
+import { useSheetPendingFlags, type PendingFlags } from './pending-flags';
 
 /** Static rule item catalogs + loading flags — change only when fetches resolve. */
 export interface RuleLibraryContextValue {
   classes: RuleItemResponse[];
+  subclasses: RuleItemResponse[];
   backgrounds: RuleItemResponse[];
   races: RuleItemResponse[];
   abilities: RuleItemResponse[];
@@ -54,6 +47,7 @@ export interface RuleLibraryContextValue {
   standardLanguageOptions: RuleItemResponse[];
 
   classesLoading: boolean;
+  subclassesLoading: boolean;
   backgroundsLoading: boolean;
   racesLoading: boolean;
   abilitiesLoading: boolean;
@@ -95,41 +89,38 @@ export interface CharacterSheetContextValue extends RuleLibraryContextValue {
   armorProficiencyCategories: Set<string>;
   isShieldItem: (item: RuleItemResponse) => boolean;
   isArmorItemProficient: (item: RuleItemResponse | null) => boolean;
-  computeArmorClassFromArmor: (
-    armorItem: RuleItemResponse | null,
-    dexMod: number,
-  ) => number | null;
+  computeArmorClassFromArmor: (armorItem: RuleItemResponse | null, dexMod: number) => number | null;
 
   effectiveArmorClassValue: string;
   displaySpeed: string;
 
+  /** Weapon catalog for the Weapon Mastery picker; the budget itself is per granting class. */
   weaponMasteryMeta: {
     hasWeaponMasteryFeature: boolean;
-    maxSelections: number;
     masteryWeapons: Array<{ id: string; name: string }>;
-    currentSelections: string[];
   };
 
   abilityMethod: CharacterFormData['abilityScoreMethod'];
-  handleSetAbilityMethod: (
-    m: CharacterFormData['abilityScoreMethod'],
-  ) => void;
-  readOnly: boolean;
+  handleSetAbilityMethod: (m: CharacterFormData['abilityScoreMethod']) => void;
+  mode: SheetMode;
+  locks: SheetLocks;
 }
 
-// Holds only data + onChange + readOnly + saveAttempted — recreated on every state change.
+// Holds only data + onChange + mode/locks + pendingFlags — recreated on every state change.
 interface CharacterDataContextValue {
   data: CharacterFormData;
   onChange: (data: CharacterFormData) => void;
-  readOnly: boolean;
-  /** True after a blocked save attempt — sections flag their required-but-empty fields in red. */
-  saveAttempted: boolean;
+  mode: SheetMode;
+  /** Committed creation allocations that render read-only; all false in creation mode. */
+  locks: SheetLocks;
+  /** After a blocked save, which pending fields are still flagged in red (per field). */
+  pendingFlags: PendingFlags;
 }
 
 // Holds all computed/derived values — only recreated when those values change.
 type CharacterComputedOnlyContextValue = Omit<
   CharacterSheetContextValue,
-  'data' | 'onChange' | 'readOnly' | keyof RuleLibraryContextValue
+  'data' | 'onChange' | 'mode' | 'locks' | keyof RuleLibraryContextValue
 >;
 
 /** Backwards-compatible shape: computed values + rule library catalogs. */
@@ -155,8 +146,7 @@ export function useCharacterSheet(): CharacterSheetContextValue {
  */
 export function useRuleLibraryData(): RuleLibraryContextValue {
   const ctx = useContext(RuleLibraryCtx);
-  if (!ctx)
-    throw new Error('useRuleLibraryData must be used within CharacterSheetProvider');
+  if (!ctx) throw new Error('useRuleLibraryData must be used within CharacterSheetProvider');
   return ctx;
 }
 
@@ -169,18 +159,17 @@ export function useCharacterComputed(): CharacterComputedContextValue {
   return useMemo(() => ({ ...library, ...ctx }), [library, ctx]);
 }
 
-/** Only data + onChange + readOnly. */
+/** Only data + onChange + mode/locks. */
 export function useCharacterData(): CharacterDataContextValue {
   const ctx = useContext(CharacterDataCtx);
-  if (!ctx)
-    throw new Error('useCharacterData must be used within CharacterSheetProvider');
+  if (!ctx) throw new Error('useCharacterData must be used within CharacterSheetProvider');
   return ctx;
 }
-
 
 export function CharacterSheetProvider({
   data,
   classes,
+  subclasses = [],
   backgrounds,
   races,
   abilities,
@@ -191,23 +180,21 @@ export function CharacterSheetProvider({
   toolItemsByCategory = {},
   standardLanguageOptions = [],
   classesLoading,
+  subclassesLoading = false,
   backgroundsLoading,
   racesLoading,
   abilitiesLoading,
   equipmentItemsLoading,
   onChange,
-  readOnly = false,
+  mode = 'creation',
   saveAttempted = false,
   children,
 }: CharacterSheetProps & { children: ReactNode }) {
-  const skillsList = useMemo(
-    () => getSkillsFromAbilities(abilities),
-    [abilities],
-  );
+  const skillsList = useMemo(() => getSkillsFromAbilities(abilities), [abilities]);
   const featureDetails = data.featureDetails ?? [];
 
   const elvenLineageFeat = featureDetails.find(
-    (f) => f.source === 'race' && f.name.trim().toLowerCase() === 'elven lineage',
+    (f) => f.source === 'race' && f.name.trim().toLowerCase() === 'elven lineage'
   );
   const selectedElvenLineage = elvenLineageFeat
     ? (data.raceTraitSelections?.[elvenLineageFeat.name] ?? null)
@@ -232,35 +219,26 @@ export function CharacterSheetProvider({
 
   const { hasPrimalChampion, hasBodyAndMind } = useMemo(
     () => getPrimalChampionBodyAndMindBonusFlags(data),
-    [data],
+    [data]
   );
   const hasUnarmoredDefense = useMemo(
-    () =>
-      featureDetails.some(
-        (f) => f.name.trim().toLowerCase() === 'unarmored defense',
-      ),
-    [featureDetails],
+    () => featureDetails.some((f) => f.name.trim().toLowerCase() === 'unarmored defense'),
+    [featureDetails]
   );
   const hasAuraOfProtection = useMemo(
-    () =>
-      featureDetails.some(
-        (f) => f.name.trim().toLowerCase() === 'aura of protection',
-      ),
-    [featureDetails],
+    () => featureDetails.some((f) => f.name.trim().toLowerCase() === 'aura of protection'),
+    [featureDetails]
   );
   const hasFastMovement = useMemo(
     () => featureDetails.some(isFastMovementFeature),
-    [featureDetails],
+    [featureDetails]
   );
-  const hasRoving = useMemo(
-    () => featureDetails.some(isRovingFeature),
-    [featureDetails],
-  );
+  const hasRoving = useMemo(() => featureDetails.some(isRovingFeature), [featureDetails]);
   const hasUnarmoredMovement = useMemo(
     // Matchers prefer the stable mechanics key over the name: the SRD data ships a typo'd name
     // ("Unarmoed Movement"), so a name-only check silently never matches and the bonus is lost.
     () => featureDetails.some(isUnarmoredMovementFeature),
-    [featureDetails],
+    [featureDetails]
   );
 
   const combinedAbilityBonuses = useMemo((): Record<string, number> => {
@@ -287,7 +265,7 @@ export function CharacterSheetProvider({
       data.featureDetails,
       data.epicBoonFeatId,
       data.epicBoonAbilityScore,
-    ],
+    ]
   );
 
   const auraOfProtectionBonus = useMemo((): number => {
@@ -299,7 +277,7 @@ export function CharacterSheetProvider({
       effectiveEpicBoonAbilityScore,
       hasPrimalChampion,
       hasBodyAndMind,
-      data.grapplerAbilityScore,
+      data.grapplerAbilityScore
     );
     return Math.max(1, calcModifier(charismaScore));
   }, [
@@ -320,7 +298,7 @@ export function CharacterSheetProvider({
         effectiveEpicBoonAbilityScore,
         hasPrimalChampion,
         hasBodyAndMind,
-        data.grapplerAbilityScore,
+        data.grapplerAbilityScore
       ),
     [
       data.attributes,
@@ -329,7 +307,7 @@ export function CharacterSheetProvider({
       hasPrimalChampion,
       hasBodyAndMind,
       data.grapplerAbilityScore,
-    ],
+    ]
   );
 
   const strengthScore = useMemo(
@@ -341,7 +319,7 @@ export function CharacterSheetProvider({
         effectiveEpicBoonAbilityScore,
         hasPrimalChampion,
         hasBodyAndMind,
-        data.grapplerAbilityScore,
+        data.grapplerAbilityScore
       ),
     [
       data.attributes,
@@ -350,7 +328,7 @@ export function CharacterSheetProvider({
       hasPrimalChampion,
       hasBodyAndMind,
       data.grapplerAbilityScore,
-    ],
+    ]
   );
 
   const conModifier = useMemo(
@@ -362,7 +340,7 @@ export function CharacterSheetProvider({
         effectiveEpicBoonAbilityScore,
         hasPrimalChampion,
         hasBodyAndMind,
-        data.grapplerAbilityScore,
+        data.grapplerAbilityScore
       ),
     [
       data.attributes,
@@ -371,7 +349,7 @@ export function CharacterSheetProvider({
       hasPrimalChampion,
       hasBodyAndMind,
       data.grapplerAbilityScore,
-    ],
+    ]
   );
 
   const wisModifier = useMemo(
@@ -383,7 +361,7 @@ export function CharacterSheetProvider({
         effectiveEpicBoonAbilityScore,
         hasPrimalChampion,
         hasBodyAndMind,
-        data.grapplerAbilityScore,
+        data.grapplerAbilityScore
       ),
     [
       data.attributes,
@@ -392,36 +370,32 @@ export function CharacterSheetProvider({
       hasPrimalChampion,
       hasBodyAndMind,
       data.grapplerAbilityScore,
-    ],
+    ]
   );
 
   const armorItemsInEquipment = useMemo(
     () => getArmorItemsFromEquipment(data.equipment, armors),
-    [data.equipment, armors],
+    [data.equipment, armors]
   );
 
   const armorChoices = useMemo(
     () => armorItemsInEquipment.filter((a) => !isShieldItem(a)),
-    [armorItemsInEquipment],
+    [armorItemsInEquipment]
   );
   const shieldChoices = useMemo(
     () => armorItemsInEquipment.filter((a) => isShieldItem(a)),
-    [armorItemsInEquipment],
+    [armorItemsInEquipment]
   );
 
   const equippedArmor = useMemo(
     () =>
-      data.equippedArmorId
-        ? (armors.find((a) => a.id === data.equippedArmorId) ?? null)
-        : null,
-    [armors, data.equippedArmorId],
+      data.equippedArmorId ? (armors.find((a) => a.id === data.equippedArmorId) ?? null) : null,
+    [armors, data.equippedArmorId]
   );
   const equippedShield = useMemo(
     () =>
-      data.equippedShieldId
-        ? (armors.find((a) => a.id === data.equippedShieldId) ?? null)
-        : null,
-    [armors, data.equippedShieldId],
+      data.equippedShieldId ? (armors.find((a) => a.id === data.equippedShieldId) ?? null) : null,
+    [armors, data.equippedShieldId]
   );
 
   const isEquippedArmorHeavy = useMemo((): boolean => {
@@ -432,176 +406,33 @@ export function CharacterSheetProvider({
     return category.includes('heavy');
   }, [equippedArmor]);
 
-  const armorProficiencyCategories = useMemo(() => {
-    const set = new Set<string>();
-    const profs = getEffectiveProficiencies(data);
-    if (!profs) return set;
-    const lines = profs.split('\n');
-    for (const line of lines) {
-      if (!/armor training/i.test(line)) continue;
-      const afterColon = line.includes(':')
-        ? line.split(':').slice(1).join(':')
-        : line;
-      const lower = afterColon.toLowerCase();
-      const hasArmorWord = lower.includes('armor');
-      if (hasArmorWord && lower.includes('light')) set.add('light');
-      if (hasArmorWord && lower.includes('medium')) set.add('medium');
-      if (hasArmorWord && lower.includes('heavy')) set.add('heavy');
-      if (lower.includes('shield')) set.add('shield');
-      if (lower.includes('all armor')) {
-        set.add('light');
-        set.add('medium');
-        set.add('heavy');
-      }
-    }
-    return set;
-  }, [data.proficiencies, data.raceTraitSelections]);
+  const armorProficiencyCategories = useMemo(
+    () => getArmorProficiencyCategories(data),
+    [data.proficiencies, data.raceTraitSelections]
+  );
 
   const isArmorItemProficient = useCallback(
-    (item: RuleItemResponse | null): boolean => {
-      if (!item) return false;
-      const norm = (item.normalized ?? {}) as Record<string, unknown>;
-      const armorData = norm.armor as { category?: string | null } | null | undefined;
-      const category = (armorData?.category ?? '') as string;
-      const categoryLower = category.toLowerCase();
-      if (isShieldItem(item)) return armorProficiencyCategories.has('shield');
-      if (categoryLower.includes('light'))
-        return armorProficiencyCategories.has('light');
-      if (categoryLower.includes('medium'))
-        return armorProficiencyCategories.has('medium');
-      if (categoryLower.includes('heavy'))
-        return armorProficiencyCategories.has('heavy');
-      return false;
-    },
-    [armorProficiencyCategories],
+    (item: RuleItemResponse | null): boolean =>
+      isArmorItemProficientShared(item, armorProficiencyCategories),
+    [armorProficiencyCategories]
   );
 
   const computeArmorClassFromArmor = useCallback(
-    (armorItem: RuleItemResponse | null, dexMod: number): number | null => {
-      if (!armorItem) return null;
-      const norm = (armorItem.normalized ?? {}) as Record<string, unknown>;
-      const armorData = norm.armor as
-        | {
-            acBase?: number | null;
-            acAddDexmod?: boolean | null;
-            acCapDexmod?: number | null;
-          }
-        | null
-        | undefined;
-      if (!armorData) return null;
-      const base =
-        typeof armorData.acBase === 'number' && !Number.isNaN(armorData.acBase)
-          ? armorData.acBase
-          : null;
-      if (base == null) return null;
-      const dexBonus = armorData.acAddDexmod === true;
-      let total = base;
-      if (dexBonus) {
-        const maxBonus =
-          typeof armorData.acCapDexmod === 'number' &&
-          !Number.isNaN(armorData.acCapDexmod)
-            ? armorData.acCapDexmod
-            : null;
-        const toAdd = maxBonus != null ? Math.min(dexMod, maxBonus) : dexMod;
-        total += toAdd;
-      }
-      return total;
-    },
-    [],
+    (armorItem: RuleItemResponse | null, dexMod: number): number | null =>
+      computeArmorClassFromArmorShared(armorItem, dexMod),
+    []
   );
 
-  const effectiveArmorClassValue = useMemo(() => {
-    const baseFromData =
-      data.armorClass !== '' && data.armorClass != null
-        ? Number(data.armorClass)
-        : NaN;
-    const defaultBaseNoArmor =
-      !Number.isNaN(baseFromData) && baseFromData > 0
-        ? baseFromData
-        : 10 + dexModifier;
-    const unarmoredDefenseFeature = featureDetails.find(
-      (f) => f.name.trim().toLowerCase() === 'unarmored defense',
-    );
-    const unarmoredDefenseText = (
-      unarmoredDefenseFeature?.desc ?? ''
-    ).toLowerCase();
-    const bodyAndMindFeatureListed = featureDetails.some(
-      (f) => f.name.trim().toLowerCase() === 'body and mind',
-    );
-    const unarmoredDefenseUsesWis =
-      bodyAndMindFeatureListed || unarmoredDefenseText.includes('wisdom');
-    const requiresNoShield =
-      unarmoredDefenseText.includes('wielding a shield') ||
-      unarmoredDefenseText.includes('wield a shield');
-    const unarmoredDefenseBase =
-      10 +
-      dexModifier +
-      (unarmoredDefenseUsesWis ? wisModifier : conModifier);
-
-    const armorMeetsStr = (() => {
-      if (!equippedArmor) return true;
-      const norm = (equippedArmor.normalized ?? {}) as Record<string, unknown>;
-      const ad = norm.armor as { strengthScoreRequired?: number | null } | null | undefined;
-      const required = ad?.strengthScoreRequired ?? null;
-      if (
-        required == null ||
-        typeof required !== 'number' ||
-        Number.isNaN(required)
-      )
-        return true;
-      return strengthScore >= required;
-    })();
-
-    const canUseArmor = isArmorItemProficient(equippedArmor) && armorMeetsStr;
-    const armorAc = computeArmorClassFromArmor(
-      canUseArmor ? equippedArmor : null,
-      dexModifier,
-    );
-    let total: number;
-    if (armorAc != null) {
-      total = armorAc;
-    } else {
-      const canUseUnarmoredDefense =
-        hasUnarmoredDefense &&
-        !equippedArmor &&
-        (!requiresNoShield || !equippedShield);
-      total = canUseUnarmoredDefense
-        ? unarmoredDefenseBase
-        : defaultBaseNoArmor;
-    }
-    if (equippedShield && isArmorItemProficient(equippedShield)) {
-      total += 2;
-    }
-    if (
-      hasSelectedFightingStyle(data, feats, 'defense') &&
-      data.equippedArmorId != null &&
-      equippedItemIsLightMediumOrHeavyArmor(equippedArmor)
-    ) {
-      total += 1;
-    }
-    if (!Number.isFinite(total) || total < 0) return '0';
-    return String(total);
-  }, [
-    data.armorClass,
-    data.equippedArmorId,
-    data.fightingStyleFeatId,
-    data.raceTraitSelections,
-    dexModifier,
-    conModifier,
-    wisModifier,
-    hasUnarmoredDefense,
-    featureDetails,
-    computeArmorClassFromArmor,
-    equippedArmor,
-    equippedShield,
-    isArmorItemProficient,
-    strengthScore,
-    feats,
-  ]);
+  // Detection + assembly both live in the shared domain, so the sheet, the backend recompute and
+  // the sheets list can never disagree on the AC.
+  const effectiveArmorClassValue = useMemo(
+    () => String(computeEffectiveArmorClass({ data, featureDetails, feats, armors })),
+    [data, featureDetails, feats, armors]
+  );
 
   const proficiencyBonus = useMemo(
     (): number | undefined => (data.level < 1 ? undefined : proficiencyBonusForLevel(data.level)),
-    [data.level],
+    [data.level]
   );
 
   const unarmoredMovementBonus = useMemo((): number => {
@@ -613,9 +444,8 @@ export function CharacterSheetProvider({
     const tableData = movementFeature?.tableData ?? [];
     if (tableData.length === 0) return 0;
     const preferredTable =
-      tableData.find((t) =>
-        t.label.trim().toLowerCase().includes('unarmored movement'),
-      ) ?? tableData[0];
+      tableData.find((t) => t.label.trim().toLowerCase().includes('unarmored movement')) ??
+      tableData[0];
     const eligibleRow = (preferredTable?.rows ?? [])
       .filter((r) => r.level <= currentLevel)
       .sort((a, b) => b.level - a.level)[0];
@@ -634,8 +464,7 @@ export function CharacterSheetProvider({
   const displaySpeed = useMemo((): string => {
     const base = Number(data.speed) || 0;
     const woodElfBonus = selectedElvenLineage === 'wood-elf' ? 5 : 0;
-    const fastMovementBonus =
-      hasFastMovement && !isEquippedArmorHeavy ? 10 : 0;
+    const fastMovementBonus = hasFastMovement && !isEquippedArmorHeavy ? 10 : 0;
     const rovingBonus = hasRoving && !isEquippedArmorHeavy ? 10 : 0;
     return String(base + woodElfBonus + fastMovementBonus + rovingBonus + unarmoredMovementBonus);
   }, [
@@ -647,52 +476,47 @@ export function CharacterSheetProvider({
     unarmoredMovementBonus,
   ]);
 
+  // Only the CATALOG lives here: how many a class may pick, and which it picked, are per class and
+  // come from the shared helpers with that class's own feature row.
   const weaponMasteryMeta = useMemo(() => {
-    const currentLevel = Math.max(1, Math.min(20, data.level ?? 1));
     const feature = featureDetails.find(
-      (f) =>
-        f.source === 'class' &&
-        f.name.trim().toLowerCase() === 'weapon mastery',
+      (f) => f.source === 'class' && f.name.trim().toLowerCase() === 'weapon mastery'
     );
-    const maxSelections = computeWeaponMasteryMaxSelections(feature, currentLevel);
 
-    const masteryWeapons =
-      weapons
-        ?.map((w) => {
-          const weaponNormFull = (w.normalized ?? {}) as {
-            weapon?: {
-              properties?: Array<{
-                detail?: string | null;
-                property?: {
-                  name?: string | null;
-                  desc?: string | null;
-                  type?: string | null;
-                } | null;
-              }>;
-            };
+    const masteryWeapons = weapons
+      ?.map((w) => {
+        const weaponNormFull = (w.normalized ?? {}) as {
+          weapon?: {
+            properties?: Array<{
+              detail?: string | null;
+              property?: {
+                name?: string | null;
+                desc?: string | null;
+                type?: string | null;
+              } | null;
+            }>;
           };
-          const weaponProperties =
-            weaponNormFull.weapon?.properties?.filter(
-              (p) =>
-                p &&
-                p.property &&
-                typeof p.property.name === 'string' &&
-                String(p.property.type ?? '')
-                  .toLowerCase()
-                  .includes('mastery'),
-            ) ?? [];
-          if (weaponProperties.length === 0) return null;
-          return { id: w.id, name: w.name };
-        })
-        .filter(Boolean) as Array<{ id: string; name: string }>;
+        };
+        const weaponProperties =
+          weaponNormFull.weapon?.properties?.filter(
+            (p) =>
+              p &&
+              p.property &&
+              typeof p.property.name === 'string' &&
+              String(p.property.type ?? '')
+                .toLowerCase()
+                .includes('mastery')
+          ) ?? [];
+        if (weaponProperties.length === 0) return null;
+        return { id: w.id, name: w.name };
+      })
+      .filter(Boolean) as Array<{ id: string; name: string }>;
 
     return {
       hasWeaponMasteryFeature: !!feature,
-      maxSelections,
       masteryWeapons: masteryWeapons ?? [],
-      currentSelections: data.weaponMasteryWeaponIds ?? [],
     };
-  }, [data.level, data.weaponMasteryWeaponIds, featureDetails, weapons]);
+  }, [featureDetails, weapons]);
 
   const abilityMethod = data.abilityScoreMethod ?? 'standard-array';
 
@@ -708,7 +532,7 @@ export function CharacterSheetProvider({
         backgroundAbilityScoreIncrease: {},
       });
     },
-    [abilityMethod, data, onChange],
+    [abilityMethod, data, onChange]
   );
 
   // Feature-reset effect: clears stale feature choices when features appear/disappear
@@ -724,10 +548,7 @@ export function CharacterSheetProvider({
     let changed = false;
     let next = data as typeof data;
 
-    if (
-      data.raceTraitSelections &&
-      Object.keys(data.raceTraitSelections).length > 0
-    ) {
+    if (data.raceTraitSelections && Object.keys(data.raceTraitSelections).length > 0) {
       const kept: Record<string, string> = {};
       for (const [name, value] of Object.entries(data.raceTraitSelections)) {
         if (activeNames.has(name)) {
@@ -756,12 +577,9 @@ export function CharacterSheetProvider({
       changed = true;
       next = { ...next, primalKnowledgeSkillKey: null };
     }
-    if (
-      !hasFeature('Expertise') &&
-      (next.expertiseSkillKeys?.length ?? 0) > 0
-    ) {
+    if (!hasFeature('Expertise') && Object.keys(next.expertiseSkillKeysByClass ?? {}).length > 0) {
       changed = true;
-      next = { ...next, expertiseSkillKeys: [] };
+      next = { ...next, expertiseSkillKeysByClass: {} };
     }
     if (!hasFeature('Scholar') && next.scholarExpertiseSkillKey) {
       changed = true;
@@ -769,8 +587,7 @@ export function CharacterSheetProvider({
     }
     if (
       !hasFeature('Deft Explorer') &&
-      (next.deftExplorerExpertiseSkillKey ||
-        (next.deftExplorerLanguageNames?.length ?? 0) > 0)
+      (next.deftExplorerExpertiseSkillKey || (next.deftExplorerLanguageNames?.length ?? 0) > 0)
     ) {
       changed = true;
       next = {
@@ -825,16 +642,42 @@ export function CharacterSheetProvider({
       changed = true;
       next = { ...next, versatileFeatId: null };
     }
-    if (!hasFeature('Weapon Mastery') && next.weaponMasteryWeaponIds) {
-      changed = true;
-      next = { ...next, weaponMasteryWeaponIds: undefined };
-    }
     if (
-      !hasFeature('Fighting Style') &&
-      (next.fightingStyleFeatId || next.fightingStyleMode === 'FEAT')
+      !hasFeature('Weapon Mastery') &&
+      Object.keys(next.weaponMasteryWeaponIdsByClass ?? {}).length > 0
     ) {
       changed = true;
-      next = { ...next, fightingStyleFeatId: null, fightingStyleMode: 'OPTION' };
+      next = { ...next, weaponMasteryWeaponIdsByClass: {} };
+    }
+    if (!hasFeature('Fighting Style') && Object.keys(next.fightingStyleByClass ?? {}).length > 0) {
+      changed = true;
+      next = { ...next, fightingStyleByClass: {} };
+    }
+    if (!hasFeature('Bonus Proficiencies') && (next.bonusProficienciesSkillKeys?.length ?? 0) > 0) {
+      const nextSkills = { ...next.skillProficiencies };
+      for (const k of next.bonusProficienciesSkillKeys ?? []) {
+        nextSkills[k] = retainSkillProficiencyFromClassOrBackground(next, k);
+      }
+      changed = true;
+      next = { ...next, bonusProficienciesSkillKeys: [], skillProficiencies: nextSkills };
+    }
+    if (!hasFeature('Additional Fighting Style') && next.additionalFightingStyleFeatId) {
+      changed = true;
+      next = { ...next, additionalFightingStyleFeatId: null };
+    }
+    if (
+      !hasFeature('Magical Discoveries') &&
+      (next.magicalDiscoveriesSpellNames?.length ?? 0) > 0
+    ) {
+      changed = true;
+      next = { ...next, magicalDiscoveriesSpellNames: [] };
+    }
+    if (
+      !hasFeature('Evocation Savant') &&
+      Object.keys(next.evocationSavantSpellbookByLevel ?? {}).length > 0
+    ) {
+      changed = true;
+      next = { ...next, evocationSavantSpellbookByLevel: {} };
     }
     if (changed) onChange(next);
   }, [data, featureDetails, onChange]);
@@ -843,11 +686,11 @@ export function CharacterSheetProvider({
   useEffect(() => {
     if (featureDetails.length === 0) return;
 
-    const prereqFailed =
-      getExpertiseSelectionPrerequisiteMessage(data, skillsList) !== null;
+    const prereqFailed = getExpertiseSelectionPrerequisiteMessage(data, skillsList) !== null;
     const deftExpertiseFailed =
       data.deftExplorerExpertiseSkillKey != null &&
-      getExpertiseSelectionPrerequisiteMessage(data, skillsList, { forDeftExplorer: true }) !== null;
+      getExpertiseSelectionPrerequisiteMessage(data, skillsList, { forDeftExplorer: true }) !==
+        null;
 
     if (!prereqFailed && !deftExpertiseFailed) return;
 
@@ -866,7 +709,12 @@ export function CharacterSheetProvider({
         delete nextRaceTraitSelections[traitName];
         changed = true;
       }
-      if (changed) next = { ...next, raceTraitSelections: nextRaceTraitSelections, skillProficiencies: nextSkillProficiencies };
+      if (changed)
+        next = {
+          ...next,
+          raceTraitSelections: nextRaceTraitSelections,
+          skillProficiencies: nextSkillProficiencies,
+        };
 
       // Clear Skilled feat picks
       if ((next.skilledProficiencyChoices ?? []).length > 0) {
@@ -886,7 +734,7 @@ export function CharacterSheetProvider({
         const nextSkills = { ...(next.skillProficiencies ?? {}) };
         nextSkills[next.primalKnowledgeSkillKey] = retainSkillProficiencyFromClassOrBackground(
           next,
-          next.primalKnowledgeSkillKey,
+          next.primalKnowledgeSkillKey
         );
         next = { ...next, primalKnowledgeSkillKey: null, skillProficiencies: nextSkills };
         changed = true;
@@ -913,16 +761,14 @@ export function CharacterSheetProvider({
   useEffect(() => {
     if (
       !featureDetails.some(
-        (f) =>
-          f.source === 'class' &&
-          f.name.trim().toLowerCase() === 'deft explorer',
+        (f) => f.source === 'class' && f.name.trim().toLowerCase() === 'deft explorer'
       )
     ) {
       return;
     }
     const normalized = normalizeStandardLanguageNames(
       data.standardLanguageNames,
-      standardLanguageOptions,
+      standardLanguageOptions
     );
     if (normalized.length >= MAX_STANDARD_LANGUAGES_TOTAL) return;
     if ((data.deftExplorerLanguageNames?.length ?? 0) === 0) return;
@@ -932,16 +778,14 @@ export function CharacterSheetProvider({
   useEffect(() => {
     if (
       !featureDetails.some(
-        (f) =>
-          f.source === 'class' &&
-          f.name.trim().toLowerCase() === 'deft explorer',
+        (f) => f.source === 'class' && f.name.trim().toLowerCase() === 'deft explorer'
       )
     ) {
       return;
     }
     const normalized = normalizeStandardLanguageNames(
       data.standardLanguageNames,
-      standardLanguageOptions,
+      standardLanguageOptions
     );
     const langNorm = (s: string) => s.trim().toLowerCase();
     const standardSet = new Set(normalized.map(langNorm));
@@ -953,16 +797,12 @@ export function CharacterSheetProvider({
   }, [data, featureDetails, standardLanguageOptions, onChange]);
 
   useEffect(() => {
-    if (
-      !featureDetails.some(
-        (f) => f.source === 'class' && isThievesCantFeatureName(f.name),
-      )
-    ) {
+    if (!featureDetails.some((f) => f.source === 'class' && isThievesCantFeature(f))) {
       return;
     }
     const normalized = normalizeStandardLanguageNames(
       data.standardLanguageNames,
-      standardLanguageOptions,
+      standardLanguageOptions
     );
     if (normalized.length >= MAX_STANDARD_LANGUAGES_TOTAL) return;
     if (!String(data.thievesCantExtraLanguageName ?? '').trim()) return;
@@ -970,16 +810,12 @@ export function CharacterSheetProvider({
   }, [data, featureDetails, standardLanguageOptions, onChange]);
 
   useEffect(() => {
-    if (
-      !featureDetails.some(
-        (f) => f.source === 'class' && isThievesCantFeatureName(f.name),
-      )
-    ) {
+    if (!featureDetails.some((f) => f.source === 'class' && isThievesCantFeature(f))) {
       return;
     }
     const normalized = normalizeStandardLanguageNames(
       data.standardLanguageNames,
-      standardLanguageOptions,
+      standardLanguageOptions
     );
     const langNorm = (s: string) => s.trim().toLowerCase();
     const standardSet = new Set(normalized.map(langNorm));
@@ -989,17 +825,26 @@ export function CharacterSheetProvider({
     onChange({ ...data, thievesCantExtraLanguageName: null });
   }, [data, featureDetails, standardLanguageOptions, onChange]);
 
-  // data/onChange/readOnly live in their own context so changes to them don't
+  // Locks track what the sheet already committed, so they follow `data`, not just the mode.
+  const locks = useMemo<SheetLocks>(
+    () => buildSheetLocks(mode, data, { skillsList, standardLanguageOptions }),
+    [mode, data, skillsList, standardLanguageOptions]
+  );
+
+  // data/onChange/mode/locks live in their own context so changes to them don't
   // invalidate the computed context (which is stable across text-only edits).
+  const pendingFlags = useSheetPendingFlags(saveAttempted);
+
   const dataValue = useMemo<CharacterDataContextValue>(
-    () => ({ data, onChange, readOnly, saveAttempted }),
-    [data, onChange, readOnly, saveAttempted],
+    () => ({ data, onChange, mode, locks, pendingFlags }),
+    [data, onChange, mode, locks, pendingFlags]
   );
 
   // Static catalogs: change only when fetches resolve, never on recalcs.
   const libraryValue = useMemo<RuleLibraryContextValue>(
     () => ({
       classes,
+      subclasses,
       backgrounds,
       races,
       abilities,
@@ -1010,6 +855,7 @@ export function CharacterSheetProvider({
       toolItemsByCategory,
       standardLanguageOptions,
       classesLoading,
+      subclassesLoading,
       backgroundsLoading,
       racesLoading,
       abilitiesLoading,
@@ -1017,6 +863,7 @@ export function CharacterSheetProvider({
     }),
     [
       classes,
+      subclasses,
       backgrounds,
       races,
       abilities,
@@ -1027,11 +874,12 @@ export function CharacterSheetProvider({
       toolItemsByCategory,
       standardLanguageOptions,
       classesLoading,
+      subclassesLoading,
       backgroundsLoading,
       racesLoading,
       abilitiesLoading,
       equipmentItemsLoading,
-    ],
+    ]
   );
 
   // Computed values: only recreated when the underlying derived values change.
@@ -1106,7 +954,7 @@ export function CharacterSheetProvider({
       weaponMasteryMeta,
       abilityMethod,
       handleSetAbilityMethod,
-    ],
+    ]
   );
 
   return (

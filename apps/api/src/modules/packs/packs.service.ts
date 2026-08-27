@@ -1,8 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import type { PackResponse } from '@rpgforce-ai/shared';
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from '../../shared/utils/is-uuid';
 
 const mapToPackResponse = (pack: {
   id: string;
@@ -52,10 +51,8 @@ export class PacksService {
   }
 
   async findByIdOrSlug(idOrSlug: string): Promise<PackResponse> {
-    const isUuid = UUID_REGEX.test(idOrSlug);
-
     const pack = await this.prisma.pack.findFirst({
-      where: isUuid ? { id: idOrSlug } : { slug: idOrSlug },
+      where: isUuid(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug },
     });
 
     if (!pack) {

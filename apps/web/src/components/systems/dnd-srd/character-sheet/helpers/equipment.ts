@@ -1,47 +1,46 @@
-import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
 import {
   parseEquipmentLine,
   formatEquipmentLine,
   splitEquipmentBySource,
   optionTextToLines,
   isEquipmentLineGP,
-} from '@/lib/dnd-srd/equipment-utils';
+  getClassOptionText,
+  getBackgroundOptionText,
+  type CharacterFormData,
+  type EquipmentSource,
+} from '@rpgforce-ai/shared';
 
-export function getWeaponNamesFromEquipment(
-  equipment: string | undefined,
-  weaponsList: { name: string }[]
-): string[] {
-  const lines = (equipment ?? '').split(/\n/).map((s) => s.trim()).filter(Boolean);
-  const weaponNames = new Set(weaponsList.map((w) => w.name));
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const line of lines) {
-    const { name } = parseEquipmentLine(line);
-    if (weaponNames.has(name) && !seen.has(name)) {
-      seen.add(name);
-      result.push(name);
-    }
-  }
-  return result;
+/**
+ * Builds the `{ equipment, equipmentSourceByLine }` pair from the three source groups.
+ *
+ * The map is written by whoever changes the text, never re-derived from it: matching a line back to
+ * its bundle fails on a resolved placeholder, on gold, and on an item both bundles grant.
+ */
+function equipmentPatchFromGroups(groups: {
+  classLines: string[];
+  backgroundLines: string[];
+  manualLines: string[];
+}): { equipment: string; equipmentSourceByLine: EquipmentSource[] } {
+  const lines = [...groups.classLines, ...groups.backgroundLines, ...groups.manualLines];
+  return {
+    equipment: lines.join('\n'),
+    equipmentSourceByLine: [
+      ...groups.classLines.map(() => 'class' as const),
+      ...groups.backgroundLines.map(() => 'background' as const),
+      ...groups.manualLines.map(() => 'manual' as const),
+    ],
+  };
 }
 
-export function getArmorItemsFromEquipment<T extends { id: string; name: string }>(
-  equipment: string | undefined,
-  armorsList: T[]
-): T[] {
-  const lines = (equipment ?? '').split(/\n/).map((s) => s.trim()).filter(Boolean);
-  const armorByName = new Map(armorsList.map((a) => [a.name, a]));
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const line of lines) {
-    const { name } = parseEquipmentLine(line);
-    const armor = armorByName.get(name);
-    if (armor && !seen.has(armor.id)) {
-      seen.add(armor.id);
-      result.push(armor);
-    }
-  }
-  return result;
+/** Applies the same index operation to the source map, so it keeps describing the text. */
+function sourceMapAfterIndexOp(
+  data: CharacterFormData,
+  lineCount: number,
+  op: (map: EquipmentSource[]) => EquipmentSource[]
+): EquipmentSource[] | undefined {
+  const map = data.equipmentSourceByLine;
+  if (!map || map.length !== lineCount) return undefined;
+  return op([...map]);
 }
 
 type EquipmentSpendAdjustOptions = {
@@ -56,7 +55,10 @@ export function removeEquipmentItem(
   options?: EquipmentSpendAdjustOptions
 ) {
   const refundSpentGP = options?.refundSpentGP !== false;
-  const lines = (data.equipment ?? '').split(/\n/).map((s) => s.trim()).filter(Boolean);
+  const lines = (data.equipment ?? '')
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const line = lines[index];
   const purchasedEquipment = data.purchasedEquipment ?? [];
   const idx = purchasedEquipment.findIndex((p) => p.line === line);
@@ -68,7 +70,16 @@ export function removeEquipmentItem(
     nextPurchased = purchasedEquipment.filter((_, i) => i !== idx);
   }
   const nextLines = lines.filter((_, i) => i !== index);
-  onChange({ ...data, equipment: nextLines.join('\n'), equipmentSpentGP, purchasedEquipment: nextPurchased });
+  const nextSourceByLine = sourceMapAfterIndexOp(data, lines.length, (map) =>
+    map.filter((_, i) => i !== index)
+  );
+  onChange({
+    ...data,
+    equipment: nextLines.join('\n'),
+    ...(nextSourceByLine ? { equipmentSourceByLine: nextSourceByLine } : {}),
+    equipmentSpentGP,
+    purchasedEquipment: nextPurchased,
+  });
 }
 
 export function changeEquipmentQuantity(
@@ -79,7 +90,10 @@ export function changeEquipmentQuantity(
   options?: EquipmentSpendAdjustOptions
 ) {
   const refundSpentGP = options?.refundSpentGP !== false;
-  const lines = (data.equipment ?? '').split(/\n/).map((s) => s.trim()).filter(Boolean);
+  const lines = (data.equipment ?? '')
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const line = lines[index];
   const { quantity, name } = parseEquipmentLine(line);
   const newQty = quantity + delta;
@@ -114,20 +128,13 @@ export function changeEquipmentQuantity(
   const nextLines = [...lines];
   if (newQty < 1) nextLines.splice(index, 1);
   else nextLines[index] = formatEquipmentLine(newQty, name);
-  onChange({ ...data, equipment: nextLines.join('\n'), equipmentSpentGP, purchasedEquipment: nextPurchased });
+  onChange({
+    ...data,
+    equipment: nextLines.join('\n'),
+    equipmentSpentGP,
+    purchasedEquipment: nextPurchased,
+  });
 }
-
-export const getClassOptionText = (data: CharacterFormData): string | null =>
-  data.startingEquipmentSelectedIndex != null &&
-  data.startingEquipmentOptions?.options?.[data.startingEquipmentSelectedIndex]
-    ? data.startingEquipmentOptions.options[data.startingEquipmentSelectedIndex].text
-    : null;
-
-export const getBackgroundOptionText = (data: CharacterFormData): string | null =>
-  data.backgroundEquipmentSelectedIndex != null &&
-  data.backgroundEquipmentOptions?.options?.[data.backgroundEquipmentSelectedIndex]
-    ? data.backgroundEquipmentOptions.options[data.backgroundEquipmentSelectedIndex].text
-    : null;
 
 export function addEquipmentItem(
   data: CharacterFormData,
@@ -158,7 +165,11 @@ export function addEquipmentItem(
   const sumQtyAtIndices = (lines: string[], indices: number[]): number =>
     indices.reduce((acc, i) => acc + parseEquipmentLine(lines[i]).quantity, 0);
 
-  const rebuildLinesSingleMerged = (lines: string[], matchIndices: number[], newLine: string): string[] => {
+  const rebuildLinesSingleMerged = (
+    lines: string[],
+    matchIndices: number[],
+    newLine: string
+  ): string[] => {
     if (matchIndices.length === 0) return lines;
     const minIdx = Math.min(...matchIndices);
     const matchSet = new Set(matchIndices);
@@ -166,7 +177,10 @@ export function addEquipmentItem(
     let inserted = false;
     for (let i = 0; i < lines.length; i++) {
       if (matchSet.has(i)) {
-        if (i === minIdx && !inserted) { out.push(newLine); inserted = true; }
+        if (i === minIdx && !inserted) {
+          out.push(newLine);
+          inserted = true;
+        }
       } else {
         out.push(lines[i]);
       }
@@ -193,7 +207,10 @@ export function addEquipmentItem(
     const purchaseTotal = absorbedSum + totalCost;
     if (purchaseTotal > 0) {
       equipmentSpentGP += totalCost;
-      nextPurchasedEquipment = [...nextPurchasedEquipment, { line: newLine, costGP: purchaseTotal }];
+      nextPurchasedEquipment = [
+        ...nextPurchasedEquipment,
+        { line: newLine, costGP: purchaseTotal },
+      ];
     }
   };
 
@@ -218,11 +235,16 @@ export function addEquipmentItem(
     }
   }
 
-  const parts: string[] = [];
-  if (nextClassLines.length) parts.push(nextClassLines.join('\n'));
-  if (nextBackgroundLines.length) parts.push(nextBackgroundLines.join('\n'));
-  if (nextManualLines.length) parts.push(nextManualLines.join('\n'));
-  onChange({ ...data, equipment: parts.join('\n'), equipmentSpentGP, purchasedEquipment: nextPurchasedEquipment });
+  onChange({
+    ...data,
+    ...equipmentPatchFromGroups({
+      classLines: nextClassLines,
+      backgroundLines: nextBackgroundLines,
+      manualLines: nextManualLines,
+    }),
+    equipmentSpentGP,
+    purchasedEquipment: nextPurchasedEquipment,
+  });
 }
 
 export function applyClassEquipmentChoice(
@@ -232,12 +254,19 @@ export function applyClassEquipmentChoice(
   optionText: string
 ) {
   const { backgroundLines } = splitEquipmentBySource(
-    data.equipment ?? '', getClassOptionText(data), getBackgroundOptionText(data)
+    data.equipment ?? '',
+    getClassOptionText(data),
+    getBackgroundOptionText(data),
+    data.equipmentSourceByLine
   );
   const classLines = optionTextToLines(optionText);
-  const parts = [classLines.join('\n')];
-  if (backgroundLines.length) parts.push(backgroundLines.join('\n'));
-  onChange({ ...data, equipment: parts.join('\n'), equipmentSpentGP: 0, purchasedEquipment: [], startingEquipmentSelectedIndex: optionIndex });
+  onChange({
+    ...data,
+    ...equipmentPatchFromGroups({ classLines, backgroundLines, manualLines: [] }),
+    equipmentSpentGP: 0,
+    purchasedEquipment: [],
+    startingEquipmentSelectedIndex: optionIndex,
+  });
 }
 
 export function applyBackgroundEquipmentChoice(
@@ -247,13 +276,19 @@ export function applyBackgroundEquipmentChoice(
   optionText: string
 ) {
   const { classLines } = splitEquipmentBySource(
-    data.equipment ?? '', getClassOptionText(data), getBackgroundOptionText(data)
+    data.equipment ?? '',
+    getClassOptionText(data),
+    getBackgroundOptionText(data),
+    data.equipmentSourceByLine
   );
   const backgroundLines = optionTextToLines(optionText);
-  const parts: string[] = [];
-  if (classLines.length) parts.push(classLines.join('\n'));
-  parts.push(backgroundLines.join('\n'));
-  onChange({ ...data, equipment: parts.join('\n'), equipmentSpentGP: 0, purchasedEquipment: [], backgroundEquipmentSelectedIndex: optionIndex });
+  onChange({
+    ...data,
+    ...equipmentPatchFromGroups({ classLines, backgroundLines, manualLines: [] }),
+    equipmentSpentGP: 0,
+    purchasedEquipment: [],
+    backgroundEquipmentSelectedIndex: optionIndex,
+  });
 }
 
 export function removeClassEquipmentSet(
@@ -266,11 +301,18 @@ export function removeClassEquipmentSet(
     return;
   }
   const { backgroundLines } = splitEquipmentBySource(
-    data.equipment ?? '', classText, getBackgroundOptionText(data)
+    data.equipment ?? '',
+    classText,
+    getBackgroundOptionText(data),
+    data.equipmentSourceByLine
   );
-  const parts: string[] = [];
-  if (backgroundLines.length) parts.push(backgroundLines.join('\n'));
-  onChange({ ...data, equipment: parts.join('\n'), equipmentSpentGP: 0, purchasedEquipment: [], startingEquipmentSelectedIndex: null });
+  onChange({
+    ...data,
+    ...equipmentPatchFromGroups({ classLines: [], backgroundLines, manualLines: [] }),
+    equipmentSpentGP: 0,
+    purchasedEquipment: [],
+    startingEquipmentSelectedIndex: null,
+  });
 }
 
 export function removeBackgroundEquipmentSet(
@@ -283,9 +325,16 @@ export function removeBackgroundEquipmentSet(
     return;
   }
   const { classLines } = splitEquipmentBySource(
-    data.equipment ?? '', getClassOptionText(data), backgroundText
+    data.equipment ?? '',
+    getClassOptionText(data),
+    backgroundText,
+    data.equipmentSourceByLine
   );
-  const parts: string[] = [];
-  if (classLines.length) parts.push(classLines.join('\n'));
-  onChange({ ...data, equipment: parts.join('\n'), equipmentSpentGP: 0, purchasedEquipment: [], backgroundEquipmentSelectedIndex: null });
+  onChange({
+    ...data,
+    ...equipmentPatchFromGroups({ classLines, backgroundLines: [], manualLines: [] }),
+    equipmentSpentGP: 0,
+    purchasedEquipment: [],
+    backgroundEquipmentSelectedIndex: null,
+  });
 }

@@ -1,11 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { isRaceLineageSpellcastingFeatureName } from '@/lib/dnd-srd/character-state';
+import {
+  getAllFightingStyleCantrips,
+  getCastingClasses,
+  isRaceLineageSpellcastingFeature,
+} from '@rpgforce-ai/shared';
 import type { CharacterSheetProps } from './types';
 import { CharacterSheetProvider, useCharacterData, useCharacterComputed } from './context';
+import { AiHintsProvider } from './ui/ai-hint';
 import { HeaderSection } from './sections/header-section';
 import { PersonalitySection } from './sections/personality-section';
 import { SpellcastingSection } from './sections/spellcasting';
@@ -16,89 +20,132 @@ import { CombatSection } from './sections/combat-section';
 import { AttacksSection } from './sections/attacks-section';
 import { EquipmentSection } from './sections/equipment-section';
 import { FeaturesSection } from './sections/features-section';
+import { MulticlassBreachDialog } from './sections/classes/multiclass-breach-dialog';
+import { useMulticlassPrerequisiteGuard } from '../hooks/use-multiclass-prerequisite-guard';
 
 export function CharacterSheet(props: CharacterSheetProps) {
   return (
     <CharacterSheetProvider {...props}>
-      <CharacterSheetContent />
+      <AiHintsProvider decisions={props.aiDecisions} spellNotes={props.aiSpellNotes}>
+        <CharacterSheetContent />
+      </AiHintsProvider>
     </CharacterSheetProvider>
   );
 }
 
 function CharacterSheetContent() {
   // data/onChange come from the data context — re-renders on every change.
-  const { data, onChange, readOnly, saveAttempted } = useCharacterData();
+  const { data, onChange, mode, locks, pendingFlags } = useCharacterData();
 
   // Computed values come from the computed context — stable across text-only edits.
   const {
     classes,
+    subclasses,
     backgrounds,
     races,
     classesLoading,
+    subclassesLoading,
     backgroundsLoading,
     racesLoading,
     proficiencyBonus,
     featureDetails,
   } = useCharacterComputed();
 
+  // Shown only when the character actually HAS a source of spells. This used to be a regex for
+  // "spellcasting ability" over every feature description, which is far too loose: the Thief's
+  // level-13 Use Magic Device says it, so a Rogue 20 with zero spells rendered the whole section.
+  // `getCastingClasses` is the same authority the counters and the save validation read.
   const hasSpellcastingAbility = React.useMemo(() => {
-    // MI slots from ASI feats or versatile feat are not in featureDetails — check them directly.
-    if ((data.magicInitiateChoicesByGain?.length ?? 0) > 0) return true;
+    if (getCastingClasses(data, classes).length > 0) return true;
 
-    // Race traits that grant cantrips/spells (Elven Lineage, Gnomish Lineage, Fiendish Legacy)
-    // only actually grant a spell once the player picks the lineage sub-option — until then
-    // the sheet has no spells from this source, so the section should stay hidden.
-    const hasRaceLineageSpells = (featureDetails as Array<{ name?: string; source?: string }>).some(
+    // Magic Initiate reaches the sheet from an ASI/Versatile gain or from a background feat.
+    if ((data.magicInitiateChoicesByGain ?? []).some(Boolean)) return true;
+    if (Object.values(data.magicInitiateChoicesBySource ?? {}).some(Boolean)) return true;
+
+    // Blessed Warrior / Druidic Warrior grant cantrips without the class being a caster.
+    if (getAllFightingStyleCantrips(data).length > 0) return true;
+
+    // A race lineage only grants its spells once the sub-option is picked, so the section stays
+    // hidden until then.
+    const hasRaceLineageSpells = (
+      featureDetails as Array<{ name?: string; source?: string; featureKey?: string }>
+    ).some(
       (f) =>
         f.source === 'race' &&
-        isRaceLineageSpellcastingFeatureName(f.name ?? '') &&
+        isRaceLineageSpellcastingFeature({ name: f.name ?? '', featureKey: f.featureKey }) &&
         Boolean(data.raceTraitSelections?.[f.name ?? ''])
     );
     if (hasRaceLineageSpells) return true;
 
-    if (!data.classRuleItemId) return false;
-    // Exclude the lineage traits here — their description text mentions "spellcasting
-    // ability" regardless of whether the player picked the sub-option, which would
-    // otherwise make this regex match unconditionally.
-    const allText = (featureDetails as Array<{ desc?: string | null; name?: string }>)
-      .filter((f) => !isRaceLineageSpellcastingFeatureName(f.name ?? ''))
-      .map((f) => `${f.name ?? ''}\n${f.desc ?? ''}`.trim())
-      .filter(Boolean)
-      .join('\n');
-    return /\bspellcasting ability\b/i.test(allText);
-  }, [data.classRuleItemId, data.magicInitiateChoicesByGain, data.raceTraitSelections, featureDetails]);
+    // Last resort: anything already on the sheet (a subclass table, a legacy sheet) must stay visible.
+    return Object.values(data.spellsByLevel ?? {}).some((rows) => (rows?.length ?? 0) > 0);
+  }, [classes, data, featureDetails]);
+
+  // Mounted here so creation and the saved sheet get the identical rule: an edit that breaks a
+  // multiclass requirement asks before it stands, instead of leaving a sheet that refuses to save.
+  const prerequisiteGuard = useMulticlassPrerequisiteGuard({ data, classes, onChange });
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={0}>
-      <div className={cn('mx-auto w-full max-w-7xl space-y-4 pb-8', readOnly && 'sheet-readonly')}>
+      <div className="mx-auto w-full max-w-7xl space-y-4 pb-8">
         <div className="flex min-h-[calc(100vh-10rem)] w-full flex-col rounded-xl border border-border/50 bg-background/50 shadow-sm p-3 sm:p-4 lg:p-5 space-y-4">
           <HeaderSection
             data={data}
             onChange={onChange}
             classes={classes}
+            subclasses={subclasses}
             backgrounds={backgrounds}
             races={races}
             classesLoading={classesLoading}
+            subclassesLoading={subclassesLoading}
             backgroundsLoading={backgroundsLoading}
             racesLoading={racesLoading}
-            readOnly={readOnly}
-            saveAttempted={saveAttempted}
+            locks={locks}
+            pendingFlags={pendingFlags}
           />
 
           <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-[1.9fr_2.8fr_3.5fr_3.2fr] lg:items-stretch">
-            <AbilityScoresSection data={data} onChange={onChange} readOnly={readOnly} saveAttempted={saveAttempted} />
-            <SavesSkillsSection data={data} onChange={onChange} readOnly={readOnly} saveAttempted={saveAttempted} />
-            <ProficienciesSection data={data} onChange={onChange} readOnly={readOnly} saveAttempted={saveAttempted} />
+            <AbilityScoresSection
+              data={data}
+              onChange={onChange}
+              locked={locks.abilityScores}
+              pendingFlags={pendingFlags}
+            />
+            <SavesSkillsSection
+              data={data}
+              onChange={onChange}
+              locked={locks.skills}
+              pendingFlags={pendingFlags}
+            />
+            <ProficienciesSection
+              data={data}
+              onChange={onChange}
+              locks={locks}
+              pendingFlags={pendingFlags}
+            />
 
-            <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:h-full lg:row-span-2">
-              <CombatSection data={data} onChange={onChange} readOnly={readOnly} />
-              <AttacksSection data={data} onChange={onChange} readOnly={readOnly} />
-              <EquipmentSection data={data} onChange={onChange} readOnly={readOnly} saveAttempted={saveAttempted} />
+            {/* The two side columns span both rows, so their natural content height would feed the
+                rows and resize Attributes/Saves/Proficiencies. Content goes absolute inside the grid
+                area: it fills without contributing height, so the rows are driven only by the left
+                sections. */}
+            <div className="relative min-h-0 min-w-0 lg:row-span-2">
+              <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:absolute lg:inset-0">
+                <CombatSection data={data} onChange={onChange} />
+                <AttacksSection data={data} />
+                <EquipmentSection
+                  data={data}
+                  onChange={onChange}
+                  mode={mode}
+                  pendingFlags={pendingFlags}
+                />
+              </div>
             </div>
 
-            <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:row-span-2 lg:h-full">
-              <PersonalitySection data={data} onChange={onChange} />
-              <FeaturesSection data={data} onChange={onChange} readOnly={readOnly} saveAttempted={saveAttempted} />
+            <div className="relative min-h-0 min-w-0 lg:row-span-2">
+              <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:absolute lg:inset-0">
+                <PersonalitySection data={data} onChange={onChange} />
+                <FeaturesSection data={data} onChange={onChange} pendingFlags={pendingFlags} />
+              </div>
             </div>
           </div>
         </div>
@@ -111,11 +158,17 @@ function CharacterSheetContent() {
               proficiencyBonus={proficiencyBonus}
               classes={classes}
               races={races}
-              saveAttempted={saveAttempted}
+              pendingFlags={pendingFlags}
             />
           </div>
         )}
       </div>
+
+      <MulticlassBreachDialog
+        breach={prerequisiteGuard.breach}
+        onConfirm={prerequisiteGuard.confirm}
+        onCancel={prerequisiteGuard.cancel}
+      />
     </TooltipProvider>
   );
 }

@@ -14,8 +14,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  refreshTokens    RefreshToken[]
-  characterSheets  CharacterSheet[]
+  refreshTokens   RefreshToken[]
+  characterSheets CharacterSheet[]
+  generationRuns  GenerationRun[]
 
   @@map("users")
 }
@@ -75,8 +76,9 @@ model Pack {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  ruleItems        RuleItem[]
-  characterSheets  CharacterSheet[]
+  ruleItems       RuleItem[]
+  characterSheets CharacterSheet[]
+  generationRuns  GenerationRun[]
 
   @@index([slug])
   @@index([systemName])
@@ -84,39 +86,70 @@ model Pack {
 }
 
 model CharacterSheet {
-  id             String   @id @default(uuid())
-  userId         String
-  packId         String
-  name           String
-  data           Json
-  schemaVersion  Int      @default(1)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(uuid())
+  userId        String
+  packId        String
+  name          String
+  data          Json
+  schemaVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   pack Pack @relation(fields: [packId], references: [id], onDelete: Restrict)
+
+  generationRun GenerationRun?
 
   @@index([userId])
   @@index([userId, updatedAt])
   @@map("character_sheets")
 }
 
+/// The AI wizard interaction that produced a sheet: the concept, what the model asked, what the user
+/// answered, and the justification it returned. Kept OUT of `CharacterSheet.data` on purpose: nothing
+/// reads it on the sheet's hot path, and `findUnique` there has no `select`, so a column or a JSON key
+/// would ship on every sheet load. Written only when the draft is actually saved.
+model GenerationRun {
+  id               String   @id @default(uuid())
+  userId           String
+  packId           String
+  characterSheetId String   @unique
+  /// The user's original concept text.
+  prompt           String
+  /// How the model interpreted the concept (Markdown, shown in the wizard's review step).
+  note             String
+  /// [{ id, question, options[], answer }] — the clarifying round, questions paired with the answers.
+  questions        Json
+  /// summary + per-area decisions + per-spell notes returned by the loadout call.
+  meta             Json
+  /// Model id that produced it, so a run stays interpretable after a model change.
+  model            String
+  createdAt        DateTime @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack           Pack           @relation(fields: [packId], references: [id], onDelete: Restrict)
+  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("generation_runs")
+}
+
 model RuleItem {
-  id            String       @id @default(uuid())
+  id            String                       @id @default(uuid())
   packId        String
   kind          RuleItemKind
-  source        String       @default("open5e")
+  source        String                       @default("open5e")
   sourceKey     String
   sourceUrl     String?
   sourceVersion String?
   name          String
   slug          String?
-  contentMd     String?      @db.Text
+  contentMd     String?                      @db.Text
   raw           Json
   normalized    Json?
   embedding     Unsupported("vector(1536)")?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
 
   pack     Pack               @relation(fields: [packId], references: [id], onDelete: Cascade)
   outgoing RuleItemRelation[] @relation("RuleItemFrom")

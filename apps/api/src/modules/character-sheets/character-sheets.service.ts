@@ -1,21 +1,18 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
-import type { CharacterSheetWithRulesResponse, PackResponse } from '@rpgforce-ai/shared';
+import {
+  STANDARD_LANGUAGE_TAG,
+  TOOL_CATEGORY_TAGS,
+  type CharacterSheetSummary,
+  type CharacterSheetWithRulesResponse,
+  type PackResponse,
+} from '@rpgforce-ai/shared';
 import { mapToRuleItemResponse } from '../ruleitems/ruleitems.service';
 import { validateCharacterSheetData } from './character-sheet-data.validation';
-
-const STANDARD_LANGUAGE_TAG = 'language:rarity:standard';
-const TOOL_CATEGORY_TAGS = [
-  'item:category:gaming-set',
-  'item:category:musical-instrument',
-  'item:category:artisan',
-  'item:category:tools',
-];
+import { CharacterRecomputeService } from './character-recompute.service';
+import { GenerationRunService } from '../generation/generation-run.service';
+import { CharacterPreviewService, type SheetPreviewInput } from './character-preview.service';
 
 function extractRuleItemIds(data: Record<string, unknown>): string[] {
   const ids = new Set<string>();
@@ -28,7 +25,15 @@ function extractRuleItemIds(data: Record<string, unknown>): string[] {
   const identity = d?.identity as Record<string, unknown> | undefined;
   addIfString(identity?.raceRuleItemId);
   addIfString(identity?.classRuleItemId);
+  addIfString(identity?.subclassRuleItemId);
   addIfString(identity?.backgroundRuleItemId);
+  // Every class of a multiclass sheet, or the preload would resolve only the initial one.
+  if (Array.isArray(identity?.classes)) {
+    for (const entry of identity.classes as Record<string, unknown>[]) {
+      addIfString(entry?.classRuleItemId);
+      addIfString(entry?.subclassRuleItemId);
+    }
+  }
 
   const combat = d?.combat as Record<string, unknown> | undefined;
   addIfString(combat?.equippedArmorId);
@@ -57,7 +62,12 @@ function sheetNameFromData(data: Record<string, unknown>): string {
 
 @Injectable()
 export class CharacterSheetsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recompute: CharacterRecomputeService,
+    private readonly previews: CharacterPreviewService,
+    private readonly generationRuns: GenerationRunService
+  ) {}
 
   private toResponse(row: {
     id: string;
@@ -81,27 +91,35 @@ export class CharacterSheetsService {
     };
   }
 
-  async create(userId: string, packId: string, data: Record<string, unknown>) {
+  async create(
+    userId: string,
+    packId: string,
+    data: Record<string, unknown>,
+    generationId?: string
+  ) {
     const pack = await this.prisma.pack.findUnique({ where: { id: packId } });
     if (!pack) {
       throw new NotFoundException('Pack not found');
     }
 
     const validated = validateCharacterSheetData(data);
-    const name = sheetNameFromData(data);
+    const stored = await this.recompute.validateAndRecompute(packId, data, validated.schemaVersion);
+    const name = sheetNameFromData(stored);
     const row = await this.prisma.characterSheet.create({
       data: {
         userId,
         packId,
         name,
-        data: data as Prisma.InputJsonValue,
+        data: stored as Prisma.InputJsonValue,
         schemaVersion: validated.schemaVersion,
       },
     });
+    // The AI interaction is only persisted once its draft becomes a real sheet; never blocks the save.
+    await this.generationRuns.linkToSheet({ generationId, userId, characterSheetId: row.id });
     return this.toResponse(row);
   }
 
-  async findAllForUser(userId: string) {
+  async findAllForUser(userId: string): Promise<CharacterSheetSummary[]> {
     const rows = await this.prisma.characterSheet.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
@@ -112,8 +130,22 @@ export class CharacterSheetsService {
         schemaVersion: true,
         createdAt: true,
         updatedAt: true,
+        data: true,
       },
     });
+
+    // One preview batch per pack: catalogs are per-pack, so they load once instead of once per sheet.
+    const byPack = new Map<string, SheetPreviewInput[]>();
+    for (const row of rows) {
+      const list = byPack.get(row.packId) ?? [];
+      list.push({ id: row.id, data: row.data, schemaVersion: row.schemaVersion });
+      byPack.set(row.packId, list);
+    }
+    const previewMaps = await Promise.all(
+      [...byPack.entries()].map(([packId, sheets]) => this.previews.buildPreviews(packId, sheets))
+    );
+    const previewById = new Map(previewMaps.flatMap((m) => [...m.entries()]));
+
     return rows.map((r) => ({
       id: r.id,
       packId: r.packId,
@@ -121,6 +153,7 @@ export class CharacterSheetsService {
       schemaVersion: r.schemaVersion,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
+      preview: previewById.get(r.id),
     }));
   }
 
@@ -137,46 +170,52 @@ export class CharacterSheetsService {
     return this.toResponse(row);
   }
 
-  async findOneWithRules(
-    userId: string,
-    id: string,
-  ): Promise<CharacterSheetWithRulesResponse> {
+  async findOneWithRules(userId: string, id: string): Promise<CharacterSheetWithRulesResponse> {
     const row = await this.prisma.characterSheet.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Character sheet not found');
-    if (row.userId !== userId) throw new ForbiddenException('You do not have access to this character sheet');
+    if (row.userId !== userId)
+      throw new ForbiddenException('You do not have access to this character sheet');
 
     const referencedIds = extractRuleItemIds(row.data as Record<string, unknown>);
 
     const includeWithTags = { tags: { include: { tag: true } } } as const;
 
-    const [referencedItems, allFeats, abilityItems, languageItems, toolItems, pack] = await Promise.all([
-      referencedIds.length > 0
-        ? this.prisma.ruleItem.findMany({ where: { id: { in: referencedIds } }, include: includeWithTags })
-        : Promise.resolve([]),
-      // The full feat catalog: the viewer resolves derived feats referenced by name (background
-      // origin feats, Eldritch Invocations' Lessons of the First Ones, Magic Initiate), not just
-      // feats referenced by id — so it needs every feat, like the editor's rule library.
-      this.prisma.ruleItem.findMany({
-        where: { packId: row.packId, kind: 'FEAT' },
-        include: includeWithTags,
-      }),
-      this.prisma.ruleItem.findMany({
-        where: { packId: row.packId, kind: 'ABILITY' },
-        include: includeWithTags,
-      }),
-      this.prisma.ruleItem.findMany({
-        where: { packId: row.packId, kind: 'OTHER', tags: { some: { tag: { key: STANDARD_LANGUAGE_TAG } } } },
-        include: includeWithTags,
-      }),
-      this.prisma.ruleItem.findMany({
-        where: {
-          packId: row.packId,
-          tags: { some: { tag: { key: { in: TOOL_CATEGORY_TAGS } } } },
-        },
-        include: includeWithTags,
-      }),
-      this.prisma.pack.findUnique({ where: { id: row.packId } }),
-    ]);
+    const [referencedItems, allFeats, abilityItems, languageItems, toolItems, pack] =
+      await Promise.all([
+        referencedIds.length > 0
+          ? this.prisma.ruleItem.findMany({
+              where: { id: { in: referencedIds } },
+              include: includeWithTags,
+            })
+          : Promise.resolve([]),
+        // The full feat catalog: the viewer resolves derived feats referenced by name (background
+        // origin feats, Eldritch Invocations' Lessons of the First Ones, Magic Initiate), not just
+        // feats referenced by id — so it needs every feat, like the editor's rule library.
+        this.prisma.ruleItem.findMany({
+          where: { packId: row.packId, kind: 'FEAT' },
+          include: includeWithTags,
+        }),
+        this.prisma.ruleItem.findMany({
+          where: { packId: row.packId, kind: 'ABILITY' },
+          include: includeWithTags,
+        }),
+        this.prisma.ruleItem.findMany({
+          where: {
+            packId: row.packId,
+            kind: 'OTHER',
+            tags: { some: { tag: { key: STANDARD_LANGUAGE_TAG } } },
+          },
+          include: includeWithTags,
+        }),
+        this.prisma.ruleItem.findMany({
+          where: {
+            packId: row.packId,
+            tags: { some: { tag: { key: { in: TOOL_CATEGORY_TAGS } } } },
+          },
+          include: includeWithTags,
+        }),
+        this.prisma.pack.findUnique({ where: { id: row.packId } }),
+      ]);
 
     if (!pack) throw new NotFoundException('Pack not found');
 
@@ -206,18 +245,16 @@ export class CharacterSheetsService {
     return {
       sheet: this.toResponse(row),
       pack: packResponse,
-      ruleItems: Object.fromEntries(allReferencedItems.map((i) => [i.id, mapToRuleItemResponse(i)])),
+      ruleItems: Object.fromEntries(
+        allReferencedItems.map((i) => [i.id, mapToRuleItemResponse(i)])
+      ),
       abilities: abilityItems.map(mapToRuleItemResponse),
       languages: languageItems.map(mapToRuleItemResponse),
       toolItems: toolItems.map(mapToRuleItemResponse),
     };
   }
 
-  async updateForUser(
-    userId: string,
-    id: string,
-    data: Record<string, unknown>,
-  ) {
+  async updateForUser(userId: string, id: string, data: Record<string, unknown>) {
     const row = await this.prisma.characterSheet.findUnique({
       where: { id },
     });
@@ -229,15 +266,35 @@ export class CharacterSheetsService {
     }
 
     const validated = validateCharacterSheetData(data);
-    const name = sheetNameFromData(data);
+    const stored = await this.recompute.validateAndRecompute(
+      row.packId,
+      data,
+      validated.schemaVersion
+    );
+    const name = sheetNameFromData(stored);
     const updated = await this.prisma.characterSheet.update({
       where: { id },
       data: {
         name,
-        data: data as Prisma.InputJsonValue,
+        data: stored as Prisma.InputJsonValue,
         schemaVersion: validated.schemaVersion,
       },
     });
     return this.toResponse(updated);
+  }
+
+  async removeForUser(userId: string, id: string) {
+    const row = await this.prisma.characterSheet.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Character sheet not found');
+    }
+    if (row.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this character sheet');
+    }
+
+    await this.prisma.characterSheet.delete({ where: { id } });
   }
 }

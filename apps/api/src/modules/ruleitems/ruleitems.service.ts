@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { RuleItemKind as PrismaRuleItemKind } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { EmbeddingsService } from '../embeddings/embeddings.service';
+import { isUuid } from '../../shared/utils/is-uuid';
 import type {
   RuleItemResponse,
   RuleItemListParams,
@@ -10,8 +11,6 @@ import type {
   RuleItemSearchParams,
   RuleItemSearchResult,
 } from '@rpgforce-ai/shared';
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function mapToRuleItemResponse(item: {
   id: string;
@@ -58,13 +57,13 @@ export class RuleitemsService {
 
   async findManyBatch(
     packId: string | undefined,
-    queries: Array<RuleItemListParams & { key: string }>,
+    queries: Array<RuleItemListParams & { key: string }>
   ): Promise<import('@rpgforce-ai/shared').RuleItemBatchResult> {
     const entries = await Promise.all(
       queries.map(async ({ key, ...params }) => {
         const result = await this.findMany({ ...params, packId });
         return [key, result] as const;
-      }),
+      })
     );
     return Object.fromEntries(entries);
   }
@@ -230,9 +229,10 @@ export class RuleitemsService {
   }
 
   async findByIdOrSlug(idOrSlug: string, packId?: string): Promise<RuleItemResponse> {
-    const isUuid = UUID_REGEX.test(idOrSlug);
     const item = await this.prisma.ruleItem.findFirst({
-      where: isUuid ? { id: idOrSlug } : { slug: idOrSlug, ...(packId ? { packId } : {}) },
+      where: isUuid(idOrSlug)
+        ? { id: idOrSlug }
+        : { slug: idOrSlug, ...(packId ? { packId } : {}) },
       include: { tags: { include: { tag: true } } },
     });
 

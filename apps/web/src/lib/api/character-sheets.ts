@@ -1,5 +1,9 @@
 import apiClient from './client';
-import type { CharacterSheetResponse, CharacterSheetSummary, CharacterSheetWithRulesResponse } from '@rpgforce-ai/shared';
+import type {
+  CharacterSheetResponse,
+  CharacterSheetSummary,
+  CharacterSheetWithRulesResponse,
+} from '@rpgforce-ai/shared';
 
 export const characterSheetsApi = {
   list: async (): Promise<CharacterSheetSummary[]> => {
@@ -23,23 +27,27 @@ export const characterSheetsApi = {
 
   create: async (
     packId: string,
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
+    // AI drafts only: links the saved sheet to the wizard interaction that produced it.
+    generationId?: string
   ): Promise<CharacterSheetResponse> => {
     const response = await apiClient.post<CharacterSheetResponse>('/character-sheets', {
       packId,
       data,
+      ...(generationId ? { generationId } : {}),
     });
     return response.data;
   },
 
-  update: async (
-    id: string,
-    data: Record<string, unknown>
-  ): Promise<CharacterSheetResponse> => {
+  update: async (id: string, data: Record<string, unknown>): Promise<CharacterSheetResponse> => {
     const response = await apiClient.patch<CharacterSheetResponse>(
       `/character-sheets/${encodeURIComponent(id)}`,
       { data }
     );
     return response.data;
+  },
+
+  remove: async (id: string): Promise<void> => {
+    await apiClient.delete(`/character-sheets/${encodeURIComponent(id)}`);
   },
 };

@@ -46,7 +46,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 async function fetchAllPaginated<T>(
   endpoint: string,
-  query: Record<string, string> = {},
+  query: Record<string, string> = {}
 ): Promise<T[]> {
   const params = new URLSearchParams({ limit: '100', ...query });
   const url = `${OPEN5E_BASE}/${endpoint}/?${params}`;
@@ -64,7 +64,7 @@ async function fetchAllPaginated<T>(
 
 async function fetchDocuments(): Promise<Open5eDocument[]> {
   const data = await fetchJson<PaginatedResponse<Open5eDocument>>(
-    `${OPEN5E_BASE}/documents/?limit=100`,
+    `${OPEN5E_BASE}/documents/?limit=100`
   );
   return data.results;
 }
@@ -158,7 +158,7 @@ function normalizeAbilityForDocument(
   const skills = (ability.skills ?? []) as AbilitySkill[];
   const skillsNormalized = skills
     .filter((sk) =>
-      (sk.descriptions ?? []).some((d: AbilityDescription) => d.document === documentKey),
+      (sk.descriptions ?? []).some((d: AbilityDescription) => d.document === documentKey)
     )
     .map((sk) => {
       const skDescs = (sk.descriptions ?? []) as AbilityDescription[];
@@ -206,8 +206,8 @@ export async function fetchRulesets(documentKey: string): Promise<Open5eRuleset[
 }
 
 /**
- * Fetch abilities; filtra por documento (ex.: srd-2024) e normaliza para manter só descrições desse documento.
- * O endpoint v2/abilities não filtra por document na API, então buscamos todos e filtramos por descriptions[].document.
+ * Fetch abilities; filters by document (e.g. srd-2024) and normalizes to keep only that document's descriptions.
+ * The v2/abilities endpoint does not filter by document in the API, so we fetch all and filter by descriptions[].document.
  */
 export async function fetchAbilities(documentKey: string): Promise<unknown[]> {
   const all = await fetchAllPaginated<AbilityRaw>('abilities', {});

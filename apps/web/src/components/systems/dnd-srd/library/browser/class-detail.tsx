@@ -2,11 +2,16 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import { normalizeFeatureDesc } from '@/lib/dnd-srd/derived-character-stats';
-import { getClassCoreTraitsDesc, tableLikeToBullets } from '@/lib/dnd-srd/rule-item-presentation';
+import {
+  normalizeFeatureDesc,
+  getClassCoreTraitsDesc,
+  getMulticlassSummary,
+  tableLikeToBullets,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { BrowseMarkdown } from './browse-markdown';
 import { BrowseCard } from './browse-card';
+import { CollapsibleSectionList, type CollapsibleEntry } from './collapsible-section-list';
 import { findParentClass, subclassEntry } from './browse-entries';
 
 interface ClassFeature {
@@ -77,25 +82,27 @@ const ClassLevelTable = ({ features }: { features: ClassFeature[] }) => {
   return (
     <section aria-label="Class features table">
       <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">Features Table</h2>
+      {/* Every column but Features holds a short numeric value, so they are all centered; only the
+          Features text column stays left-aligned. */}
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="bg-muted text-left">
-              <th className="border-b border-border px-2 py-1.5 font-semibold text-foreground">
+            <tr className="bg-muted">
+              <th className="border-b border-border px-2 py-1.5 text-center font-semibold text-foreground">
                 Level
               </th>
               {columns.length > 0 && (
-                <th className="border-b border-border px-2 py-1.5 font-semibold text-foreground">
+                <th className="border-b border-border px-2 py-1.5 text-center font-semibold text-foreground">
                   {columns[0].label}
                 </th>
               )}
-              <th className="w-full border-b border-border px-2 py-1.5 font-semibold text-foreground">
+              <th className="w-full border-b border-border px-2 py-1.5 text-left font-semibold text-foreground">
                 Features
               </th>
               {columns.slice(1).map((col) => (
                 <th
                   key={col.label}
-                  className="border-b border-border px-2 py-1.5 text-center font-semibold text-foreground"
+                  className="border-b border-border px-2 py-1.5 text-center font-semibold whitespace-nowrap text-foreground"
                 >
                   {col.label}
                 </th>
@@ -105,15 +112,15 @@ const ClassLevelTable = ({ features }: { features: ClassFeature[] }) => {
           <tbody>
             {levels.map((level) => (
               <tr key={level} className="odd:bg-background even:bg-muted/30">
-                <td className="border-b border-border/50 px-2 py-1 font-medium text-foreground">
+                <td className="border-b border-border/50 px-2 py-1 text-center font-semibold text-foreground">
                   {level}
                 </td>
                 {columns.length > 0 && (
-                  <td className="border-b border-border/50 px-2 py-1 text-muted-foreground">
+                  <td className="border-b border-border/50 px-2 py-1 text-center text-muted-foreground">
                     {columns[0].values.get(level) ?? '—'}
                   </td>
                 )}
-                <td className="border-b border-border/50 px-2 py-1 text-muted-foreground">
+                <td className="border-b border-border/50 px-2 py-1 text-left text-muted-foreground">
                   {(featureNamesByLevel.get(level) ?? []).join(', ') || '—'}
                 </td>
                 {columns.slice(1).map((col) => (
@@ -133,44 +140,30 @@ const ClassLevelTable = ({ features }: { features: ClassFeature[] }) => {
   );
 };
 
-const featureHeading = (feature: ClassFeature): string => {
-  const levels = featureLevels(feature);
-  if (levels.length === 0) return feature.name ?? '';
-  const prefix = levels.length === 1 ? `Level ${levels[0]}` : `Levels ${levels.join(', ')}`;
-  return `${prefix}: ${feature.name ?? ''}`;
-};
+const featureKeyOf = (feature: ClassFeature, index: number): string =>
+  feature.key ?? feature.name ?? `feature-${index}`;
 
 export const FeatureList = ({ features, title }: { features: ClassFeature[]; title: string }) => {
-  const levelFeatures = React.useMemo(
-    () =>
+  const entries = React.useMemo(
+    (): CollapsibleEntry[] =>
       features
         .filter((f) => f.featureType === 'CLASS_LEVEL_FEATURE' && f.desc?.trim())
-        .sort((a, b) => minFeatureLevel(a) - minFeatureLevel(b)),
+        .sort((a, b) => minFeatureLevel(a) - minFeatureLevel(b))
+        .map((feature, index) => {
+          const levels = featureLevels(feature);
+          return {
+            key: featureKeyOf(feature, index),
+            title: feature.name ?? '',
+            badge: levels.length > 0 ? levels[0] : undefined,
+            subtitle:
+              levels.length > 1 ? `Também nos níveis ${levels.slice(1).join(', ')}` : undefined,
+            content: <BrowseMarkdown>{normalizeFeatureDesc(feature.desc)}</BrowseMarkdown>,
+          };
+        }),
     [features]
   );
 
-  if (levelFeatures.length === 0) return null;
-
-  return (
-    <section aria-label={title}>
-      <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">{title}</h2>
-      <div className="flex flex-col gap-2">
-        {levelFeatures.map((feature) => (
-          <details
-            key={feature.key ?? feature.name}
-            className="group rounded-lg border border-border bg-card"
-          >
-            <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
-              {featureHeading(feature)}
-            </summary>
-            <div className="border-t border-border/60 px-4 py-3">
-              <BrowseMarkdown>{normalizeFeatureDesc(feature.desc)}</BrowseMarkdown>
-            </div>
-          </details>
-        ))}
-      </div>
-    </section>
-  );
+  return <CollapsibleSectionList title={title} entries={entries} />;
 };
 
 const HitPointsBlock = ({ item }: { item: RuleItemResponse }) => {
@@ -220,6 +213,7 @@ export const ClassDetail = ({
       (s.normalized as { subclassOf?: { key?: string } } | undefined)?.subclassOf?.key === classKey
   );
   const coreTraits = getClassCoreTraitsDesc(item);
+  const multiclass = getMulticlassSummary(item);
   const desc = (item.normalized as { desc?: string } | undefined)?.desc;
 
   return (
@@ -232,12 +226,32 @@ export const ClassDetail = ({
           <BrowseMarkdown>{tableLikeToBullets(coreTraits)}</BrowseMarkdown>
         </section>
       ) : null}
+      {multiclass ? (
+        <section aria-label="Multiclassing" className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">Multiclassing</h2>
+          <p className="mb-2 text-sm text-muted-foreground">
+            {multiclass.requirement
+              ? `Taking ${item.name} as a second class requires ${multiclass.requirement}, in it and in the classes you already have. You then gain:`
+              : `Taking ${item.name} as a second class grants:`}
+          </p>
+          <ul className="ml-4 list-disc space-y-1 text-sm text-foreground">
+            {multiclass.grants.map((grant) => (
+              <li key={grant}>{grant}</li>
+            ))}
+            <li>Its level 1 features, and its later features as you level in it</li>
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Not granted: saving throws, the full starting proficiencies, and starting equipment.
+            Those come only from your first class.
+          </p>
+        </section>
+      ) : null}
       <ClassLevelTable features={features} />
       <FeatureList features={features} title="Class Features" />
       {ownSubclasses.length > 0 && (
         <section aria-label="Subclasses">
           <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">Subclasses</h2>
-          <ul className="grid list-none gap-3 p-0 sm:grid-cols-2">
+          <ul className="grid list-none gap-4 p-0 sm:grid-cols-2">
             {ownSubclasses.map((subclass) => {
               const entry = subclassEntry(subclass);
               return (

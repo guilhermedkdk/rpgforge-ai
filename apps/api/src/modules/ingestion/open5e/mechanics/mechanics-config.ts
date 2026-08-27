@@ -1,14 +1,12 @@
 import type { RuleMechanics } from '@rpgforce-ai/shared';
 
 /**
- * Single source of truth mapping SRD features/feats to machine-readable
- * mechanics. When the SRD changes a feature name or a new feature ships,
- * add/adjust ONE entry here and re-run the ingestion — the frontend matches
- * `mechanics.featureKey` first and only falls back to display-name matching.
+ * Maps SRD features and feats to machine-readable mechanics. A renamed or new feature is ONE entry
+ * here plus a re-run of the ingestion; the frontend matches `mechanics.featureKey` first and only
+ * falls back to display names.
  *
- * Matching: `sourceKeySuffixes` win (matched against the end of the Open5e
- * `key`, e.g. `srd-2024_rogue_expertise` ends with `_expertise`); `names` are
- * the normalized (lowercased/trimmed) display-name fallbacks.
+ * `sourceKeySuffixes` win, matched against the end of the Open5e `key`; `names` are the normalized
+ * display-name fallbacks.
  */
 export interface FeatureMechanicsRule {
   mechanics: RuleMechanics;
@@ -20,7 +18,7 @@ export interface FeatureMechanicsRule {
 
 const rule = (
   featureKey: string,
-  extra: Omit<FeatureMechanicsRule, 'mechanics'> & { mechanics?: Omit<RuleMechanics, 'featureKey'> },
+  extra: Omit<FeatureMechanicsRule, 'mechanics'> & { mechanics?: Omit<RuleMechanics, 'featureKey'> }
 ): FeatureMechanicsRule => ({
   mechanics: { featureKey, ...(extra.mechanics ?? {}) },
   sourceKeySuffixes: extra.sourceKeySuffixes,
@@ -56,32 +54,51 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
   rule('expertise', {
     sourceKeySuffixes: ['_expertise'],
     names: ['expertise'],
-    mechanics: { choices: [{ featureKey: 'expertise', selectionKind: 'skill', choicesPerGain: 2 }] },
+    mechanics: {
+      choices: [{ featureKey: 'expertise', selectionKind: 'skill', choicesPerGain: 2 }],
+    },
   }),
   rule('metamagic', {
     sourceKeySuffixes: ['_metamagic'],
     names: ['metamagic'],
-    mechanics: { choices: [{ featureKey: 'metamagic', selectionKind: 'option', choicesPerGain: 2 }] },
+    mechanics: {
+      choices: [{ featureKey: 'metamagic', selectionKind: 'option', choicesPerGain: 2 }],
+    },
   }),
   rule('eldritch-invocations', {
     sourceKeySuffixes: ['_eldritch-invocations'],
     names: ['eldritch invocations', 'eldritch invocation'],
-    mechanics: { choices: [{ featureKey: 'eldritch-invocations', selectionKind: 'option', choicesPerGain: 1 }] },
+    mechanics: {
+      choices: [{ featureKey: 'eldritch-invocations', selectionKind: 'option', choicesPerGain: 1 }],
+    },
+  }),
+  // Ranger 1: grants two always-prepared spells and a skill. It carries no choice, but the engine
+  // still has to RECOGNISE it (the granted-spell derivation reads it), and without a key here it was
+  // the last rule in the whole engine identified by its English display name.
+  rule('favored-enemy', {
+    sourceKeySuffixes: ['_favored-enemy'],
+    names: ['favored enemy'],
   }),
   rule('mystic-arcanum', {
     sourceKeySuffixes: ['_mystic-arcanum'],
     names: ['mystic arcanum'],
-    mechanics: { choices: [{ featureKey: 'mystic-arcanum', selectionKind: 'spell', choicesPerGain: 1 }] },
+    mechanics: {
+      choices: [{ featureKey: 'mystic-arcanum', selectionKind: 'spell', choicesPerGain: 1 }],
+    },
   }),
   rule('signature-spells', {
     sourceKeySuffixes: ['_signature-spells'],
     names: ['signature spells'],
-    mechanics: { choices: [{ featureKey: 'signature-spells', selectionKind: 'spell', choicesPerGain: 2 }] },
+    mechanics: {
+      choices: [{ featureKey: 'signature-spells', selectionKind: 'spell', choicesPerGain: 2 }],
+    },
   }),
   rule('spell-mastery', {
     sourceKeySuffixes: ['_spell-mastery'],
     names: ['spell mastery'],
-    mechanics: { choices: [{ featureKey: 'spell-mastery', selectionKind: 'spell', choicesPerGain: 2 }] },
+    mechanics: {
+      choices: [{ featureKey: 'spell-mastery', selectionKind: 'spell', choicesPerGain: 2 }],
+    },
   }),
   rule('magical-secrets', {
     sourceKeySuffixes: ['_magical-secrets'],
@@ -91,17 +108,25 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
   rule('weapon-mastery', {
     sourceKeySuffixes: ['_weapon-mastery'],
     names: ['weapon mastery'],
-    mechanics: { choices: [{ featureKey: 'weapon-mastery', selectionKind: 'item', choicesPerGain: 1 }] },
+    mechanics: {
+      choices: [{ featureKey: 'weapon-mastery', selectionKind: 'item', choicesPerGain: 1 }],
+    },
   }),
   rule('fighting-style', {
     sourceKeySuffixes: ['_fighting-style'],
     names: ['fighting style'],
-    mechanics: { choices: [{ featureKey: 'fighting-style', selectionKind: 'feat', choicesPerGain: 1 }] },
+    mechanics: {
+      choices: [{ featureKey: 'fighting-style', selectionKind: 'feat', choicesPerGain: 1 }],
+    },
   }),
   rule('ability-score-improvement', {
     sourceKeySuffixes: ['_ability-score-improvement'],
     names: ['ability score improvement'],
-    mechanics: { choices: [{ featureKey: 'ability-score-improvement', selectionKind: 'ability', choicesPerGain: 1 }] },
+    mechanics: {
+      choices: [
+        { featureKey: 'ability-score-improvement', selectionKind: 'ability', choicesPerGain: 1 },
+      ],
+    },
   }),
   rule('epic-boon', {
     sourceKeySuffixes: ['_epic-boon'],
@@ -111,7 +136,9 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
   rule('primal-knowledge', {
     sourceKeySuffixes: ['_primal-knowledge'],
     names: ['primal knowledge'],
-    mechanics: { choices: [{ featureKey: 'primal-knowledge', selectionKind: 'skill', choicesPerGain: 1 }] },
+    mechanics: {
+      choices: [{ featureKey: 'primal-knowledge', selectionKind: 'skill', choicesPerGain: 1 }],
+    },
   }),
   rule('scholar', {
     sourceKeySuffixes: ['_scholar'],
@@ -130,25 +157,51 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
   }),
 
   // ── Class features with fixed behavior ───────────────────────────────
-  rule('thieves-cant', { sourceKeySuffixes: ['_thieves-cant'], names: ["thieves' cant", 'thieves cant'] }),
+  rule('thieves-cant', {
+    sourceKeySuffixes: ['_thieves-cant'],
+    names: ["thieves' cant", 'thieves cant'],
+  }),
   rule('druidic', { sourceKeySuffixes: ['_druidic'], names: ['druidic'] }),
-  rule('words-of-creation', { sourceKeySuffixes: ['_words-of-creation'], names: ['words of creation'] }),
+  rule('words-of-creation', {
+    sourceKeySuffixes: ['_words-of-creation'],
+    names: ['words of creation'],
+  }),
   rule('faithful-steed', { sourceKeySuffixes: ['_faithful-steed'], names: ['faithful steed'] }),
-  rule('paladins-smite', { sourceKeySuffixes: ['_paladins-smite'], names: ["paladin's smite", 'paladins smite'] }),
+  rule('paladins-smite', {
+    sourceKeySuffixes: ['_paladins-smite'],
+    names: ["paladin's smite", 'paladins smite'],
+  }),
   rule('contact-patron', { sourceKeySuffixes: ['_contact-patron'], names: ['contact patron'] }),
-  rule('jack-of-all-trades', { sourceKeySuffixes: ['_jack-of-all-trades'], names: ['jack of all trades'] }),
-  rule('unarmored-defense', { sourceKeySuffixes: ['_unarmored-defense'], names: ['unarmored defense'] }),
-  rule('aura-of-protection', { sourceKeySuffixes: ['_aura-of-protection'], names: ['aura of protection'] }),
+  rule('jack-of-all-trades', {
+    sourceKeySuffixes: ['_jack-of-all-trades'],
+    names: ['jack of all trades'],
+  }),
+  rule('unarmored-defense', {
+    sourceKeySuffixes: ['_unarmored-defense'],
+    names: ['unarmored defense'],
+  }),
+  rule('aura-of-protection', {
+    sourceKeySuffixes: ['_aura-of-protection'],
+    names: ['aura of protection'],
+  }),
   rule('fast-movement', { sourceKeySuffixes: ['_fast-movement'], names: ['fast movement'] }),
   rule('roving', { sourceKeySuffixes: ['_roving'], names: ['roving'] }),
-  rule('unarmored-movement', { sourceKeySuffixes: ['_unarmored-movement'], names: ['unarmored movement'] }),
+  rule('unarmored-movement', {
+    sourceKeySuffixes: ['_unarmored-movement'],
+    names: ['unarmored movement'],
+  }),
   rule('martial-arts', { sourceKeySuffixes: ['_martial-arts'], names: ['martial arts'] }),
   rule('primal-champion', { sourceKeySuffixes: ['_primal-champion'], names: ['primal champion'] }),
   rule('body-and-mind', { sourceKeySuffixes: ['_body-and-mind'], names: ['body and mind'] }),
   rule('rage', {
     sourceKeySuffixes: ['_rage'],
     names: ['rage'],
-    mechanics: { tables: [{ name: 'Rages', role: 'resource' }, { name: 'Rage Damage', role: 'resource' }] },
+    mechanics: {
+      tables: [
+        { name: 'Rages', role: 'resource' },
+        { name: 'Rage Damage', role: 'resource' },
+      ],
+    },
   }),
   rule('bardic-inspiration', {
     sourceKeySuffixes: ['_bardic-inspiration'],
@@ -167,17 +220,26 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
   rule('elven-lineage', {
     names: ['elven lineage'],
     nameIncludesAll: [['elven', 'lineage']],
-    mechanics: { markers: ['lineage-spellcasting'], choices: [{ featureKey: 'elven-lineage', selectionKind: 'option', choicesPerGain: 1 }] },
+    mechanics: {
+      markers: ['lineage-spellcasting'],
+      choices: [{ featureKey: 'elven-lineage', selectionKind: 'option', choicesPerGain: 1 }],
+    },
   }),
   rule('gnomish-lineage', {
     names: ['gnomish lineage'],
     nameIncludesAll: [['gnomish', 'lineage']],
-    mechanics: { markers: ['lineage-spellcasting'], choices: [{ featureKey: 'gnomish-lineage', selectionKind: 'option', choicesPerGain: 1 }] },
+    mechanics: {
+      markers: ['lineage-spellcasting'],
+      choices: [{ featureKey: 'gnomish-lineage', selectionKind: 'option', choicesPerGain: 1 }],
+    },
   }),
   rule('fiendish-legacy', {
     names: ['fiendish legacy'],
     nameIncludesAll: [['fiendish', 'legacy']],
-    mechanics: { markers: ['lineage-spellcasting'], choices: [{ featureKey: 'fiendish-legacy', selectionKind: 'option', choicesPerGain: 1 }] },
+    mechanics: {
+      markers: ['lineage-spellcasting'],
+      choices: [{ featureKey: 'fiendish-legacy', selectionKind: 'option', choicesPerGain: 1 }],
+    },
   }),
   rule('otherworldly-presence', { names: ['otherworldly presence'] }),
   rule('keen-senses', { names: ['keen senses'] }),
@@ -187,7 +249,9 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
   rule('magic-initiate', {
     sourceKeySuffixes: ['_magic-initiate'],
     names: ['magic initiate'],
-    mechanics: { choices: [{ featureKey: 'magic-initiate', selectionKind: 'spell', choicesPerGain: 3 }] },
+    mechanics: {
+      choices: [{ featureKey: 'magic-initiate', selectionKind: 'spell', choicesPerGain: 3 }],
+    },
   }),
   rule('skilled', {
     sourceKeySuffixes: ['_skilled'],
@@ -200,15 +264,11 @@ const FEATURE_MECHANICS_RULES: readonly FeatureMechanicsRule[] = [
 ];
 
 const normalizeName = (name: string): string =>
-  name
-    .trim()
-    .toLowerCase()
-    .replace(/’/g, "'")
-    .replace(/\s+/g, ' ');
+  name.trim().toLowerCase().replace(/’/g, "'").replace(/\s+/g, ' ');
 
 export function findMechanicsRule(
   sourceKey: string | null | undefined,
-  name: string | null | undefined,
+  name: string | null | undefined
 ): FeatureMechanicsRule | null {
   const key = (sourceKey ?? '').trim().toLowerCase();
   if (key) {

@@ -6,6 +6,7 @@ import { IngestionModule } from './modules/ingestion/ingestion.module';
 import { PacksModule } from './modules/packs/packs.module';
 import { RuleitemsModule } from './modules/ruleitems/ruleitems.module';
 import { CharacterSheetsModule } from './modules/character-sheets/character-sheets.module';
+import { GenerationModule } from './modules/generation/generation.module';
 import { PrismaService } from './shared/prisma.service';
 
 @Global()
@@ -18,6 +19,7 @@ import { PrismaService } from './shared/prisma.service';
     PacksModule,
     RuleitemsModule,
     CharacterSheetsModule,
+    GenerationModule,
     IngestionModule,
   ],
   controllers: [AppController],

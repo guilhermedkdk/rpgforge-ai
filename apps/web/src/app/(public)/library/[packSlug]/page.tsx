@@ -30,7 +30,7 @@ export default function PackLibraryPage() {
         {isLoading ? (
           <LoadingState />
         ) : isError ? (
-          <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <div className="flex flex-col items-center gap-4 py-24 text-center content-reveal">
             <p className="font-serif text-lg font-semibold text-foreground">
               Não foi possível carregar a biblioteca
             </p>
@@ -44,7 +44,7 @@ export default function PackLibraryPage() {
         ) : pack && entry ? (
           <entry.library pack={pack} />
         ) : (
-          <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <div className="flex flex-col items-center gap-4 py-24 text-center content-reveal">
             <p className="font-serif text-lg font-semibold text-foreground">
               {pack
                 ? `O sistema ${pack.name} ainda não possui uma biblioteca disponível.`

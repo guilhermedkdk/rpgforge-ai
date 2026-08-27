@@ -1,4 +1,4 @@
-/** Rotas protegidas. Usado por middleware e api/client. */
+/** Protected routes. Used by proxy and api/client. */
 export const PROTECTED_PATHS = ['/sheets'] as const;
 
 export const isProtectedRoute = (pathname: string): boolean =>

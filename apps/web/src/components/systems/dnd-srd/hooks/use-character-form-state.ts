@@ -1,14 +1,15 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import { createDefaultCharacterData, type CharacterFormData } from '@/lib/dnd-srd/character-state';
 import {
+  createDefaultCharacterData,
   applyCombatFromAttributes,
   reconcileDependentSelections,
-} from '@/lib/dnd-srd/derived-character-stats';
-import { reconcileFeatPrerequisites } from '@/lib/dnd-srd/feat-prerequisites';
-import { SESSION_EDITABLE_FIELDS } from '@/components/systems/dnd-srd/character-sheet/constants';
+  reconcileFeatPrerequisites,
+  type RuleItemResponse,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
+import type { SheetMode } from '../character-sheet/types';
 
 // Fields that affect combat stats (AC, HP, initiative). Changes to any of these
 // require running applyCombatFromAttributes. Text-only fields (personality, name,
@@ -33,20 +34,21 @@ const COMBAT_AFFECTING_KEYS: ReadonlySet<string> = new Set([
   'raceTraitSelections',
   'equippedArmorId',
   'equippedShieldId',
-  'fightingStyleFeatId',
+  'fightingStyleByClass',
 ]);
 
-type CharacterFormMode = 'editor' | 'session';
-
 /**
- * Owns the character form state shared by the editor and the session viewer.
- * `mode` decides how onChange patches are applied:
- * - 'editor': full edits, recomputing combat stats only when an affecting field changed;
- * - 'session': only SESSION_EDITABLE_FIELDS are accepted from the sheet UI.
+ * Owns the character form state shared by the creation editor and the saved-sheet page.
+ *
+ * There is exactly ONE write path (`handleChange` === `applyDerived`): what a saved sheet may not
+ * change is decided by the sheet UI (see `character-sheet/locks.ts`), never by dropping patches here.
+ * A field filter used to live in this hook, and every derived write it silently swallowed turned into
+ * a front/back divergence (granted spells never landed, so "already on the sheet" checks read a
+ * smaller sheet than the editor's).
  */
 export const useCharacterFormState = (
-  mode: CharacterFormMode,
   initial?: CharacterFormData | (() => CharacterFormData),
+  mode: SheetMode = 'creation'
 ) => {
   const [data, setData] = useState<CharacterFormData>(initial ?? createDefaultCharacterData);
 
@@ -54,52 +56,42 @@ export const useCharacterFormState = (
   // without needing to re-create handleChange whenever feats load/change.
   const featsRef = useRef<RuleItemResponse[]>([]);
 
+  // Creation always keeps currentHp at full (a new character starts at max health); play preserves
+  // the stored currentHp so damage/healing sticks. Same single write path, one flag.
+  const fillCurrentHpToMax = mode === 'creation';
+
   /** setData wrapper that recomputes combat stats unless the updater bails with `prev`. */
-  const recalc = useCallback((updater: (prev: CharacterFormData) => CharacterFormData) => {
-    setData((prev) => {
-      const next = updater(prev);
-      if (next === prev) return prev;
-      return applyCombatFromAttributes(next, featsRef.current);
-    });
-  }, []);
+  const recalc = useCallback(
+    (updater: (prev: CharacterFormData) => CharacterFormData) => {
+      setData((prev) => {
+        const next = updater(prev);
+        if (next === prev) return prev;
+        return applyCombatFromAttributes(next, featsRef.current, { fillCurrentHpToMax });
+      });
+    },
+    [fillCurrentHpToMax]
+  );
 
   const handleChange = useCallback(
     (nextData: CharacterFormData) => {
-      if (mode === 'session') {
-        setData((prev) => {
-          const patch: Partial<CharacterFormData> = {};
-          for (const key of SESSION_EDITABLE_FIELDS) {
-            if (nextData[key] !== prev[key]) {
-              (patch as Record<string, unknown>)[key] = nextData[key];
-            }
-          }
-          const changedKeys = Object.keys(patch);
-          if (changedKeys.length === 0) return prev;
-          const merged = { ...prev, ...patch };
-          // Text/wallet/death-save edits don't affect combat stats — skip the recompute (same result).
-          if (changedKeys.every((k) => !COMBAT_AFFECTING_KEYS.has(k))) return merged;
-          return applyCombatFromAttributes(merged, featsRef.current);
-        });
-        return;
-      }
       setData((prev) => {
         // Central re-validation of selections that reference dynamic state. Feat prerequisites are
         // checked here too (not only in the guarded derivation) so an attribute edit — which never
         // re-runs the derivation — still drops a feat that no longer qualifies. Both are no-ops when
         // nothing is stale.
         const reconciled = reconcileDependentSelections(
-          reconcileFeatPrerequisites(nextData, featsRef.current),
+          reconcileFeatPrerequisites(nextData, featsRef.current)
         );
         const changedKeys = (Object.keys(reconciled) as (keyof CharacterFormData)[]).filter(
-          (k) => reconciled[k] !== prev[k],
+          (k) => reconciled[k] !== prev[k]
         );
         if (changedKeys.length > 0 && changedKeys.every((k) => !COMBAT_AFFECTING_KEYS.has(k))) {
           return reconciled;
         }
-        return applyCombatFromAttributes(reconciled, featsRef.current);
+        return applyCombatFromAttributes(reconciled, featsRef.current, { fillCurrentHpToMax });
       });
     },
-    [mode],
+    [fillCurrentHpToMax]
   );
 
   return { data, setData, featsRef, recalc, handleChange };

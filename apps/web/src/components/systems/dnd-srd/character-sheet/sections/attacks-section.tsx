@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, memo } from 'react';
-import * as React from 'react';
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -10,21 +9,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  getAllWeaponMasteryWeaponIds,
   getEffectiveModifier,
+  getEffectiveProficiencies,
   getTotalAbilityScoreImprovementFromGains,
-} from '@/lib/dnd-srd/character-state';
-import { getEffectiveProficiencies } from '@/lib/dnd-srd/derived-character-stats';
-import type { NormalizedWeapon } from '@rpgforce-ai/shared';
+  getWeaponAttackAbilityMod,
+  getWeaponNamesFromEquipment,
+  hasSelectedFightingStyle,
+  isWeaponProficientByRules,
+  parseWeaponProficiencyRules,
+  type NormalizedWeapon,
+} from '@rpgforce-ai/shared';
 import { useCharacterComputed } from '../context';
 import { Section } from '../ui/section';
-import {
-  getWeaponNamesFromEquipment,
-  parseWeaponProficiencyRules,
-  isWeaponProficientByRules,
-  getWeaponAttackAbilityMod,
-  hasSelectedFightingStyle,
-} from '../helpers';
-import { ATTRIBUTES } from '../constants';
+import { ATTRIBUTES, unacknowledgedCueBorder } from '../constants';
 
 function weaponHasAmmunitionProperty(
   weaponTagKeys: string[],
@@ -54,8 +52,6 @@ function weaponHasAmmunitionProperty(
 
 interface AttacksSectionProps {
   data: import('../types').CharacterFormData;
-  onChange: (data: import('../types').CharacterFormData) => void;
-  readOnly?: boolean;
 }
 
 export const AttacksSection = memo(function AttacksSection({ data }: AttacksSectionProps) {
@@ -322,10 +318,10 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
                 }>;
               };
             };
+            // The union across classes: on the attack row it only matters THAT the weapon is
+            // mastered, not which class paid for it.
             const hasWeaponMastery =
-              weapon != null &&
-              Array.isArray(data.weaponMasteryWeaponIds) &&
-              data.weaponMasteryWeaponIds.includes(weapon.id);
+              weapon != null && getAllWeaponMasteryWeaponIds(data).includes(weapon.id);
             const weaponPropertiesAll =
               weaponNormFull.weapon?.properties?.filter(
                 (p) => p && p.property && typeof p.property.name === 'string'
@@ -373,10 +369,9 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      data-editable="true"
                       className={cn(
                         'col-span-5 flex h-7 cursor-pointer items-center rounded-md border bg-secondary/60 px-2 py-1.5 text-sm text-foreground shadow-[0_0_0_1px_rgba(250,250,250,0.03)] outline-none transition-colors hover:border-primary hover:bg-secondary/70 focus-visible:ring-2 focus-visible:ring-ring',
-                        weaponAcknowledged ? 'border-border' : 'border-dashed border-primary/70'
+                        weaponAcknowledged ? 'border-border' : unacknowledgedCueBorder
                       )}
                       aria-label={`Weapon details ${weaponName}`}
                     >

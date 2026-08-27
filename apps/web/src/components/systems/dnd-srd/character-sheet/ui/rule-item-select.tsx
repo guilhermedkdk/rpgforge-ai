@@ -5,8 +5,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronDown } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { normalizeFeatureDesc } from '@/lib/dnd-srd/derived-character-stats';
-import { getDetailSnippets, getPreviewFromNormalized } from '@/lib/dnd-srd/rule-item-presentation';
+import {
+  normalizeFeatureDesc,
+  getDetailSnippets,
+  getPreviewFromNormalized,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +19,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
 
-const triggerClassName =
-  'mt-1 flex h-9 w-full items-center justify-between rounded-md border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:opacity-50 disabled:pointer-events-none';
+/** Shared so any control sitting in the identity row matches the selects exactly. */
+export const identityTriggerClassName =
+  'mt-1 flex h-9 w-full items-center justify-between rounded-md border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground shadow-xs transition-colors outline-none focus-visible:border-ring disabled:opacity-50 disabled:pointer-events-none';
 
 export interface RuleItemSelectProps {
   id: string;
@@ -34,6 +38,8 @@ export interface RuleItemSelectProps {
   showClearOption?: boolean;
   /** Flags the trigger in red after a blocked save attempt with no selection. */
   invalid?: boolean;
+  /** Called when the player acts on this field, so its red flag can stand down. */
+  onAcknowledge?: () => void;
 }
 
 export function RuleItemSelect({
@@ -49,6 +55,7 @@ export function RuleItemSelect({
   'aria-label': ariaLabel,
   showClearOption = false,
   invalid = false,
+  onAcknowledge,
 }: RuleItemSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
@@ -80,12 +87,17 @@ export function RuleItemSelect({
         <DropdownMenuTrigger
           id={id}
           disabled={disabled || loading}
-          className={cn(triggerClassName, 'cursor-pointer', invalid && 'border-destructive')}
+          className={cn(
+            identityTriggerClassName,
+            'cursor-pointer',
+            invalid && 'border-destructive'
+          )}
           aria-label={ariaLabel ?? label}
           aria-haspopup="listbox"
           aria-expanded={open}
+          onPointerDown={onAcknowledge}
         >
-          <span className={cn(!selectedItem && 'text-muted-foreground')}>
+          <span className={cn('min-w-0 truncate', !selectedItem && 'text-muted-foreground')}>
             {loading ? <Spinner size="sm" /> : selectedItem ? selectedItem.name : placeholder}
           </span>
           <ChevronDown
@@ -131,7 +143,7 @@ export function RuleItemSelect({
               {displayItem ? (
                 <>
                   {(() => {
-                    const preview = getPreviewFromNormalized(displayItem);
+                    const sections = getPreviewFromNormalized(displayItem);
                     const snippets = getDetailSnippets(displayItem);
                     return (
                       <>
@@ -150,19 +162,22 @@ export function RuleItemSelect({
                             ))}
                           </dl>
                         )}
-                        {preview.content ? (
-                          <div className="markdown-preview mt-2 border-t border-border/50 pt-2">
+                        {sections.map((section) => (
+                          <div
+                            key={section.title}
+                            className="markdown-preview mt-2 border-t border-border/50 pt-2"
+                          >
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {preview.sectionTitle}
+                              {section.title}
                             </span>
                             <div className="mt-1 text-xs leading-relaxed text-muted-foreground [&_ul]:list-none [&_ul]:pl-0 [&_li]:mb-2 [&_li]:last:mb-0 [&_h3]:mt-2 [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:text-xs [&_h3]:first:mt-1 [&_h4]:mt-2 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-foreground [&_h4]:text-xs [&_strong]:font-semibold [&_strong]:text-foreground [&_table]:w-full [&_table]:text-[11px] [&_th]:border [&_th]:border-border [&_th]:px-1.5 [&_th]:py-0.5 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-0.5">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {normalizeFeatureDesc(preview.content)}
+                                {normalizeFeatureDesc(section.content)}
                               </ReactMarkdown>
                             </div>
                           </div>
-                        ) : null}
-                        {!preview.content && snippets.length === 0 && (
+                        ))}
+                        {sections.length === 0 && snippets.length === 0 && (
                           <p className="mt-2 text-xs italic text-muted-foreground">
                             No description available.
                           </p>

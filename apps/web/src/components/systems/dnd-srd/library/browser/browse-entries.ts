@@ -1,10 +1,10 @@
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import { ruleItemSpellLevel } from '../../character-sheet/sections/spellcasting/spell-utils';
 import {
   getBackgroundBenefits,
   getFlavorDesc,
   getRaceTraits,
-} from '@/lib/dnd-srd/rule-item-presentation';
+  ruleItemSpellLevel,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { stripContentPreamble } from './browse-markdown';
 import {
   ITEM_MAGIC_YES_TAG,
@@ -26,13 +26,12 @@ const CASTER_TYPE_LABELS: Record<string, string> = {
   HALF: 'Half Caster',
 };
 
-export const spellSchoolName = (item: RuleItemResponse): string | null => {
+const spellSchoolName = (item: RuleItemResponse): string | null => {
   const school = (item.normalized as { school?: { name?: string } } | undefined)?.school;
   return school?.name ?? null;
 };
 
-export const spellLevelLabel = (level: number): string =>
-  level === 0 ? 'Cantrip' : `Level ${level}`;
+const spellLevelLabel = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`);
 
 export const classEntry = (item: RuleItemResponse): BrowseEntry => {
   const hitDice = normalizedString(item, 'hitDice');

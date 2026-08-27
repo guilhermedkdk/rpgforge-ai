@@ -12,19 +12,23 @@ import {
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   calcModifier,
+  getBonusClassSkillBudgetExemptKeys,
+  getClassSkillBudgets,
   getEffectiveAttribute,
+  getEffectiveExpertiseSkillKeys,
   getOptionWisdomCheckBonusSkillKeys,
-  isJackOfAllTradesFeatureName,
-} from '@/lib/dnd-srd/character-state';
+  isJackOfAllTradesFeature,
+} from '@rpgforce-ai/shared';
 import { useCharacterComputed } from '../context';
 import { Section } from '../ui/section';
 import {
   featureSelectionCheckboxClass,
   featureSelectionRowClass,
-} from '../features/feature-detail/feature-selection-row';
-import { getBonusClassSkillBudgetExemptKeys, updateClassSkillSelection } from '../helpers';
+} from '../features/feature-detail/shared/feature-option-row';
+import { toggleMulticlassClassSkill, updateClassSkillSelection } from '../helpers';
 import { ATTRIBUTES, ABILITY_KEY_TO_ATTR, needsChoiceHighlight } from '../constants';
 import type { CharacterFormData } from '../types';
+import type { PendingFlags } from '../pending-flags';
 
 const SKILL_BONUS_TRAIT_NAMES = new Set(['keen senses', 'skillful']);
 
@@ -35,18 +39,25 @@ function getSkillBonusSourceLabel(key: string, data: CharacterFormData): string 
     }
   }
   if (data.primalKnowledgeSkillKey === key) return 'Selected by Primal Knowledge.';
-  if ((data.skilledProficiencyChoices ?? []).includes('skill:' + key)) return 'Selected by Skilled feat.';
+  if ((data.skilledProficiencyChoices ?? []).includes('skill:' + key))
+    return 'Selected by Skilled feat.';
   return null;
 }
 
 interface SavesSkillsSectionProps {
   data: CharacterFormData;
   onChange: (data: CharacterFormData) => void;
-  readOnly?: boolean;
-  saveAttempted?: boolean;
+  /** Committed class-skill budget: the picker collapses to a static title. */
+  locked?: boolean;
+  pendingFlags: PendingFlags;
 }
 
-export function SavesSkillsSection({ data, onChange, saveAttempted = false }: SavesSkillsSectionProps) {
+export function SavesSkillsSection({
+  data,
+  onChange,
+  locked = false,
+  pendingFlags,
+}: SavesSkillsSectionProps) {
   const {
     proficiencyBonus,
     combinedAbilityBonuses,
@@ -62,7 +73,7 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
   const [classSkillsOpen, setClassSkillsOpen] = useState(false);
 
   const hasJackOfAllTrades = featureDetails.some(
-    (f) => f.source === 'class' && isJackOfAllTradesFeatureName(f.name),
+    (f) => f.source === 'class' && isJackOfAllTradesFeature(f)
   );
 
   // Class-feature options that add +WIS (min +1) to certain Intelligence checks: Cleric Thaumaturge
@@ -75,7 +86,7 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
     effectiveEpicBoonAbilityScore,
     hasPrimalChampion,
     hasBodyAndMind,
-    data.grapplerAbilityScore,
+    data.grapplerAbilityScore
   );
 
   return (
@@ -109,9 +120,7 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
             const isSaveProficient = Boolean(data.savingThrows[attr]);
             const pb = proficiencyBonus ?? 0;
             const jackOfAllTradesSaveBonus =
-              hasJackOfAllTrades &&
-              !isSaveProficient &&
-              proficiencyBonus != null
+              hasJackOfAllTrades && !isSaveProficient && proficiencyBonus != null
                 ? Math.floor(pb / 2)
                 : 0;
             const totalMod =
@@ -145,6 +154,7 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
 
       <Section
         icon={null}
+        aiHintArea="skills"
         title={(() => {
           const hasClassSelected = data.classRuleItemId != null;
           const classOptions = data.classSkillOptions ?? {
@@ -163,12 +173,17 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
             (k) =>
               proficientMap[k] && !backgroundSkillKeys.includes(k) && !budgetExemptKeys.includes(k)
           ).length;
-          const needsClassSkillChoices = selectedCount < chooseN;
+          // Each class owes its own picks from its own list; a single flat budget cannot say that.
+          const budgets = getClassSkillBudgets(data, skillsList);
+          const perClass = budgets.length > 1;
+          const needsClassSkillChoices = perClass
+            ? budgets.some((b) => b.selectedKeys.length < b.chooseN)
+            : selectedCount < chooseN;
           const skillKeyToName = new Map(skillsList.map((s) => [s.key, s.name]));
           const getSkillName = (key: string) =>
             skillKeyToName.get(key) ??
             key.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-          if (!hasClassSkillChoice) {
+          if (!hasClassSkillChoice || locked) {
             return (
               <div className="flex items-center gap-1">
                 <span className="text-primary">
@@ -197,10 +212,11 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
                     className={cn(
                       'font-serif text-sm font-semibold uppercase tracking-wider leading-tight cursor-pointer transition-colors rounded-md border pt-1.5 pb-1 px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       needsClassSkillChoices
-                        ? needsChoiceHighlight(saveAttempted)
+                        ? needsChoiceHighlight(pendingFlags.isFlagged('skills:class'))
                         : 'border-transparent bg-transparent text-muted-foreground hover:text-foreground'
                     )}
                     aria-label="Class Skills"
+                    onPointerDown={() => pendingFlags.dismiss('skills:class')}
                   >
                     Skills
                   </button>
@@ -214,88 +230,161 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
                 >
                   <div className="p-3">
                     <p className="mb-2 text-sm font-medium text-foreground">Class Skills</p>
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      {chooseN != null
-                        ? `Choose ${chooseN} from the list below. Those marked by the background cannot be changed.`
-                        : 'Choose from the list below. Background skills are already marked.'}
-                    </p>
-                    <TooltipProvider delayDuration={300} skipDelayDuration={0}>
-                      <ul
-                        className="max-h-64 space-y-2 overflow-y-auto"
-                        role="list"
-                        aria-label="Skills to choose"
-                      >
-                        {optionKeys.map((key) => {
-                          const proficient = proficientMap[key] === true;
-                          const isBackground = backgroundSkillKeys.includes(key);
-                          const bonusSourceLabel = !isBackground
-                            ? getSkillBonusSourceLabel(key, data)
-                            : null;
-                          const checkbox = (
-                            <span className={featureSelectionCheckboxClass(proficient)} aria-hidden>
-                              {proficient ? (
-                                <Check className="h-3 w-3" strokeWidth={2.5} />
-                              ) : null}
-                            </span>
-                          );
-                          const label = (
-                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                              {getSkillName(key)}
-                            </span>
-                          );
-                          if (isBackground || bonusSourceLabel) {
-                            const tooltipText = isBackground
-                              ? 'Automatically selected by background.'
-                              : bonusSourceLabel!;
+
+                    {/* One budget per class: a Wizard 1 / Bard 1 owes 2 from the Wizard list AND
+                        1 from anywhere, which a single merged list cannot express. */}
+                    {perClass ? (
+                      <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+                        {/* pr-2: several budgets make this list long enough to scroll, and the rows
+                            run edge to edge, so without it they sit under the scrollbar. */}
+                        <div className="max-h-72 space-y-3 overflow-y-auto pr-2">
+                          {budgets.map((budget) => {
+                            const full = budget.selectedKeys.length >= budget.chooseN;
                             return (
-                              <Tooltip key={key}>
-                                <TooltipTrigger asChild>
-                                  <li
-                                    className={featureSelectionRowClass(true)}
-                                    role="listitem"
-                                    aria-disabled="true"
-                                    aria-label={`${getSkillName(key)} (locked: ${tooltipText})`}
+                              <div key={budget.classRuleItemId}>
+                                <p className="mb-1.5 flex items-baseline justify-between gap-2 text-[11px]">
+                                  <span className="font-semibold text-foreground">
+                                    {budget.className}
+                                  </span>
+                                  <span className="tabular-nums text-muted-foreground">
+                                    {budget.selectedKeys.length}/{budget.chooseN}
+                                  </span>
+                                </p>
+                                <ul className="space-y-1" role="list">
+                                  {budget.optionKeys.map((key) => {
+                                    const proficient = proficientMap[key] === true;
+                                    const isBackground = backgroundSkillKeys.includes(key);
+                                    const mine = budget.selectedKeys.includes(key);
+                                    // Taken by another budget or granted elsewhere: not this one's.
+                                    const takenElsewhere = proficient && !mine;
+                                    const blocked =
+                                      isBackground || takenElsewhere || (full && !mine);
+                                    return (
+                                      <li key={key} role="listitem">
+                                        <button
+                                          type="button"
+                                          disabled={blocked}
+                                          onClick={() =>
+                                            toggleMulticlassClassSkill(data, onChange, key, !mine)
+                                          }
+                                          className={featureSelectionRowClass(blocked)}
+                                          aria-pressed={mine}
+                                          aria-label={`${mine ? 'Uncheck' : 'Check'} ${getSkillName(key)} for ${budget.className}`}
+                                        >
+                                          <span
+                                            className={featureSelectionCheckboxClass(proficient)}
+                                            aria-hidden
+                                          >
+                                            {proficient ? (
+                                              <Check className="h-3 w-3" strokeWidth={2.5} />
+                                            ) : null}
+                                          </span>
+                                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                                            {getSkillName(key)}
+                                          </span>
+                                        </button>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </TooltipProvider>
+                    ) : (
+                      <>
+                        <p className="mb-3 text-xs text-muted-foreground">
+                          {chooseN != null
+                            ? `Choose ${chooseN} from the list below. Those marked by the background cannot be changed.`
+                            : 'Choose from the list below. Background skills are already marked.'}
+                        </p>
+                        <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+                          <ul
+                            className="max-h-64 space-y-2 overflow-y-auto"
+                            role="list"
+                            aria-label="Skills to choose"
+                          >
+                            {optionKeys.map((key) => {
+                              const proficient = proficientMap[key] === true;
+                              const isBackground = backgroundSkillKeys.includes(key);
+                              const bonusSourceLabel = !isBackground
+                                ? getSkillBonusSourceLabel(key, data)
+                                : null;
+                              const checkbox = (
+                                <span
+                                  className={featureSelectionCheckboxClass(proficient)}
+                                  aria-hidden
+                                >
+                                  {proficient ? (
+                                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                                  ) : null}
+                                </span>
+                              );
+                              const label = (
+                                <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                                  {getSkillName(key)}
+                                </span>
+                              );
+                              if (isBackground || bonusSourceLabel) {
+                                const tooltipText = isBackground
+                                  ? 'Automatically selected by background.'
+                                  : bonusSourceLabel!;
+                                return (
+                                  <Tooltip key={key}>
+                                    <TooltipTrigger asChild>
+                                      <li
+                                        className={featureSelectionRowClass(true)}
+                                        role="listitem"
+                                        aria-disabled="true"
+                                        aria-label={`${getSkillName(key)} (locked: ${tooltipText})`}
+                                      >
+                                        {checkbox}
+                                        {label}
+                                      </li>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="left"
+                                      className="max-w-[240px] text-center"
+                                    >
+                                      {tooltipText}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                );
+                              }
+                              const maxReached =
+                                chooseN != null && selectedCount >= chooseN && !proficient;
+                              return (
+                                <li key={key} role="listitem">
+                                  <button
+                                    type="button"
+                                    disabled={maxReached}
+                                    onClick={() =>
+                                      updateClassSkillSelection(
+                                        data,
+                                        onChange,
+                                        key,
+                                        !proficient,
+                                        optionKeys,
+                                        chooseN,
+                                        backgroundSkillKeys
+                                      )
+                                    }
+                                    className={featureSelectionRowClass(maxReached)}
+                                    aria-label={`${proficient ? 'Uncheck' : 'Check'} ${getSkillName(key)}`}
+                                    aria-pressed={proficient}
+                                    aria-disabled={maxReached}
                                   >
                                     {checkbox}
                                     {label}
-                                  </li>
-                                </TooltipTrigger>
-                                <TooltipContent side="left" className="max-w-[240px] text-center">
-                                  {tooltipText}
-                                </TooltipContent>
-                              </Tooltip>
-                            );
-                          }
-                          const maxReached = chooseN != null && selectedCount >= chooseN && !proficient;
-                          return (
-                            <li key={key} role="listitem">
-                              <button
-                                type="button"
-                                disabled={maxReached}
-                                onClick={() =>
-                                  updateClassSkillSelection(
-                                    data,
-                                    onChange,
-                                    key,
-                                    !proficient,
-                                    optionKeys,
-                                    chooseN,
-                                    backgroundSkillKeys
-                                  )
-                                }
-                                className={featureSelectionRowClass(maxReached)}
-                                aria-label={`${proficient ? 'Uncheck' : 'Check'} ${getSkillName(key)}`}
-                                aria-pressed={proficient}
-                                aria-disabled={maxReached}
-                              >
-                                {checkbox}
-                                {label}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </TooltipProvider>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </TooltipProvider>
+                      </>
+                    )}
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -333,16 +422,8 @@ export function SavesSkillsSection({ data, onChange, saveAttempted = false }: Sa
               );
               const baseMod = effectiveAttr === 0 ? 0 : calcModifier(effectiveAttr);
               const proficient = data.skillProficiencies[skill.key] ?? false;
-              const expertiseKeys =
-                (data as unknown as { expertiseSkillKeys?: string[] }).expertiseSkillKeys ?? [];
-              const scholarExpertKey = data.scholarExpertiseSkillKey ?? null;
-              const deftExpertKey = data.deftExplorerExpertiseSkillKey ?? null;
-              const hasExpertise =
-                expertiseKeys.includes(skill.key) ||
-                (scholarExpertKey != null &&
-                  scholarExpertKey !== '' &&
-                  scholarExpertKey === skill.key) ||
-                (deftExpertKey != null && deftExpertKey !== '' && deftExpertKey === skill.key);
+              // Class picks (per class) plus Scholar and Deft Explorer, from the one shared reader.
+              const hasExpertise = getEffectiveExpertiseSkillKeys(data).includes(skill.key);
               const totalMod =
                 baseMod +
                 (proficient && proficiencyBonus != null

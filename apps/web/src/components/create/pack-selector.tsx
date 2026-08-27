@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Swords, Shield, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Drawer,
@@ -15,17 +14,10 @@ import {
 } from '@/components/ui/drawer';
 import { packsApi } from '@/lib/api/packs';
 import { systemRegistry } from '@/components/systems/registry';
+import { PackIcon } from '@/components/systems/pack-icon';
+import { ErrorState } from '@/components/ui/error-state';
 import { LoadingState } from '@/components/ui/loading-state';
 import type { PackResponse } from '@rpgforce-ai/shared';
-
-const packIcons: Record<string, React.ReactNode> = {
-  'dnd-srd-5-2': <Swords className="h-6 w-6" />,
-  default: <Shield className="h-6 w-6" />,
-};
-
-const getPackIcon = (slug: string): React.ReactNode => {
-  return packIcons[slug] ?? packIcons.default;
-};
 
 interface PackSelectorProps {
   selectedPackId: string | null;
@@ -39,7 +31,9 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
   const {
     data: packs = [],
     isLoading,
-    error,
+    isError,
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ['packs'],
     queryFn: packsApi.getAll,
@@ -60,13 +54,14 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
     return <LoadingState />;
   }
 
-  if (error) {
+  if (isError) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
-        <p className="text-sm text-destructive">
-          Não foi possível carregar os sistemas. Tente novamente.
-        </p>
-      </div>
+      <ErrorState
+        title="Não foi possível carregar os sistemas"
+        description="Verifique sua conexão e tente novamente."
+        onRetry={() => void refetch()}
+        isRetrying={isFetching}
+      />
     );
   }
 
@@ -80,7 +75,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col content-reveal">
       <div className="mb-6 shrink-0 text-center">
         <div className="mb-4 flex justify-center">
           <Swords className="h-10 w-10 text-primary" aria-hidden="true" />
@@ -103,55 +98,52 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
                 <button
                   key={pack.id}
                   type="button"
-                  className={`w-full text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!isSupported ? 'cursor-not-allowed' : ''}`}
+                  aria-pressed={isSelected}
+                  className={`group relative w-full overflow-hidden rounded-xl border bg-card text-left transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    !isSupported
+                      ? 'cursor-not-allowed border-border opacity-50'
+                      : isSelected
+                        ? 'cursor-pointer border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/40'
+                        : 'cursor-pointer border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5'
+                  }`}
                   onClick={() => isSupported && handleSelect(pack.id)}
                   onMouseEnter={() => setHoveredPack(pack.id)}
                   onMouseLeave={() => setHoveredPack(null)}
                 >
-                  <Card
-                    className={`transition-all ${
-                      !isSupported
-                        ? 'opacity-50'
-                        : isSelected
-                          ? 'cursor-pointer border-primary bg-primary/5 ring-1 ring-primary/30'
-                          : 'cursor-pointer hover:border-primary/30 hover:bg-card/80'
-                    }`}
-                  >
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors ${
-                          isSelected
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-secondary text-muted-foreground'
-                        }`}
-                      >
-                        {getPackIcon(pack.slug)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-serif text-base font-semibold text-foreground">
-                          {pack.name}
-                        </h3>
-                        <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
-                          {pack.description ?? pack.systemName}
-                        </p>
-                      </div>
+                  {isSupported && (
+                    <div
+                      className={`pointer-events-none absolute inset-0 bg-linear-to-br from-primary/10 via-transparent to-transparent transition-opacity duration-300 ${
+                        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <div className="relative flex items-center gap-4 px-4 py-6">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-muted-foreground'
+                      }`}
+                    >
+                      <PackIcon slug={pack.slug} className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-serif text-base font-semibold text-foreground">
+                        {pack.name}
+                      </h3>
+                      <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
+                        {pack.description ?? pack.systemName}
+                      </p>
+                    </div>
+                    {!isSupported && (
                       <div className="hidden shrink-0 sm:flex">
-                        {!isSupported ? (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
-                            Em breve
-                          </Badge>
-                        ) : isSelected ? (
-                          <Badge variant="default" className="text-xs">
-                            Selecionado
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            {pack.systemName}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Em breve
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -212,7 +204,7 @@ const PackPreview = ({ pack }: { pack: PackResponse }) => {
     <>
       <div className="mb-4 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          {getPackIcon(pack.slug)}
+          <PackIcon slug={pack.slug} className="h-6 w-6" />
         </div>
         <div>
           <h3 className="font-serif text-lg font-bold text-foreground">{pack.name}</h3>

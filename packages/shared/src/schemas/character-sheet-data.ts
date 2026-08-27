@@ -11,12 +11,27 @@ export const PERSISTED_CHARACTER_SCHEMA_VERSION = 1 as const;
 
 const abilityScoreRecordSchema = z.record(z.string(), z.number());
 
+/** One class the character has levels in. `classes[0]` is the INITIAL class and never reorders. */
+const classEntrySchema = z
+  .object({
+    classRuleItemId: z.string(),
+    subclassRuleItemId: z.string().nullable().optional(),
+    level: z.number().int().min(1).max(20),
+  })
+  .catchall(z.unknown());
+
 const identitySchema = z
   .object({
     name: z.string(),
+    /** TOTAL character level (sum of `classes[].level`). Drives proficiency bonus and feats. */
     level: z.number().int().min(1),
     raceRuleItemId: z.string().nullable(),
+    /** Mirrors `classes[0]`; kept so pre-multiclass readers and the list preview keep working. */
     classRuleItemId: z.string().nullable(),
+    /** Optional: sheets saved before subclass support omit it. */
+    subclassRuleItemId: z.string().nullable().optional(),
+    /** Optional: sheets saved before multiclass support omit it (synthesized from the mirrors). */
+    classes: z.array(classEntrySchema).optional(),
     backgroundRuleItemId: z.string().nullable(),
     abilityScoreMethod: z.enum(['standard-array', 'point-buy']),
     attributes: abilityScoreRecordSchema,
@@ -55,6 +70,11 @@ const sheetSpellRowSchema = z
     granted: z.boolean().optional(),
     /** Where a granted spell came from (shown in the spell row tooltip). */
     grantSource: z.string().optional(),
+    /**
+     * Which class this spell is prepared through (SRD: "each spell you prepare is associated with
+     * one of your classes"). Absent on pre-multiclass sheets, where it resolves to the only class.
+     */
+    classRuleItemId: z.string().optional(),
   })
   .catchall(z.unknown());
 
@@ -76,6 +96,18 @@ const spellcastingSchema = z
     // Wizard-only; omitted entirely for non-wizards.
     wizardSpellbookByLevel: z.record(z.string(), z.array(z.string())).optional(),
     wizardSpellbookByScrollByLevel: z.record(z.string(), z.array(z.string())).optional(),
+    /**
+     * Pact Magic slots, a pool separate from `spellSlots`: Warlock levels never feed the
+     * Multiclass Spellcaster table. Absent for characters without Pact Magic.
+     */
+    pactMagicSlots: z
+      .object({
+        slotLevel: z.number().int().min(1).max(9).optional(),
+        total: z.number().int().min(0).optional(),
+        expended: z.number().int().min(0).optional(),
+      })
+      .catchall(z.unknown())
+      .optional(),
   })
   .catchall(z.unknown());
 
@@ -116,11 +148,21 @@ const walletSchema = z
   })
   .catchall(z.unknown());
 
+/**
+ * Where an item came from. RECORDED when the starting-equipment bundle is applied, never inferred
+ * later: attributing by text fails on a resolved placeholder ("Musical Instrument, Lute" vs the
+ * bundle's "Musical Instrument of your choice"), on an item present in both bundles, and on the
+ * pack's OCR typos. Absent on sheets saved before this field existed, which fall back to the text
+ * matching that produced them.
+ */
+const equipmentSourceSchema = z.enum(['class', 'background', 'manual']);
+
 const equipmentItemSchema = z
   .object({
     id: z.string().optional(),
     name: z.string().optional(),
     quantity: z.number().int().min(1),
+    source: equipmentSourceSchema.optional(),
   })
   .catchall(z.unknown())
   .refine((item) => Boolean(item.id?.trim()) || Boolean(item.name?.trim()), {
@@ -131,6 +173,17 @@ const equipmentSchema = z
   .object({
     wallet: walletSchema,
     items: z.array(equipmentItemSchema),
+    /**
+     * Starting gold per source. `wallet.gold` stays the total (what play mode spends); this says how
+     * much of it each bundle contributed, so the creation view can show it inside that bundle instead
+     * of as an unattributable lump.
+     */
+    goldBySource: z
+      .object({
+        class: z.number().int().min(0).optional(),
+        background: z.number().int().min(0).optional(),
+      })
+      .optional(),
     startingEquipmentSelectedIndex: z.number().int().optional(),
     backgroundEquipmentSelectedIndex: z.number().int().optional(),
   })

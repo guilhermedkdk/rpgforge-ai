@@ -14,9 +14,9 @@ export const ThemeToggle = () => {
 
   return (
     <Button variant="ghost" size="icon" onClick={handleToggleTheme} aria-label="Alternar tema">
-      {/* Ícone do sol - visível apenas em dark mode (para alternar para light) */}
+      {/* Sun icon: visible only in dark mode (to switch to light) */}
       <Sun className="h-4 w-4 hidden dark:block" aria-hidden="true" />
-      {/* Ícone da lua - visível apenas em light mode (para alternar para dark) */}
+      {/* Moon icon: visible only in light mode (to switch to dark) */}
       <Moon className="h-4 w-4 block dark:hidden" aria-hidden="true" />
     </Button>
   );

@@ -54,7 +54,7 @@ function LibraryItemPageContent() {
         {isLoading ? (
           <LoadingState />
         ) : error || !pack || !entry || !item ? (
-          <div className="flex flex-col items-center gap-4 py-24 text-center">
+          <div className="flex flex-col items-center gap-4 py-24 text-center content-reveal">
             <p className="font-serif text-lg font-semibold text-foreground">
               {notFound ? 'Este item não existe na biblioteca' : 'Não foi possível carregar o item'}
             </p>
@@ -73,7 +73,9 @@ function LibraryItemPageContent() {
             </Button>
           </div>
         ) : (
-          <entry.libraryItem pack={pack} item={item} backHref={backHref} />
+          <div className="content-reveal">
+            <entry.libraryItem pack={pack} item={item} backHref={backHref} />
+          </div>
         )}
       </main>
       <SiteFooter />

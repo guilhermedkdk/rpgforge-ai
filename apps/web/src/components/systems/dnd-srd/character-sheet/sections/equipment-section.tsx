@@ -1,9 +1,50 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Minus, Trash2, Shield, Swords, Package, ChevronRight, Coins, Check, Wrench, Music, Dices, Backpack, ScrollText, FlaskConical, Crosshair, Wand2, Sparkles, Circle } from 'lucide-react';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import { Input } from '@/components/ui/input';
+import {
+  Plus,
+  Minus,
+  Trash2,
+  Shield,
+  Swords,
+  Package,
+  Boxes,
+  BookOpen,
+  ChevronRight,
+  Coins,
+  Check,
+  Wrench,
+  Music,
+  Dices,
+  Backpack,
+  ScrollText,
+  FlaskConical,
+  Crosshair,
+  Wand2,
+  Sparkles,
+  Circle,
+} from 'lucide-react';
+import {
+  breakdownGP,
+  buildEquipmentItemIdLookupMap,
+  coerceNonNegativeWalletInt,
+  getAvailableGP,
+  getBackgroundOptionText,
+  getClassOptionText,
+  isEquipmentLineGP,
+  isHolySymbolItemName,
+  normalizeEquipmentLookupKey,
+  normalizeStartingEquipmentOptionTextForCompare,
+  parseBundleItemName,
+  parseEquipmentLine,
+  resolveEquipmentItemId,
+  resolveEquipmentToolPlaceholder,
+  singularizeIfPlural,
+  splitEquipmentBySource,
+  stripToolItemPriceSuffix,
+  WALLET_COIN_MAX,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
@@ -11,26 +52,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { TruncatedTooltip, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import {
-  parseEquipmentLine,
-  splitEquipmentBySource,
-  isEquipmentLineGP,
-  getAvailableGP,
-  getAvailableGpUnclamped,
-  getItemCostGP,
-  formatCostInfo,
-  breakdownGP,
-  coerceNonNegativeWalletInt,
-  getEquipmentItemQuantity,
-  WALLET_COIN_MAX,
-  resolveEquipmentToolPlaceholder,
-  normalizeStartingEquipmentOptionTextForCompare,
-  buildEquipmentItemIdLookupMap,
-  resolveEquipmentItemId,
-  normalizeEquipmentLookupKey,
-} from '@/lib/dnd-srd/equipment-utils';
+import { TruncatedTooltip } from '@/components/ui/tooltip';
 import { useRuleLibraryData } from '../context';
 import { Section } from '../ui/section';
 import {
@@ -43,30 +65,28 @@ import {
   removeEquipmentItem,
   changeEquipmentQuantity,
   addEquipmentItem,
-  getClassOptionText,
-  getBackgroundOptionText,
   applyClassEquipmentChoice,
   applyBackgroundEquipmentChoice,
   removeClassEquipmentSet,
   removeBackgroundEquipmentSet,
 } from '../helpers';
-import { stripToolItemPriceSuffix } from '../helpers/proficiency';
-import type { CharacterFormData } from '../types';
+import type { CharacterFormData, SheetMode } from '../types';
+import type { PendingFlags } from '../pending-flags';
+import { AddEquipmentShop } from './equipment/add-equipment-shop';
 
 interface EquipmentSectionProps {
   data: CharacterFormData;
   onChange: (data: CharacterFormData) => void;
-  readOnly?: boolean;
-  saveAttempted?: boolean;
+  mode: SheetMode;
+  pendingFlags: PendingFlags;
 }
 
-export function EquipmentSection({
-  data,
-  onChange,
-  readOnly = false,
-  saveAttempted = false,
-}: EquipmentSectionProps) {
-  const { weapons, armors, adventuringGear, toolItemsByCategory, equipmentItemsLoading } = useRuleLibraryData();
+export function EquipmentSection({ data, onChange, mode, pendingFlags }: EquipmentSectionProps) {
+  // Play mode is a different ECONOMY, not a lock: coins are the real wallet (editable, spent by the
+  // shop) instead of the creation gold budget, and GP lines move to the header totals.
+  const inPlay = mode === 'play';
+  const { weapons, armors, adventuringGear, toolItemsByCategory, equipmentItemsLoading } =
+    useRuleLibraryData();
   const artisanTools = toolItemsByCategory['item:category:artisan'] ?? [];
   const generalTools = toolItemsByCategory['item:category:tools'] ?? [];
 
@@ -86,21 +106,30 @@ export function EquipmentSection({
       return true;
     });
     const itemTags = new Map<string, string[]>(allItems.map((i) => [i.id, i.tagKeys]));
-    return { equipmentLookupMap: buildEquipmentItemIdLookupMap(allItems), equipmentItemTags: itemTags };
+    return {
+      equipmentLookupMap: buildEquipmentItemIdLookupMap(allItems),
+      equipmentItemTags: itemTags,
+    };
   }, [weapons, armors, adventuringGear, artisanTools, generalTools, toolItemsByCategory]);
 
   // Pre-resolve every equipment line name → tagKeys once.
   // Icon lookup uses only tagKeys — no name matching at render time.
   const resolvedLineTags = useMemo(() => {
     const map = new Map<string, string[]>();
-    for (const line of (data.equipment ?? '').split('\n').map((l) => l.trim()).filter(Boolean)) {
+    for (const line of (data.equipment ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)) {
       const { name } = parseEquipmentLine(line);
       if (map.has(name)) continue;
       let id = resolveEquipmentItemId(name, equipmentLookupMap);
       if (!id) {
         const normPrefix = normalizeEquipmentLookupKey(name) + ' ';
         for (const [key, val] of equipmentLookupMap) {
-          if (key.startsWith(normPrefix)) { id = val; break; }
+          if (key.startsWith(normPrefix)) {
+            id = val;
+            break;
+          }
         }
       }
       map.set(name, id ? (equipmentItemTags.get(id) ?? []) : []);
@@ -111,12 +140,9 @@ export function EquipmentSection({
   const bundleStepByName = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of adventuringGear) {
-      const displayName = stripToolItemPriceSuffix(item.name);
-      const bundleMatch = displayName.match(/\s*\(\s*(\d+)\s*\)\s*$/);
-      if (!bundleMatch) continue;
-      const bundleQty = parseInt(bundleMatch[1], 10);
-      const baseName = displayName.replace(/\s*\(\s*\d+\s*\)\s*$/, '').trim();
-      map.set(singularizeFirst(baseName).toLowerCase(), bundleQty);
+      const { bundleQty, baseName } = parseBundleItemName(item.name);
+      if (bundleQty == null) continue;
+      map.set(singularizeIfPlural(baseName, bundleQty).toLowerCase(), bundleQty);
     }
     return map;
   }, [adventuringGear]);
@@ -133,7 +159,7 @@ export function EquipmentSection({
 
   const holySymbolItems = useMemo(() => {
     return adventuringGear
-      .filter((i) => i.name.toLowerCase().startsWith('holy symbol,'))
+      .filter((i) => isHolySymbolItemName(i.name))
       .map((i) => ({ ...i, displayName: stripToolItemPriceSuffix(i.name) }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [adventuringGear]);
@@ -141,28 +167,20 @@ export function EquipmentSection({
   const wGp = Math.min(WALLET_COIN_MAX, coerceNonNegativeWalletInt(data.walletGP));
   const wSp = Math.min(WALLET_COIN_MAX, coerceNonNegativeWalletInt(data.walletSP));
   const wCp = Math.min(WALLET_COIN_MAX, coerceNonNegativeWalletInt(data.walletCP));
-  const walletDecimal = wGp + wSp * 0.1 + wCp * 0.01;
-  const fromEquipmentDecimal = Math.max(
-    0,
-    getAvailableGpUnclamped(data.equipment, data.equipmentSpentGP ?? 0)
-  );
 
-  // Read-only: wallet ints from DB; if all zero but a GP line exists on equipment, use that fallback.
-  const coins = readOnly
-    ? walletDecimal > 0
-      ? { gp: wGp, sp: wSp, cp: wCp }
-      : fromEquipmentDecimal > 0
-        ? breakdownGP(fromEquipmentDecimal)
-        : { gp: wGp, sp: wSp, cp: wCp }
+  // In play the wallet integers are the ONLY source: they are what gets persisted, and the `13 GP`
+  // line the load rebuilds into the equipment text is derived FROM them. Falling back to that line
+  // whenever the wallet totalled zero (the previous behaviour) made 0 unreachable — clearing the field
+  // or typing 0 snapped straight back to the old amount.
+  const coins = inPlay
+    ? { gp: wGp, sp: wSp, cp: wCp }
     : breakdownGP(getAvailableGP(data.equipment, data.equipmentSpentGP));
 
-  const availableGP = readOnly
-    ? walletDecimal > 0
-      ? walletDecimal
-      : fromEquipmentDecimal
+  const availableGP = inPlay
+    ? wGp + wSp * 0.1 + wCp * 0.01
     : getAvailableGP(data.equipment, data.equipmentSpentGP);
 
-  // View mode: wrap addEquipmentItem to also deduct cost from wallet.
+  // Play mode: wrap addEquipmentItem to also deduct cost from wallet.
   const addItemAndDeductWallet = useCallback(
     (itemName: string, qty: number, costGP?: number) => {
       const costCP = Math.round((costGP ?? 0) * qty * 100);
@@ -177,7 +195,12 @@ export function EquipmentSection({
       addEquipmentItem(
         data,
         (updated) =>
-          onChange({ ...updated, walletGP: newWalletGP, walletSP: newWalletSP, walletCP: newWalletCP }),
+          onChange({
+            ...updated,
+            walletGP: newWalletGP,
+            walletSP: newWalletSP,
+            walletCP: newWalletCP,
+          }),
         itemName,
         qty,
         costGP
@@ -200,29 +223,42 @@ export function EquipmentSection({
       equipmentName: string,
       effectiveQty: number,
       costGP: number | undefined,
-      packTotalCost: number | undefined,
+      packTotalCost: number | undefined
     ) => {
-      if (readOnly) {
+      if (inPlay) {
         addItemAndDeductWallet(equipmentName, effectiveQty, costGP);
       } else {
         addEquipmentItem(data, onChange, equipmentName, effectiveQty, costGP, packTotalCost);
       }
     },
-    [readOnly, addItemAndDeductWallet, data, onChange],
+    [inPlay, addItemAndDeductWallet, data, onChange]
   );
 
   // splitEquipmentBySource runs on the original equipment string so placeholder lines
   // are correctly attributed to class or background based on the option text budget.
   // Placeholders are resolved to real tool names (or removed) only after the split.
-  const { classLines, backgroundLines, manualLines, manualIndices } = useMemo(
+  const {
+    classLines,
+    backgroundLines,
+    manualLines,
+    classIndices,
+    backgroundIndices,
+    manualIndices,
+  } = useMemo(
     () =>
       splitEquipmentBySource(
         data.equipment ?? '',
         getClassOptionText(data),
-        getBackgroundOptionText(data)
+        getBackgroundOptionText(data),
+        data.equipmentSourceByLine
       ),
     [data]
   );
+
+  // A selected bundle whose option is "take the gold" resolves to no item lines; show the option
+  // text (e.g. "50 GP") under its section so it doesn't read as an unfilled "Determined by…".
+  const selectedClassOptionText = getClassOptionText(data);
+  const selectedBackgroundOptionText = getBackgroundOptionText(data);
 
   const resolveToolPlaceholder = useCallback(
     (line: string): string | null =>
@@ -261,29 +297,33 @@ export function EquipmentSection({
     data.backgroundEquipmentOptions?.options?.[data.backgroundEquipmentSelectedIndex]
       ? data.backgroundEquipmentOptions.options[data.backgroundEquipmentSelectedIndex].label
       : '';
-  const getLineCategoryOrder = useCallback((line: string): number => {
-    if (isEquipmentLineGP(line)) return 99;
-    const { name } = parseEquipmentLine(line);
-    const tags = resolvedLineTags.get(name) ?? [];
-    if (tags.includes('item:armor:yes')) return 0;
-    if (tags.includes('item:weapon:yes')) return 1;
-    if (tags.includes('item:category:ammunition')) return 2;
-    if (
-      tags.includes('item:category:spellcasting-focus') ||
-      tags.includes('item:category:wand') ||
-      tags.includes('item:category:staff') ||
-      tags.includes('item:category:rod')
-    ) return 3;
-    if (tags.includes('item:category:equipment-pack')) return 4;
-    if (tags.includes('item:category:musical-instrument')) return 5;
-    if (tags.includes('item:category:gaming-set')) return 6;
-    if (tags.includes('item:category:artisan') || tags.includes('item:category:tools')) return 7;
-    if (tags.includes('item:category:scroll')) return 8;
-    if (tags.includes('item:category:potion')) return 9;
-    if (tags.includes('item:category:ring')) return 10;
-    if (tags.includes('item:category:wondrous-item')) return 11;
-    return 12;
-  }, [resolvedLineTags]);
+  const getLineCategoryOrder = useCallback(
+    (line: string): number => {
+      if (isEquipmentLineGP(line)) return 99;
+      const { name } = parseEquipmentLine(line);
+      const tags = resolvedLineTags.get(name) ?? [];
+      if (tags.includes('item:armor:yes')) return 0;
+      if (tags.includes('item:weapon:yes')) return 1;
+      if (tags.includes('item:category:ammunition')) return 2;
+      if (
+        tags.includes('item:category:spellcasting-focus') ||
+        tags.includes('item:category:wand') ||
+        tags.includes('item:category:staff') ||
+        tags.includes('item:category:rod')
+      )
+        return 3;
+      if (tags.includes('item:category:equipment-pack')) return 4;
+      if (tags.includes('item:category:musical-instrument')) return 5;
+      if (tags.includes('item:category:gaming-set')) return 6;
+      if (tags.includes('item:category:artisan') || tags.includes('item:category:tools')) return 7;
+      if (tags.includes('item:category:scroll')) return 8;
+      if (tags.includes('item:category:potion')) return 9;
+      if (tags.includes('item:category:ring')) return 10;
+      if (tags.includes('item:category:wondrous-item')) return 11;
+      return 12;
+    },
+    [resolvedLineTags]
+  );
 
   const sortedClassLines = [...resolvedClassLines].sort(
     (a, b) => getLineCategoryOrder(a) - getLineCategoryOrder(b)
@@ -295,16 +335,50 @@ export function EquipmentSection({
     (a, b) => getLineCategoryOrder(a.line) - getLineCategoryOrder(b.line)
   );
 
-  /** Sheet view only: GP total is in the header — omit GP rows from lists. Creation shows GP per section. */
-  const displayClassLines = readOnly
-    ? sortedClassLines.filter((l) => !isEquipmentLineGP(l))
-    : sortedClassLines;
-  const displayBackgroundLines = readOnly
-    ? sortedBackgroundLines.filter((l) => !isEquipmentLineGP(l))
-    : sortedBackgroundLines;
-  const displayManualEntries = readOnly
-    ? sortedManualEntries.filter(({ line }) => !isEquipmentLineGP(line))
-    : sortedManualEntries;
+  /**
+   * Play only: ONE list of the character's items, with no origin split at all. Once the sheet exists,
+   * "class equipment" and "background equipment" stop being meaningful: it is all just gear the
+   * character owns, every row edits its own quantity and deletes itself, and there is no action that
+   * wipes a whole starting set. The buckets survive only to carry each line's index (needed to edit it)
+   * and the scope of an unfilled tool placeholder.
+   */
+  const playRows = useMemo(() => {
+    if (!inPlay) return [];
+    const rows = [
+      ...classLines.map((line, i) => ({ line, index: classIndices[i], scope: 'class' as const })),
+      ...backgroundLines.map((line, i) => ({
+        line,
+        index: backgroundIndices[i],
+        scope: 'background' as const,
+      })),
+      ...manualLines.map((line, i) => ({ line, index: manualIndices[i], scope: 'class' as const })),
+    ];
+    return rows
+      .map((row) => {
+        const resolved = resolveToolPlaceholder(row.line);
+        return resolved === null ? null : { ...row, line: resolved };
+      })
+      .filter(
+        (row): row is { line: string; index: number; scope: 'class' | 'background' } => row !== null
+      )
+      .filter(({ line }) => !isEquipmentLineGP(line))
+      .sort((a, b) => getLineCategoryOrder(a.line) - getLineCategoryOrder(b.line));
+  }, [
+    inPlay,
+    classLines,
+    backgroundLines,
+    manualLines,
+    classIndices,
+    backgroundIndices,
+    manualIndices,
+    resolveToolPlaceholder,
+    getLineCategoryOrder,
+  ]);
+
+  // Creation only (play renders `playRows`): each bundle keeps its own section, GP line included.
+  const displayClassLines = sortedClassLines;
+  const displayBackgroundLines = sortedBackgroundLines;
+  const displayManualEntries = sortedManualEntries;
 
   const getEquipmentIcon = (name: string) => {
     if (name.toUpperCase() === 'GP' || /^\d+\s*GP$/i.test(name.trim()))
@@ -355,43 +429,71 @@ export function EquipmentSection({
   const renderMusicalInstrumentChoice = (keyPrefix: string, idx: number, choiceKey: string) => {
     const chosen = data.toolProficiencyChoices?.[choiceKey]?.[0] ?? null;
     const hasChoice = chosen !== null;
+    const flagKey = `equipment:instrument:${choiceKey}`;
+    const flagged = pendingFlags.isFlagged(flagKey);
+    // Committed starting-equipment pick: static in play, since swapping it is a creation edit. An
+    // unfilled one keeps its picker so the slot can still be completed.
+    if (inPlay && hasChoice) {
+      return (
+        <div
+          key={`${keyPrefix}-${idx}-musical-choice`}
+          className="flex w-full items-center justify-between gap-2 pr-2 text-left text-sm"
+          role="listitem"
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
+            <Music className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <TruncatedTooltip text={chosen} />
+          </span>
+          <span className="min-w-5 shrink-0 text-center text-xs tabular-nums">1</span>
+        </div>
+      );
+    }
     return (
-      /* Container matches renderItemRow exactly (px-2 py-1).
-         The dashed border goes on the container when unselected so it has
-         the full px-2 py-1 breathing room around the content. */
+      // Border + px-2 py-1 go on the button (not the container) so the whole dashed area is
+      // clickable. The row's own pr-2 insets the quantity badge so it lines up with the fixed
+      // items' numbers (the badge itself must NOT use pr-2: with border-box, min-w-5 + pr-2
+      // shrinks the digit's content box and shifts the centered number right).
       <div
         key={`${keyPrefix}-${idx}-musical-choice`}
-        className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-md border border-dashed px-2 py-1 text-left text-sm',
-          hasChoice ? 'border-transparent' : needsChoiceBorder(saveAttempted)
-        )}
+        className="flex w-full items-center justify-between gap-2 pr-2 text-left text-sm"
         role="listitem"
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              data-editable="true"
-              className="flex min-w-0 flex-1 cursor-pointer items-center justify-between rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn(
+                'flex min-w-0 flex-1 cursor-pointer items-center justify-between rounded-md border border-dashed px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                hasChoice ? 'border-transparent' : needsChoiceBorder(flagged)
+              )}
               aria-label={
                 hasChoice
                   ? `Change musical instrument (current: ${chosen})`
                   : 'Choose a musical instrument for starting equipment'
               }
+              onPointerDown={() => pendingFlags.dismiss(flagKey)}
             >
               <span className="flex min-w-0 items-center gap-2">
-                <Package
-                  className={cn('h-4 w-4 shrink-0', hasChoice ? 'text-muted-foreground' : needsChoiceAccent(saveAttempted))}
+                <Music
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    hasChoice ? 'text-muted-foreground' : needsChoiceAccent(flagged)
+                  )}
                   aria-hidden
                 />
                 {hasChoice ? (
                   <TruncatedTooltip text={chosen} />
                 ) : (
-                  <span className={cn('truncate text-sm', needsChoiceAccent(saveAttempted))}>Choose Musical Instrument</span>
+                  <span className={cn('truncate text-sm', needsChoiceAccent(flagged))}>
+                    Choose Musical Instrument
+                  </span>
                 )}
               </span>
               {!hasChoice && (
-                <ChevronRight className={cn('h-3.5 w-3.5 shrink-0', needsChoiceAccent(saveAttempted))} aria-hidden />
+                <ChevronRight
+                  className={cn('h-3.5 w-3.5 shrink-0', needsChoiceAccent(flagged))}
+                  aria-hidden
+                />
               )}
             </button>
           </DropdownMenuTrigger>
@@ -404,9 +506,7 @@ export function EquipmentSection({
           >
             <div className="p-3">
               <p className="mb-2 text-sm font-medium text-foreground">Musical Instrument</p>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Choose 1 from the list below.
-              </p>
+              <p className="mb-3 text-xs text-muted-foreground">Choose 1 from the list below.</p>
               <ul className="max-h-64 space-y-1.5 overflow-y-auto" role="list">
                 {musicalInstruments.map((item) => {
                   const selected = chosen === item.displayName;
@@ -423,7 +523,13 @@ export function EquipmentSection({
                             delete next[choiceKey];
                             onChange({ ...data, toolProficiencyChoices: next });
                           } else if (!maxReached) {
-                            onChange({ ...data, toolProficiencyChoices: { ...(data.toolProficiencyChoices ?? {}), [choiceKey]: [item.displayName] } });
+                            onChange({
+                              ...data,
+                              toolProficiencyChoices: {
+                                ...(data.toolProficiencyChoices ?? {}),
+                                [choiceKey]: [item.displayName],
+                              },
+                            });
                           }
                         }}
                         disabled={maxReached}
@@ -433,14 +539,18 @@ export function EquipmentSection({
                             ? 'cursor-not-allowed opacity-40'
                             : 'cursor-pointer hover:border-primary/50 hover:bg-muted/40'
                         )}
-                        aria-label={selected ? `Uncheck ${item.displayName}` : `Select ${item.displayName}`}
+                        aria-label={
+                          selected ? `Uncheck ${item.displayName}` : `Select ${item.displayName}`
+                        }
                         aria-pressed={selected}
                         aria-disabled={maxReached}
                       >
                         <span
                           className={cn(
                             'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
-                            selected ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground/50'
+                            selected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'text-muted-foreground/50'
                           )}
                           aria-hidden
                         >
@@ -461,15 +571,12 @@ export function EquipmentSection({
           </DropdownMenuContent>
         </DropdownMenu>
         {/* Quantity badge — only when an instrument has been selected */}
-        {hasChoice && (
-          <span className="min-w-5 shrink-0 text-center text-xs tabular-nums">1</span>
-        )}
+        {hasChoice && <span className="min-w-5 shrink-0 text-center text-xs tabular-nums">1</span>}
       </div>
     );
   };
 
-  const isHolySymbolPlaceholder = (line: string) =>
-    line.trim().toLowerCase() === 'holy symbol';
+  const isHolySymbolPlaceholder = (line: string) => line.trim().toLowerCase() === 'holy symbol';
 
   const setHolySymbolChoice = (scope: 'class' | 'background', itemId: string | null) =>
     onChange({
@@ -483,47 +590,72 @@ export function EquipmentSection({
   const renderHolySymbolChoice = (
     keyPrefix: string,
     idx: number,
-    scope: 'class' | 'background',
+    scope: 'class' | 'background'
   ) => {
     const chosenId = data.holySymbolChoiceItemIds?.[scope] ?? null;
     const chosen = chosenId
       ? (holySymbolItems.find((i) => i.id === chosenId)?.displayName ?? null)
       : null;
     const hasChoice = chosenId !== null;
+    const flagKey = `equipment:holy-symbol:${scope}`;
+    const flagged = pendingFlags.isFlagged(flagKey);
+    if (inPlay && hasChoice) {
+      return (
+        <div
+          key={`${keyPrefix}-${idx}-holy-symbol-choice`}
+          className="flex w-full items-center justify-between gap-2 pr-2 text-left text-sm"
+          role="listitem"
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
+            <Wand2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <TruncatedTooltip text={chosen ?? 'Holy Symbol'} />
+          </span>
+          <span className="min-w-5 shrink-0 text-center text-xs tabular-nums">1</span>
+        </div>
+      );
+    }
     return (
       <div
         key={`${keyPrefix}-${idx}-holy-symbol-choice`}
-        className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-md border border-dashed px-2 py-1 text-left text-sm',
-          hasChoice ? 'border-transparent' : needsChoiceBorder(saveAttempted)
-        )}
+        className="flex w-full items-center justify-between gap-2 pr-2 text-left text-sm"
         role="listitem"
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              data-editable="true"
-              className="flex min-w-0 flex-1 cursor-pointer items-center justify-between rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn(
+                'flex min-w-0 flex-1 cursor-pointer items-center justify-between rounded-md border border-dashed px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                hasChoice ? 'border-transparent' : needsChoiceBorder(flagged)
+              )}
               aria-label={
                 hasChoice
                   ? `Change holy symbol (current: ${chosen})`
                   : 'Choose a holy symbol for starting equipment'
               }
+              onPointerDown={() => pendingFlags.dismiss(flagKey)}
             >
               <span className="flex min-w-0 items-center gap-2">
-                <Package
-                  className={cn('h-4 w-4 shrink-0', hasChoice ? 'text-muted-foreground' : needsChoiceAccent(saveAttempted))}
+                <Wand2
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    hasChoice ? 'text-muted-foreground' : needsChoiceAccent(flagged)
+                  )}
                   aria-hidden
                 />
                 {hasChoice ? (
                   <TruncatedTooltip text={chosen ?? 'Holy Symbol'} />
                 ) : (
-                  <span className={cn('truncate text-sm', needsChoiceAccent(saveAttempted))}>Choose Holy Symbol</span>
+                  <span className={cn('truncate text-sm', needsChoiceAccent(flagged))}>
+                    Choose Holy Symbol
+                  </span>
                 )}
               </span>
               {!hasChoice && (
-                <ChevronRight className={cn('h-3.5 w-3.5 shrink-0', needsChoiceAccent(saveAttempted))} aria-hidden />
+                <ChevronRight
+                  className={cn('h-3.5 w-3.5 shrink-0', needsChoiceAccent(flagged))}
+                  aria-hidden
+                />
               )}
             </button>
           </DropdownMenuTrigger>
@@ -556,14 +688,18 @@ export function EquipmentSection({
                             ? 'cursor-not-allowed opacity-40'
                             : 'cursor-pointer hover:border-primary/50 hover:bg-muted/40'
                         )}
-                        aria-label={selected ? `Uncheck ${item.displayName}` : `Select ${item.displayName}`}
+                        aria-label={
+                          selected ? `Uncheck ${item.displayName}` : `Select ${item.displayName}`
+                        }
                         aria-pressed={selected}
                         aria-disabled={maxReached}
                       >
                         <span
                           className={cn(
                             'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
-                            selected ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground/50'
+                            selected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'text-muted-foreground/50'
                           )}
                           aria-hidden
                         >
@@ -583,9 +719,7 @@ export function EquipmentSection({
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
-        {hasChoice && (
-          <span className="min-w-5 shrink-0 text-center text-xs tabular-nums">1</span>
-        )}
+        {hasChoice && <span className="min-w-5 shrink-0 text-center text-xs tabular-nums">1</span>}
       </div>
     );
   };
@@ -600,7 +734,7 @@ export function EquipmentSection({
     const { quantity, name } = parseEquipmentLine(line);
     const displayName = getEquipmentDisplayName(quantity, name);
     const isGP = name.toUpperCase() === 'GP';
-    const bundleStep = !readOnly ? (bundleStepByName.get(name.toLowerCase()) ?? 1) : 1;
+    const bundleStep = !inPlay ? (bundleStepByName.get(name.toLowerCase()) ?? 1) : 1;
     return (
       <div
         key={`${keyPrefix}-${idx}-${name}-${quantity}`}
@@ -615,10 +749,9 @@ export function EquipmentSection({
           <span className="flex shrink-0 items-center gap-0.5">
             <button
               type="button"
-              data-editable="true"
               onClick={() =>
                 changeEquipmentQuantity(data, onChange, editIndex!, -bundleStep, {
-                  refundSpentGP: !readOnly,
+                  refundSpentGP: !inPlay,
                 })
               }
               className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -629,7 +762,6 @@ export function EquipmentSection({
             <span className="min-w-5 text-center text-xs tabular-nums">{quantity}</span>
             <button
               type="button"
-              data-editable="true"
               onClick={() => changeEquipmentQuantity(data, onChange, editIndex!, bundleStep)}
               className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Increase quantity of ${name}`}
@@ -638,9 +770,8 @@ export function EquipmentSection({
             </button>
             <button
               type="button"
-              data-editable="true"
               onClick={() =>
-                removeEquipmentItem(data, onChange, editIndex!, { refundSpentGP: !readOnly })
+                removeEquipmentItem(data, onChange, editIndex!, { refundSpentGP: !inPlay })
               }
               className="cursor-pointer shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Remove ${name} from equipment`}
@@ -660,12 +791,12 @@ export function EquipmentSection({
   return (
     <Section
       title="Equipment"
+      aiHintArea="equipment"
       icon={<Package className="h-4 w-4" />}
       className="flex min-h-0 flex-[1.4] flex-col lg:max-h-[36rem]"
       headerAction={
         <button
           type="button"
-          data-editable="true"
           disabled={equipmentItemsLoading}
           aria-label="Add equipment"
           onClick={() => setEquipmentAddOpen(true)}
@@ -685,13 +816,12 @@ export function EquipmentSection({
             <Coins className="h-3 w-3 shrink-0" aria-hidden />
             GP
           </span>
-          {readOnly ? (
+          {inPlay ? (
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               value={String(coins.gp)}
-              data-editable="true"
               onChange={(e) => {
                 const v = e.target.value.replace(/\D/g, '');
                 if (v === '') {
@@ -708,7 +838,7 @@ export function EquipmentSection({
               }}
               className={cn(
                 numberInputNoSpinner,
-                'h-full min-h-7 min-w-10 flex-1 self-stretch border-l border-border bg-card px-1.5 py-1 text-right text-sm font-semibold tabular-nums text-amber-600 outline-none dark:text-amber-400',
+                'h-full min-h-7 min-w-10 flex-1 self-stretch border-l border-border bg-card px-1.5 py-1 text-right text-sm font-semibold tabular-nums text-amber-600 outline-none dark:text-amber-400'
               )}
               aria-label="Gold pieces available"
             />
@@ -725,13 +855,12 @@ export function EquipmentSection({
             <Coins className="h-3 w-3 shrink-0" aria-hidden />
             SP
           </span>
-          {readOnly ? (
+          {inPlay ? (
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               value={String(coins.sp)}
-              data-editable="true"
               onChange={(e) => {
                 const v = e.target.value.replace(/\D/g, '');
                 if (v === '') {
@@ -748,7 +877,7 @@ export function EquipmentSection({
               }}
               className={cn(
                 numberInputNoSpinner,
-                'h-full min-h-7 min-w-10 flex-1 self-stretch border-l border-border bg-card px-1.5 py-1 text-right text-sm font-semibold tabular-nums text-slate-500 outline-none dark:text-slate-400',
+                'h-full min-h-7 min-w-10 flex-1 self-stretch border-l border-border bg-card px-1.5 py-1 text-right text-sm font-semibold tabular-nums text-slate-500 outline-none dark:text-slate-400'
               )}
               aria-label="Silver pieces available"
             />
@@ -765,13 +894,12 @@ export function EquipmentSection({
             <Coins className="h-3 w-3 shrink-0" aria-hidden />
             CP
           </span>
-          {readOnly ? (
+          {inPlay ? (
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               value={String(coins.cp)}
-              data-editable="true"
               onChange={(e) => {
                 const v = e.target.value.replace(/\D/g, '');
                 if (v === '') {
@@ -788,7 +916,7 @@ export function EquipmentSection({
               }}
               className={cn(
                 numberInputNoSpinner,
-                'h-full min-h-7 min-w-10 flex-1 self-stretch border-l border-border bg-card px-1.5 py-1 text-right text-sm font-semibold tabular-nums text-orange-600 outline-none dark:text-orange-500',
+                'h-full min-h-7 min-w-10 flex-1 self-stretch border-l border-border bg-card px-1.5 py-1 text-right text-sm font-semibold tabular-nums text-orange-600 outline-none dark:text-orange-500'
               )}
               aria-label="Copper pieces available"
             />
@@ -804,91 +932,25 @@ export function EquipmentSection({
         role="list"
         aria-label="Equipment list"
       >
-        {readOnly ? (
+        {inPlay ? (
           <div className="rounded-md border border-border bg-muted/40" role="listitem">
-            {(sortedClassLines.length > 0 || sortedBackgroundLines.length > 0) && (
-              <div className="flex items-center justify-end gap-0.5 border-b border-border px-2 py-1.5">
-                {sortedClassLines.length > 0 && (
-                  <button
-                    type="button"
-                    data-editable="true"
-                    onClick={() => {
-                      const choices = { ...(data.toolProficiencyChoices ?? {}) };
-                      delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY];
-                      removeClassEquipmentSet(
-                        {
-                          ...data,
-                          toolProficiencyChoices: choices,
-                          holySymbolChoiceItemIds: {
-                            ...(data.holySymbolChoiceItemIds ?? { class: null, background: null }),
-                            class: null,
-                          },
-                        },
-                        onChange
-                      );
-                    }}
-                    className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Remove class starting equipment set`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  </button>
-                )}
-                {sortedBackgroundLines.length > 0 && (
-                  <button
-                    type="button"
-                    data-editable="true"
-                    onClick={() => {
-                      const choices = { ...(data.toolProficiencyChoices ?? {}) };
-                      delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY_BG];
-                      removeBackgroundEquipmentSet(
-                        {
-                          ...data,
-                          toolProficiencyChoices: choices,
-                          holySymbolChoiceItemIds: {
-                            ...(data.holySymbolChoiceItemIds ?? { class: null, background: null }),
-                            background: null,
-                          },
-                        },
-                        onChange
-                      );
-                    }}
-                    className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Remove background equipment set`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  </button>
-                )}
-              </div>
-            )}
             <div className="flex flex-col gap-0.5 px-2 py-1.5">
-              <div role="group" aria-label="All equipment">
-                {displayClassLines.map((line, idx) =>
+              <div role="group" aria-label="Equipment">
+                {playRows.map(({ line, index, scope }) =>
                   isMusicalInstrumentPlaceholder(line)
-                    ? renderMusicalInstrumentChoice('class-ro', idx, MUSICAL_INSTRUMENT_CHOICE_KEY)
+                    ? renderMusicalInstrumentChoice(
+                        `play-${scope}`,
+                        index,
+                        scope === 'background'
+                          ? MUSICAL_INSTRUMENT_CHOICE_KEY_BG
+                          : MUSICAL_INSTRUMENT_CHOICE_KEY
+                      )
                     : isHolySymbolPlaceholder(line)
-                      ? renderHolySymbolChoice('class-ro', idx, 'class')
-                      : renderItemRow(line, 'class', idx, false)
-                )}
-                {displayBackgroundLines.map((line, idx) =>
-                  isMusicalInstrumentPlaceholder(line)
-                    ? renderMusicalInstrumentChoice('bg-ro', idx, MUSICAL_INSTRUMENT_CHOICE_KEY_BG)
-                    : isHolySymbolPlaceholder(line)
-                      ? renderHolySymbolChoice('bg-ro', idx, 'background')
-                      : renderItemRow(line, 'bg', idx, false)
-                )}
-                {displayManualEntries.map(({ line, index }) =>
-                  isMusicalInstrumentPlaceholder(line)
-                    ? renderMusicalInstrumentChoice('manual-ro', index, MUSICAL_INSTRUMENT_CHOICE_KEY)
-                    : isHolySymbolPlaceholder(line)
-                      ? renderHolySymbolChoice('manual-ro', index, 'class')
-                      : renderItemRow(line, 'manual', index, true, index)
+                      ? renderHolySymbolChoice(`play-${scope}`, index, scope)
+                      : renderItemRow(line, 'play', index, true, index)
                 )}
               </div>
-              {displayClassLines.length === 0 &&
-              displayBackgroundLines.length === 0 &&
-              displayManualEntries.length === 0 &&
-              !hasClassEquipmentChoice &&
-              !hasBackgroundEquipmentChoice ? (
+              {playRows.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Add items with the + button above.</p>
               ) : null}
             </div>
@@ -901,7 +963,7 @@ export function EquipmentSection({
                 className="flex items-center gap-2 border-b border-border px-2 py-1.5"
                 style={{ color: 'var(--muted-foreground)' }}
               >
-                <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 <span className="text-xs font-medium uppercase tracking-wider">
                   {classEquipmentTitle}
                   {classOptionLabel ? ` (Option ${classOptionLabel})` : ''}
@@ -909,7 +971,6 @@ export function EquipmentSection({
                 {sortedClassLines.length > 0 && (
                   <button
                     type="button"
-                    data-editable="true"
                     onClick={() => {
                       const choices = { ...(data.toolProficiencyChoices ?? {}) };
                       delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY];
@@ -936,15 +997,14 @@ export function EquipmentSection({
                 {hasClassEquipmentChoice ? (
                   <button
                     type="button"
-                    data-editable="true"
+                    onPointerDown={() => pendingFlags.dismiss('equipment:bundle:class')}
                     onClick={() => setStartingEquipmentChoiceOpen(true)}
                     className={cn(
                       'flex w-fit cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      needsChoiceHighlightSoft(saveAttempted)
+                      needsChoiceHighlightSoft(pendingFlags.isFlagged('equipment:bundle:class'))
                     )}
                     aria-label={`Choose option for ${classEquipmentTitle}`}
                   >
-                    <Package className="h-3 w-3" aria-hidden />
                     Choose option
                     <ChevronRight className="h-3 w-3" aria-hidden />
                   </button>
@@ -961,7 +1021,9 @@ export function EquipmentSection({
                           : renderItemRow(line, 'class', idx, false)
                     )}
                   </div>
-                ) : sortedClassLines.length > 0 ? null : (
+                ) : sortedClassLines.length > 0 ? null : selectedClassOptionText ? (
+                  <p className="text-xs text-muted-foreground">{selectedClassOptionText}</p>
+                ) : (
                   <p className="text-xs text-muted-foreground">Determined by class.</p>
                 )}
               </div>
@@ -973,7 +1035,7 @@ export function EquipmentSection({
                 className="flex items-center gap-2 border-b border-border px-2 py-1.5"
                 style={{ color: 'var(--muted-foreground)' }}
               >
-                <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 <span className="text-xs font-medium uppercase tracking-wider">
                   {backgroundEquipmentTitle}
                   {backgroundOptionLabel ? ` (Option ${backgroundOptionLabel})` : ''}
@@ -981,7 +1043,6 @@ export function EquipmentSection({
                 {sortedBackgroundLines.length > 0 && (
                   <button
                     type="button"
-                    data-editable="true"
                     onClick={() => {
                       const choices = { ...(data.toolProficiencyChoices ?? {}) };
                       delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY_BG];
@@ -1008,15 +1069,16 @@ export function EquipmentSection({
                 {hasBackgroundEquipmentChoice ? (
                   <button
                     type="button"
-                    data-editable="true"
+                    onPointerDown={() => pendingFlags.dismiss('equipment:bundle:background')}
                     onClick={() => setBackgroundEquipmentChoiceOpen(true)}
                     className={cn(
                       'flex w-fit cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      needsChoiceHighlightSoft(saveAttempted)
+                      needsChoiceHighlightSoft(
+                        pendingFlags.isFlagged('equipment:bundle:background')
+                      )
                     )}
                     aria-label={`Choose option for ${backgroundEquipmentTitle}`}
                   >
-                    <Package className="h-3 w-3" aria-hidden />
                     Choose option
                     <ChevronRight className="h-3 w-3" aria-hidden />
                   </button>
@@ -1033,7 +1095,9 @@ export function EquipmentSection({
                           : renderItemRow(line, 'bg', idx, false)
                     )}
                   </div>
-                ) : sortedBackgroundLines.length > 0 ? null : (
+                ) : sortedBackgroundLines.length > 0 ? null : selectedBackgroundOptionText ? (
+                  <p className="text-xs text-muted-foreground">{selectedBackgroundOptionText}</p>
+                ) : (
                   <p className="text-xs text-muted-foreground">Determined by background.</p>
                 )}
               </div>
@@ -1045,7 +1109,7 @@ export function EquipmentSection({
                 className="flex items-center gap-2 border-b border-border px-2 py-1.5"
                 style={{ color: 'var(--muted-foreground)' }}
               >
-                <Package className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Boxes className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 <span className="text-xs font-medium uppercase tracking-wider">
                   Additional Equipment
                 </span>
@@ -1055,14 +1119,20 @@ export function EquipmentSection({
                   <div role="group" aria-label="Additional Equipment">
                     {displayManualEntries.map(({ line, index }) =>
                       isMusicalInstrumentPlaceholder(line)
-                        ? renderMusicalInstrumentChoice('manual', index, MUSICAL_INSTRUMENT_CHOICE_KEY)
+                        ? renderMusicalInstrumentChoice(
+                            'manual',
+                            index,
+                            MUSICAL_INSTRUMENT_CHOICE_KEY
+                          )
                         : isHolySymbolPlaceholder(line)
                           ? renderHolySymbolChoice('manual', index, 'class')
                           : renderItemRow(line, 'manual', index, true, index)
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Add items with the + button above.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add items with the + button above.
+                  </p>
                 )}
               </div>
             </div>
@@ -1103,12 +1173,17 @@ export function EquipmentSection({
                     const newOptLower = opt.text.toLowerCase();
                     // Clear only class-scoped placeholder choices when changing class equipment.
                     // Background-scoped choices are unaffected.
-                    if (!newOptLower.includes('musical instrument')) delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY];
+                    if (!newOptLower.includes('musical instrument'))
+                      delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY];
                     const holySymbolChoiceItemIds = {
                       ...(data.holySymbolChoiceItemIds ?? { class: null, background: null }),
                       ...(newOptLower.includes('holy symbol') ? {} : { class: null }),
                     };
-                    dataForApply = { ...data, toolProficiencyChoices: choices, holySymbolChoiceItemIds };
+                    dataForApply = {
+                      ...data,
+                      toolProficiencyChoices: choices,
+                      holySymbolChoiceItemIds,
+                    };
                   }
                   applyClassEquipmentChoice(dataForApply, onChange, idx, opt.text);
                   setStartingEquipmentChoiceOpen(false);
@@ -1156,12 +1231,17 @@ export function EquipmentSection({
                     const choices = { ...(data.toolProficiencyChoices ?? {}) };
                     const newOptLower = opt.text.toLowerCase();
                     // Clear only background-scoped placeholder choices when changing background equipment.
-                    if (!newOptLower.includes('musical instrument')) delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY_BG];
+                    if (!newOptLower.includes('musical instrument'))
+                      delete choices[MUSICAL_INSTRUMENT_CHOICE_KEY_BG];
                     const holySymbolChoiceItemIds = {
                       ...(data.holySymbolChoiceItemIds ?? { class: null, background: null }),
                       ...(newOptLower.includes('holy symbol') ? {} : { background: null }),
                     };
-                    dataForApply = { ...data, toolProficiencyChoices: choices, holySymbolChoiceItemIds };
+                    dataForApply = {
+                      ...data,
+                      toolProficiencyChoices: choices,
+                      holySymbolChoiceItemIds,
+                    };
                   }
                   applyBackgroundEquipmentChoice(dataForApply, onChange, idx, opt.text);
                   setBackgroundEquipmentChoiceOpen(false);
@@ -1197,402 +1277,6 @@ export function EquipmentSection({
           />
         </DialogContent>
       </Dialog>
-
     </Section>
-  );
-}
-
-interface AddEquipmentShopProps {
-  coins: { gp: number; sp: number; cp: number };
-  availableGP: number;
-  /** Current equipment text — for the "already owned ×N" badges. */
-  equipment: string;
-  onAddItem: (
-    equipmentName: string,
-    effectiveQty: number,
-    costGP: number | undefined,
-    packTotalCost: number | undefined,
-  ) => void;
-}
-
-/**
- * Body of the "Add Equipment" dialog. Lives outside EquipmentSection so the catalog rows
- * (hundreds of elements) are only built while the dialog is open — as inline children they were
- * rebuilt on every sheet render even with the dialog closed.
- */
-function AddEquipmentShop({ coins, availableGP, equipment, onAddItem }: AddEquipmentShopProps) {
-  const { weapons, armors, adventuringGear, toolItemsByCategory } = useRuleLibraryData();
-  const [search, setSearch] = useState('');
-  const [addQuantities, setAddQuantities] = useState<Record<string, number>>({});
-  const [activeCategory, setActiveCategory] = useState<'weapons' | 'armor' | 'tools' | 'gear'>('weapons');
-
-  const allToolItems = useMemo(() => {
-    const artisanTools = toolItemsByCategory['item:category:artisan'] ?? [];
-    const generalTools = toolItemsByCategory['item:category:tools'] ?? [];
-    const seen = new Set<string>();
-    return [...artisanTools, ...generalTools]
-      .filter((i) => {
-        if (seen.has(i.id)) return false;
-        seen.add(i.id);
-        return true;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [toolItemsByCategory]);
-
-  const shopWeapons = useMemo(
-    () =>
-      weapons
-        .filter((w) => w.name.trim().toLowerCase() !== 'unarmed strike')
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [weapons],
-  );
-  const sortedArmors = useMemo(
-    () => [...armors].sort((a, b) => a.name.localeCompare(b.name)),
-    [armors],
-  );
-  const sortedAdventuringGear = useMemo(
-    () => [...adventuringGear].sort((a, b) => a.name.localeCompare(b.name)),
-    [adventuringGear],
-  );
-
-  const searchLower = search.trim().toLowerCase();
-  const filteredWeapons = searchLower
-    ? shopWeapons.filter((w) => w.name.toLowerCase().includes(searchLower))
-    : shopWeapons;
-  const filteredArmors = searchLower
-    ? sortedArmors.filter((a) => a.name.toLowerCase().includes(searchLower))
-    : sortedArmors;
-  const filteredArtisanTools = searchLower
-    ? allToolItems.filter((a) => a.name.toLowerCase().includes(searchLower))
-    : allToolItems;
-  const filteredAdventuringGear = searchLower
-    ? sortedAdventuringGear.filter((g) => g.name.toLowerCase().includes(searchLower))
-    : sortedAdventuringGear;
-
-  const renderAddItemRow = (item: RuleItemResponse) => {
-    const displayName = stripToolItemPriceSuffix(item.name);
-    const bundleMatch = displayName.match(/\s*\(\s*(\d+)\s*\)\s*$/);
-    const bundleQty = bundleMatch ? parseInt(bundleMatch[1], 10) : null;
-    const baseName = displayName.replace(/\s*\(\s*\d+\s*\)\s*$/, '').trim();
-    const equipmentName = bundleQty != null ? singularizeFirst(baseName) : baseName;
-    const qty = addQuantities[item.id] ?? 1;
-    const effectiveQty = bundleQty != null ? qty * bundleQty : qty;
-    const costGP = getItemCostGP(item.normalized as Record<string, unknown>);
-    const totalCost = costGP != null ? costGP * qty : 0;
-    const canAfford = availableGP >= totalCost;
-    const alreadyHave = getEquipmentItemQuantity(equipment, equipmentName);
-    return (
-      <div
-        key={item.id}
-        className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/40"
-      >
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="min-w-0 truncate cursor-pointer rounded-lg border border-border/50 bg-muted/60 px-2.5 py-1 text-foreground">{displayName}</span>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-[300px] max-h-[60vh] overflow-y-auto p-3" sideOffset={8}>
-              <ItemTooltipContent item={item} />
-            </TooltipContent>
-          </Tooltip>
-          {alreadyHave > 0 && (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
-              ×{alreadyHave}
-            </span>
-          )}
-        </span>
-        {costGP != null ? (() => {
-          const { text, currency } = formatCostInfo(costGP);
-          const colorClass = {
-            gp: 'text-amber-600 dark:text-amber-400',
-            sp: 'text-slate-400 dark:text-slate-300',
-            cp: 'text-orange-600 dark:text-orange-500',
-          }[currency];
-          return (
-            <span className={cn('shrink-0 text-xs tabular-nums', colorClass)}>
-              {text}
-            </span>
-          );
-        })() : (
-          <span className="shrink-0 text-xs text-muted-foreground/40">—</span>
-        )}
-        <span className="flex shrink-0 items-center gap-0.5">
-          <button
-            type="button"
-            data-editable="true"
-            onClick={() =>
-              setAddQuantities((prev) => ({
-                ...prev,
-                [item.id]: Math.max(1, (prev[item.id] ?? 1) - 1),
-              }))
-            }
-            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Decrease quantity of ${displayName}`}
-          >
-            <Minus className="h-3.5 w-3.5" aria-hidden />
-          </button>
-          <span className="min-w-6 text-center text-xs tabular-nums">{qty}</span>
-          <button
-            type="button"
-            data-editable="true"
-            onClick={() =>
-              setAddQuantities((prev) => ({
-                ...prev,
-                [item.id]: (prev[item.id] ?? 1) + 1,
-              }))
-            }
-            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Increase quantity of ${displayName}`}
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        </span>
-        <button
-          type="button"
-          data-editable="true"
-          disabled={!canAfford}
-          onClick={() => {
-            if (!canAfford) return;
-            const packTotalCost = bundleQty != null && costGP != null ? costGP * qty : undefined;
-            onAddItem(equipmentName, effectiveQty, costGP ?? undefined, packTotalCost);
-            setAddQuantities((prev) => ({ ...prev, [item.id]: 1 }));
-          }}
-          className="ml-1 flex h-6 shrink-0 cursor-pointer items-center rounded bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Add
-        </button>
-      </div>
-    );
-  };
-
-  return (
-    <>
-      <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
-        <div
-          className="flex flex-wrap gap-1"
-          aria-label={`Available: ${coins.gp} GP, ${coins.sp} SP, ${coins.cp} CP`}
-        >
-          <div className="flex flex-1 basis-0 items-stretch overflow-hidden rounded-md border border-border bg-muted/40">
-            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">
-              <Coins className="h-3 w-3 shrink-0" aria-hidden />
-              GP
-            </span>
-            <span className="flex flex-1 items-center justify-end rounded-r-md px-2 py-1 text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-              {coins.gp}
-            </span>
-          </div>
-          <div className="flex flex-1 basis-0 items-stretch overflow-hidden rounded-md border border-border bg-muted/40">
-            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <Coins className="h-3 w-3 shrink-0" aria-hidden />
-              SP
-            </span>
-            <span className="flex flex-1 items-center justify-end rounded-r-md px-2 py-1 text-sm font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-              {coins.sp}
-            </span>
-          </div>
-          <div className="flex flex-1 basis-0 items-stretch overflow-hidden rounded-md border border-border bg-muted/40">
-            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-orange-600 dark:text-orange-500">
-              <Coins className="h-3 w-3 shrink-0" aria-hidden />
-              CP
-            </span>
-            <span className="flex flex-1 items-center justify-end rounded-r-md px-2 py-1 text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-500">
-              {coins.cp}
-            </span>
-          </div>
-        </div>
-        <Input
-          type="search"
-          placeholder="Search equipment..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-8 text-sm [&::-webkit-search-cancel-button]:cursor-pointer [&::-moz-search-clear-button]:cursor-pointer"
-          aria-label="Search equipment"
-        />
-      </div>
-
-      {/* Category tabs + list */}
-      <Tabs
-        value={activeCategory}
-        onValueChange={(v) =>
-          setActiveCategory(v as 'weapons' | 'armor' | 'tools' | 'gear')
-        }
-        className="flex min-h-0 flex-1 flex-col overflow-hidden"
-      >
-            <div className="border-b border-border px-4 pt-3 pb-0">
-              <TabsList className="h-8 w-full gap-1 bg-transparent p-0">
-                <TabsTrigger
-                  value="weapons"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Weapons
-                </TabsTrigger>
-                <TabsTrigger
-                  value="armor"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Armor
-                </TabsTrigger>
-                <TabsTrigger
-                  value="tools"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Tools
-                </TabsTrigger>
-                <TabsTrigger
-                  value="gear"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Gear
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="weapons" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredWeapons.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No weapons found.</p>
-              ) : (
-                filteredWeapons.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-            <TabsContent value="armor" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredArmors.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No armor found.</p>
-              ) : (
-                filteredArmors.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-            <TabsContent value="tools" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredArtisanTools.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No tools found.</p>
-              ) : (
-                filteredArtisanTools.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-            <TabsContent value="gear" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredAdventuringGear.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No gear found.</p>
-              ) : (
-                filteredAdventuringGear.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-          </Tabs>
-    </>
-  );
-}
-
-/** Singularizes the first word of a name, e.g. "Arrows" → "Arrow", "Bullets, Sling" → "Bullet, Sling". */
-function singularizeFirst(name: string): string {
-  const commaIdx = name.indexOf(',');
-  if (commaIdx > 0) {
-    const first = name.slice(0, commaIdx);
-    const rest = name.slice(commaIdx);
-    return (first.endsWith('s') ? first.slice(0, -1) : first) + rest;
-  }
-  return name.endsWith('s') ? name.slice(0, -1) : name;
-}
-
-function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
-  const displayName = stripToolItemPriceSuffix(item.name);
-  const norm = (item.normalized ?? {}) as Record<string, unknown>;
-  const tags = item.tagKeys;
-
-  const weightRaw = typeof norm.weight === 'string' ? parseFloat(norm.weight) : null;
-  const weightText = weightRaw != null && weightRaw > 0
-    ? `${weightRaw % 1 === 0 ? weightRaw : weightRaw} ${norm.weightUnit ?? 'lb'}`
-    : null;
-
-  const categoryLabel = (() => {
-    if (tags.includes('weapon:type:simple')) return 'Simple Weapon';
-    if (tags.includes('weapon:type:martial')) return 'Martial Weapon';
-    if (tags.includes('item:weapon:yes')) return 'Weapon';
-    if (tags.includes('item:armor:yes')) return 'Armor';
-    if (tags.includes('item:category:artisan')) return 'Artisan Tool';
-    if (tags.includes('item:category:tools')) return 'Tool';
-    if (tags.includes('item:category:gaming-set')) return 'Gaming Set';
-    if (tags.includes('item:category:musical-instrument')) return 'Musical Instrument';
-    if (tags.includes('item:category:equipment-pack')) return 'Equipment Pack';
-    if (tags.includes('item:category:scroll')) return 'Scroll';
-    if (tags.includes('item:category:potion')) return 'Potion';
-    if (tags.includes('item:category:adventuring-gear')) return 'Adventuring Gear';
-    return null;
-  })();
-
-  const weaponObj = norm.weapon as Record<string, unknown> | null | undefined;
-  const armorObj = norm.armor as Record<string, unknown> | null | undefined;
-  const desc = typeof norm.desc === 'string' ? norm.desc.trim() : null;
-
-  const properties = Array.isArray(weaponObj?.properties)
-    ? (weaponObj!.properties as Array<{ property?: { name?: string }; detail?: string | null }>)
-        .map((p) => {
-          const name = p?.property?.name;
-          if (!name) return null;
-          return p.detail ? `${name} (${p.detail})` : name;
-        })
-        .filter((v): v is string => v !== null)
-    : [];
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="font-semibold text-foreground leading-tight">{displayName}</p>
-
-      <div className="flex flex-wrap items-center gap-1.5">
-        {categoryLabel && (
-          <span className="rounded-full bg-background/60 border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            {categoryLabel}
-          </span>
-        )}
-        {weightText && (
-          <span className="text-[11px] text-muted-foreground">{weightText}</span>
-        )}
-      </div>
-
-      {weaponObj && (
-        <div className="flex flex-col gap-1 border-t border-border/40 pt-2">
-          {!!weaponObj.damageDice && (
-            <p className="text-[11px]">
-              <span className="text-muted-foreground">Damage: </span>
-              <span className="font-medium text-foreground">
-                {String(weaponObj.damageDice)}
-                {(weaponObj.damageType as { name?: string } | undefined)?.name
-                  ? ` ${(weaponObj.damageType as { name: string }).name}`
-                  : ''}
-              </span>
-            </p>
-          )}
-          {properties.length > 0 && (
-            <p className="text-[11px]">
-              <span className="text-muted-foreground">Properties: </span>
-              <span className="font-medium text-foreground">{properties.join(', ')}</span>
-            </p>
-          )}
-        </div>
-      )}
-
-      {armorObj && (
-        <div className="flex flex-col gap-1 border-t border-border/40 pt-2">
-          {typeof armorObj.acDisplay === 'string' && (
-            <p className="text-[11px]">
-              <span className="text-muted-foreground">CA: </span>
-              <span className="font-medium text-foreground">{armorObj.acDisplay}</span>
-            </p>
-          )}
-          {armorObj.strengthScoreRequired != null && (
-            <p className="text-[11px]">
-              <span className="text-muted-foreground">Str required: </span>
-              <span className="font-medium text-foreground">{String(armorObj.strengthScoreRequired)}</span>
-            </p>
-          )}
-          {armorObj.grantsStealthDisadvantage === true && (
-            <p className="text-[11px] text-destructive/80">Stealth disadvantage</p>
-          )}
-        </div>
-      )}
-
-      {desc && (
-        <p className="border-t border-border/40 pt-2 text-[11px] leading-relaxed text-muted-foreground">
-          {desc}
-        </p>
-      )}
-    </div>
   );
 }

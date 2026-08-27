@@ -3,6 +3,7 @@ import { RuleItemKind as PrismaRuleItemKind } from '@prisma/client';
 import { normalizeContentMdForKind } from './content-md-normalizer';
 import { applyMechanics } from './mechanics/mechanics-derivation';
 import { FLAVOR_DESCRIPTIONS } from './flavor-descriptions';
+import { applyMulticlassing } from './multiclassing-config';
 
 const KIND_MAP: Record<RuleItemKind, PrismaRuleItemKind> = {
   CLASS: 'CLASS',
@@ -194,6 +195,7 @@ export function mapOpen5eToRuleItemPayload(
   }
 
   normalized = applyMechanics(kind, sourceKey, name, normalized);
+  normalized = applyMulticlassing(kind, sourceKey, normalized);
 
   if (normalized && (kind === 'CLASS' || kind === 'RACE' || kind === 'BACKGROUND')) {
     const flavorDesc = FLAVOR_DESCRIPTIONS[sourceKey];

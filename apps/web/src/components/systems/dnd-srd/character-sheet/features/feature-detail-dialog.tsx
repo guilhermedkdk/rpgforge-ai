@@ -1,58 +1,65 @@
 'use client';
 
 import * as React from 'react';
+import {
+  computeActiveMiSourceInfo,
+  featRuleItemAsMechanicsFeature,
+  isAdditionalFightingStyleFeatureName,
+  isBonusProficienciesFeatureName,
+  isEvocationSavantFeatureName,
+  isMagicalDiscoveriesFeatureName,
+  isMagicInitiateFeature,
+  isRaceLineageSpellcastingFeature,
+  isSignatureSpellsFeature,
+  isSpellMasteryFeature,
+  splitDeftExplorerDesc,
+  type CharacterFormData,
+  type MagicInitiateSpellList,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
+import { AdditionalFightingStylePanel } from './feature-detail/panels/additional-fighting-style';
+import { BonusProficienciesPanel } from './feature-detail/panels/bonus-proficiencies';
+import { EvocationSavantPanel } from './feature-detail/panels/evocation-savant';
+import { MagicalDiscoveriesPanel } from './feature-detail/panels/magical-discoveries';
 import { cn } from '@/lib/utils';
 import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
 import { useCharacterSheet } from '../context';
-import { splitDeftExplorerDesc } from '../helpers';
-import {
-  isSpellMasteryFeatureName,
-  isSignatureSpellsFeatureName,
-  isMagicInitiateFeatureName,
-  isRaceLineageSpellcastingFeatureName,
-  type MagicInitiateSpellList,
-} from '@/lib/dnd-srd/character-state';
-import { computeActiveMiSourceInfo } from '@/lib/dnd-srd/derived-character-stats';
-import { markdownBodyClass, markdownBodyTypographyClass } from './feature-detail/types';
-import { AdditionalFeatView } from './feature-detail/additional-feat-view';
-import { SpellListView } from './feature-detail/spell-list-view';
+import { markdownBodyClass, markdownBodyTypographyClass } from './feature-detail/shared/types';
+import { AdditionalFeatView } from './feature-detail/views/additional-feat';
+import { SpellListView } from './feature-detail/views/spell-list';
 import {
   SpellcastingTableView,
   isSpellcastingTableFeature,
-} from './feature-detail/spellcasting-table-view';
+} from './feature-detail/views/spellcasting-table';
 import {
   FeatureColumnTableView,
   isInlineColumnTableFeature,
-} from './feature-detail/feature-column-table-view';
-import { GenericOptionsView } from './feature-detail/generic-options-view';
-import { FightingStylePanel } from './feature-detail/fighting-style-panel';
-import { MetamagicPanel } from './feature-detail/metamagic-panel';
-import { EldritchInvocationsPanel } from './feature-detail/eldritch-invocations-panel';
-import { EpicBoonPanel } from './feature-detail/epic-boon-panel';
-import { VersatilePanel } from './feature-detail/versatile-panel';
-import { AbilityScoreImprovementPanel } from './feature-detail/ability-score-improvement-panel';
-import { MysticArcanumSpellPickerPanel } from './feature-detail/mystic-arcanum-panel';
-import { MagicInitiatePanel } from './feature-detail/magic-initiate-panel';
-import { RaceLineageSpellcastingAbilityPicker } from './feature-detail/race-lineage-spellcasting-ability-picker';
-import { SignatureSpellsSpellPickerPanel } from './feature-detail/signature-spells-panel';
-import { SpellMasterySpellPickerPanel } from './feature-detail/spell-mastery-panel';
-import {
-  RaceTraitSkillPicker,
-  PrimalKnowledgePanel,
-  ExpertisePanel,
-  ScholarPanel,
-  WeaponMasteryPanel,
-  GenericTableData,
-  PrimalChampionWarning,
-} from './feature-detail/skill-picker-panels';
+} from './feature-detail/views/feature-column-table';
+import { GenericOptionsView } from './feature-detail/views/generic-options';
+import { FightingStylePanel } from './feature-detail/panels/fighting-style';
+import { MetamagicPanel } from './feature-detail/panels/metamagic';
+import { EldritchInvocationsPanel } from './feature-detail/panels/eldritch-invocations';
+import { EpicBoonPanel } from './feature-detail/panels/epic-boon';
+import { VersatilePanel } from './feature-detail/panels/versatile';
+import { AbilityScoreImprovementPanel } from './feature-detail/panels/ability-score-improvement';
+import { MysticArcanumSpellPickerPanel } from './feature-detail/panels/mystic-arcanum';
+import { MagicInitiatePanel } from './feature-detail/panels/magic-initiate';
+import { RaceLineageSpellcastingAbilityPicker } from './feature-detail/panels/race-lineage-spellcasting';
+import { SignatureSpellsSpellPickerPanel } from './feature-detail/panels/signature-spells';
+import { SpellMasterySpellPickerPanel } from './feature-detail/panels/spell-mastery';
+import { RaceTraitSkillPicker } from './feature-detail/panels/race-trait-skill';
+import { PrimalKnowledgePanel } from './feature-detail/panels/primal-knowledge';
+import { ExpertisePanel } from './feature-detail/panels/expertise';
+import { ScholarPanel } from './feature-detail/panels/scholar';
+import { WeaponMasteryPanel } from './feature-detail/panels/weapon-mastery';
+import { PrimalChampionWarning } from './feature-detail/panels/primal-champion-warning';
+import { GenericTableData } from './feature-detail/views/generic-table-data';
 import {
   DeftExplorerExpertisePickerBlock,
   DeftExplorerLanguagesPickerBlock,
-} from './feature-detail/deft-explorer-pickers';
+} from './feature-detail/panels/deft-explorer';
 
 type FeatureDetailItem = NonNullable<CharacterFormData['featureDetails']>[number];
 
@@ -64,31 +71,139 @@ type FeatureDetailItem = NonNullable<CharacterFormData['featureDetails']>[number
 function buildMagicInitiateSourceInfo(
   data: CharacterFormData,
   featureDetails: FeatureDetailItem[],
-  featsList: RuleItemResponse[],
+  featsList: RuleItemResponse[]
 ): {
   gainCount: number;
   gainSourceLabels: string[];
   lockedSpellLists: (MagicInitiateSpellList | null)[];
   sourceKeys: string[];
-  /** @deprecated No longer needed — kept for callers that haven't migrated yet. */
-  asiMiOffset: number;
 } {
   const slots = computeActiveMiSourceInfo(
     featureDetails,
     data.abilityScoreImprovementByGain,
     featsList,
     data.versatileFeatId,
-    data.eldritchInvocationSelections,
+    data.eldritchInvocationSelections
   );
-  const nonAsiCount = slots.filter(({ key }) => !key.startsWith('asi:')).length;
   return {
     gainCount: slots.length,
     gainSourceLabels: slots.map(({ label }) => label),
     lockedSpellLists: slots.map(({ lockedSpellList }) => lockedSpellList),
     sourceKeys: slots.map(({ key }) => key),
-    asiMiOffset: nonAsiCount,
   };
 }
+
+const FEATURE_DESC_MAX_DEFAULT = 'max-h-[min(32vh,240px)]';
+const FEATURE_DESC_MAX_COMPACT = 'max-h-[min(28vh,200px)]';
+
+/** Title + scrollable description + the feature's choice panel — the shell every panel entry shares. */
+function FeaturePanelShell({
+  title,
+  desc,
+  descMaxClass = FEATURE_DESC_MAX_DEFAULT,
+  children,
+}: {
+  title: string;
+  desc?: string;
+  descMaxClass?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <DialogTitle className="shrink-0 pr-8">{title}</DialogTitle>
+      <DialogDescription asChild>
+        <div
+          className={cn(
+            markdownBodyTypographyClass,
+            'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden'
+          )}
+        >
+          <div className={cn(descMaxClass, 'shrink-0 overflow-y-auto overflow-x-hidden')}>
+            {desc?.trim() ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{desc}</ReactMarkdown>
+            ) : null}
+          </div>
+          {children}
+        </div>
+      </DialogDescription>
+    </>
+  );
+}
+
+interface FeaturePanelCtx {
+  feat: FeatureDetailItem;
+  data: CharacterFormData;
+  onChange: (d: CharacterFormData) => void;
+  classes: RuleItemResponse[];
+  races: RuleItemResponse[];
+  miGainInfo: ReturnType<typeof buildMagicInitiateSourceInfo>;
+}
+
+/**
+ * Feature → choice-panel registry. Covering a new feature is ONE entry here (matcher + panel),
+ * never another branch in the dialog body. First match wins; anything unmatched falls through to
+ * the generic view below.
+ */
+const FEATURE_PANELS: Array<{
+  match: (feat: FeatureDetailItem) => boolean;
+  descMaxClass?: string;
+  render: (ctx: FeaturePanelCtx) => React.ReactNode;
+}> = [
+  {
+    match: (f) => isSpellMasteryFeature(f),
+    render: ({ data, onChange, classes }) => (
+      <SpellMasterySpellPickerPanel data={data} onChange={onChange} classes={classes} />
+    ),
+  },
+  {
+    match: (f) => isSignatureSpellsFeature(f),
+    render: ({ data, onChange, classes }) => (
+      <SignatureSpellsSpellPickerPanel data={data} onChange={onChange} classes={classes} />
+    ),
+  },
+  {
+    match: (f) => isMagicInitiateFeature(f),
+    descMaxClass: FEATURE_DESC_MAX_COMPACT,
+    render: ({ data, onChange, classes, races, miGainInfo }) => (
+      <MagicInitiatePanel
+        data={data}
+        onChange={onChange}
+        classes={classes}
+        races={races}
+        sourceKeys={miGainInfo.sourceKeys}
+        gainSourceLabels={
+          miGainInfo.gainSourceLabels.length > 1 ? miGainInfo.gainSourceLabels : undefined
+        }
+        lockedSpellLists={miGainInfo.lockedSpellLists}
+      />
+    ),
+  },
+  {
+    match: (f) => f.source === 'subclass' && isMagicalDiscoveriesFeatureName(f.name),
+    render: ({ data, onChange, classes }) => (
+      <MagicalDiscoveriesPanel data={data} onChange={onChange} classes={classes} />
+    ),
+  },
+  {
+    match: (f) => f.source === 'subclass' && isEvocationSavantFeatureName(f.name),
+    render: ({ data, onChange, classes }) => (
+      <EvocationSavantPanel data={data} onChange={onChange} classes={classes} />
+    ),
+  },
+  {
+    match: (f) => f.name.trim().toLowerCase() === 'mystic arcanum',
+    render: ({ feat, data, onChange, classes }) => (
+      <MysticArcanumSpellPickerPanel
+        data={data}
+        onChange={onChange}
+        classes={classes}
+        gainCount={feat.gainCount ?? 1}
+        gainedAtLevels={feat.gainedAtLevels}
+        gainedAtDetails={feat.gainedAtDetails}
+      />
+    ),
+  },
+];
 
 interface FeatureDetailContentProps {
   selectedFeatureIndex: number | null;
@@ -132,7 +247,7 @@ export function FeatureDetailContent({
       ? featsList.find((f) => f.id === selectedAdditionalFeatId)
       : null;
 
-    if (additionalFeat && isMagicInitiateFeatureName(additionalFeat.name)) {
+    if (additionalFeat && isMagicInitiateFeature(featRuleItemAsMechanicsFeature(additionalFeat))) {
       const raw = (additionalFeat.raw ?? {}) as Record<string, unknown>;
       const norm = (additionalFeat.normalized ?? {}) as Record<string, unknown>;
       const benefits = (norm.benefits ?? raw.benefits ?? []) as Array<{ desc?: string | null }>;
@@ -159,7 +274,7 @@ export function FeatureDetailContent({
             <div
               className={cn(
                 markdownBodyTypographyClass,
-                'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden',
+                'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden'
               )}
             >
               {featDesc ? (
@@ -201,113 +316,17 @@ export function FeatureDetailContent({
   if (isSpellListFeature) {
     return <SpellListView feat={feat} classItem={currentClassItem} />;
   }
-  if (isSpellMasteryFeatureName(feat.name)) {
+  const panelEntry = FEATURE_PANELS.find((entry) => entry.match(feat));
+  if (panelEntry) {
     return (
-      <>
-        <DialogTitle className="shrink-0 pr-8">{feat.name}</DialogTitle>
-        <DialogDescription asChild>
-          <div
-            className={cn(
-              markdownBodyTypographyClass,
-              'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden'
-            )}
-          >
-            <div className="max-h-[min(32vh,240px)] shrink-0 overflow-y-auto overflow-x-hidden">
-              {feat.desc?.trim() ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{feat.desc}</ReactMarkdown>
-              ) : null}
-            </div>
-            <SpellMasterySpellPickerPanel data={data} onChange={onChange} classes={classes} />
-          </div>
-        </DialogDescription>
-      </>
-    );
-  }
-  if (isSignatureSpellsFeatureName(feat.name)) {
-    return (
-      <>
-        <DialogTitle className="shrink-0 pr-8">{feat.name}</DialogTitle>
-        <DialogDescription asChild>
-          <div
-            className={cn(
-              markdownBodyTypographyClass,
-              'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden'
-            )}
-          >
-            <div className="max-h-[min(32vh,240px)] shrink-0 overflow-y-auto overflow-x-hidden">
-              {feat.desc?.trim() ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{feat.desc}</ReactMarkdown>
-              ) : null}
-            </div>
-            <SignatureSpellsSpellPickerPanel data={data} onChange={onChange} classes={classes} />
-          </div>
-        </DialogDescription>
-      </>
-    );
-  }
-  if (isMagicInitiateFeatureName(feat.name)) {
-    const { gainSourceLabels, lockedSpellLists, sourceKeys: miSourceKeys } = miGainInfo;
-    return (
-      <>
-        <DialogTitle className="shrink-0 pr-8">{feat.name}</DialogTitle>
-        <DialogDescription asChild>
-          <div
-            className={cn(
-              markdownBodyTypographyClass,
-              'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden'
-            )}
-          >
-            <div className="max-h-[min(28vh,200px)] shrink-0 overflow-y-auto overflow-x-hidden">
-              {feat.desc?.trim() ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{feat.desc}</ReactMarkdown>
-              ) : null}
-            </div>
-            <MagicInitiatePanel
-              data={data}
-              onChange={onChange}
-              classes={classes}
-              races={races}
-              sourceKeys={miSourceKeys}
-              gainSourceLabels={gainSourceLabels.length > 1 ? gainSourceLabels : undefined}
-              lockedSpellLists={lockedSpellLists}
-            />
-          </div>
-        </DialogDescription>
-      </>
-    );
-  }
-  if (featNameLower === 'mystic arcanum') {
-    return (
-      <>
-        <DialogTitle className="shrink-0 pr-8">{feat.name}</DialogTitle>
-        <DialogDescription asChild>
-          <div
-            className={cn(
-              markdownBodyTypographyClass,
-              'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden'
-            )}
-          >
-            <div className="max-h-[min(32vh,240px)] shrink-0 overflow-y-auto overflow-x-hidden">
-              {feat.desc?.trim() ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{feat.desc}</ReactMarkdown>
-              ) : null}
-            </div>
-            <MysticArcanumSpellPickerPanel
-              data={data}
-              onChange={onChange}
-              classes={classes}
-              gainCount={feat.gainCount ?? 1}
-              gainedAtLevels={feat.gainedAtLevels}
-              gainedAtDetails={feat.gainedAtDetails}
-            />
-          </div>
-        </DialogDescription>
-      </>
+      <FeaturePanelShell title={feat.name} desc={feat.desc} descMaxClass={panelEntry.descMaxClass}>
+        {panelEntry.render({ feat, data, onChange, classes, races, miGainInfo })}
+      </FeaturePanelShell>
     );
   }
   return (
     <>
-      <DialogTitle className="pr-8">{feat.name}</DialogTitle>
+      <DialogTitle className="shrink-0 pr-8">{feat.name}</DialogTitle>
       <DialogDescription asChild>
         <div className={markdownBodyClass}>
           {/* Spellcasting / Pact Magic: multi-column slot grids */}
@@ -326,7 +345,7 @@ export function FeatureDetailContent({
           />
 
           {/* Elven Lineage / Gnomish Lineage / Fiendish Legacy: spellcasting ability for granted spells */}
-          {isRaceLineageSpellcastingFeatureName(feat.name) && (
+          {isRaceLineageSpellcastingFeature(feat) && (
             <RaceLineageSpellcastingAbilityPicker
               data={data}
               onChange={onChange}
@@ -345,6 +364,19 @@ export function FeatureDetailContent({
             />
           )}
 
+          {/* Subclass: name-only options (Elemental Affinity, Fiendish Resilience, Circle of the
+              Land) are rendered inside GenericOptionsView, between the text and the tables. */}
+
+          {/* Bonus Proficiencies (College of Lore): 3 skill choices */}
+          {feat.source === 'subclass' && isBonusProficienciesFeatureName(feat.name) && (
+            <BonusProficienciesPanel data={data} onChange={onChange} skillsList={skillsList} />
+          )}
+
+          {/* Additional Fighting Style (Champion): second fighting-style feat */}
+          {feat.source === 'subclass' && isAdditionalFightingStyleFeatureName(feat.name) && (
+            <AdditionalFightingStylePanel data={data} onChange={onChange} featsList={featsList} />
+          )}
+
           {/* Generic level/value tables appended at the end (no inline column reference) */}
           {!isSpellcastingTableFeature(feat) &&
             !isInlineColumnTableFeature(feat) &&
@@ -355,7 +387,8 @@ export function FeatureDetailContent({
             <WeaponMasteryPanel
               data={data}
               onChange={onChange}
-              weaponMasteryMeta={weaponMasteryMeta}
+              feat={feat}
+              masteryWeapons={weaponMasteryMeta.masteryWeapons}
             />
           )}
 
@@ -455,6 +488,7 @@ export function FeatureDetailContent({
               featsList={featsList}
               gainCount={feat.gainCount ?? 1}
               gainedAtLevels={feat.gainedAtLevels}
+              gainSlotOffset={feat.gainSlotOffset ?? 0}
             />
           )}
         </div>

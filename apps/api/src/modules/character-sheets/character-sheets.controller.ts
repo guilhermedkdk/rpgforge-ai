@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -24,11 +25,8 @@ export class CharacterSheetsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: CreateCharacterSheetDto,
-  ) {
-    return this.characterSheetsService.create(user.id, dto.packId, dto.data);
+  async create(@CurrentUser() user: RequestUser, @Body() dto: CreateCharacterSheetDto) {
+    return this.characterSheetsService.create(user.id, dto.packId, dto.data, dto.generationId);
   }
 
   @Get()
@@ -54,8 +52,14 @@ export class CharacterSheetsController {
   async update(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
-    @Body() dto: UpdateCharacterSheetDto,
+    @Body() dto: UpdateCharacterSheetDto
   ) {
     return this.characterSheetsService.updateForUser(user.id, id, dto.data);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    await this.characterSheetsService.removeForUser(user.id, id);
   }
 }

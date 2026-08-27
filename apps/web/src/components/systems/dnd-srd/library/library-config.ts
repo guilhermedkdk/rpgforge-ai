@@ -1,14 +1,15 @@
-import type { RuleItemListParams, RuleItemResponse } from '@rpgforce-ai/shared';
-import { STANDARD_LANGUAGE_TAG } from '@/components/systems/dnd-srd/character-sheet/constants';
+import {
+  STANDARD_LANGUAGE_TAG,
+  type RuleItemListParams,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 
 /** Potions allowed in the gear picker (creation flow offers only basic consumables). */
-const ALLOWED_POTION_NAMES: ReadonlySet<string> = new Set([
-  'Potion of Healing',
-  'Antitoxin',
-]);
+const ALLOWED_POTION_NAMES: ReadonlySet<string> = new Set(['Potion of Healing', 'Antitoxin']);
 
 export type RuleLibraryKey =
   | 'classes'
+  | 'subclasses'
   | 'backgrounds'
   | 'races'
   | 'abilities'
@@ -40,6 +41,7 @@ export interface RuleLibraryQueryConfig {
 
 export const RULE_LIBRARY_QUERIES: readonly RuleLibraryQueryConfig[] = [
   { key: 'classes', params: { type: 'CLASS', limit: 100 } },
+  { key: 'subclasses', params: { type: 'SUBCLASS', limit: 100 }, includeRaw: false },
   { key: 'backgrounds', params: { type: 'BACKGROUND', limit: 100 } },
   { key: 'races', params: { type: 'RACE', limit: 100 } },
   { key: 'abilities', params: { type: 'ABILITY', limit: 100 } },
@@ -92,11 +94,18 @@ export const ADVENTURING_GEAR_GROUP_KEYS: readonly RuleLibraryKey[] = [
 ];
 
 export const EDITOR_LIBRARY_KEYS: readonly RuleLibraryKey[] = RULE_LIBRARY_QUERIES.map(
-  (q) => q.key,
+  (q) => q.key
 );
 
-/** The session viewer preloads everything sheet-specific; only item catalogs are fetched. */
-export const SESSION_LIBRARY_KEYS: readonly RuleLibraryKey[] = [
+/**
+ * The saved sheet preloads everything sheet-specific with the sheet itself, so it only fetches the
+ * item catalogs plus `classes`/`subclasses`: a sheet that reaches level 3 still has to pick a
+ * subclass, the save validation needs the pack's list to know one is even required for that class,
+ * and multiclassing needs the full class list to add one.
+ */
+export const SAVED_SHEET_LIBRARY_KEYS: readonly RuleLibraryKey[] = [
+  'classes',
+  'subclasses',
   'weapons',
   'unarmedStrike',
   'armors',

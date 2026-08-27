@@ -1,11 +1,30 @@
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
+import type {
+  AiDecision,
+  AiSpellNote,
+  RuleItemResponse,
+  CharacterFormData,
+} from '@rpgforce-ai/shared';
 
 export type { CharacterFormData };
 
+/**
+ * Which flow the sheet is rendered in.
+ * - 'creation': building a new character; every choice is open and equipment runs on the starting
+ *   gold budget.
+ * - 'play': a saved character. Creation allocations that are already committed render locked (see
+ *   `isCommitted*` in ./locks) and equipment runs on the real coin wallet. Everything else — level,
+ *   spells, features, combat, equipment, personality — stays editable.
+ */
+export type SheetMode = 'creation' | 'play';
+
 export interface CharacterSheetProps {
   data: CharacterFormData;
+  /** AI wizard only: per-area justifications shown as hint icons on the sheet sections. */
+  aiDecisions?: AiDecision[] | null;
+  /** AI wizard only: per-spell justifications shown as hint icons on spell rows. */
+  aiSpellNotes?: AiSpellNote[] | null;
   classes: RuleItemResponse[];
+  subclasses?: RuleItemResponse[];
   backgrounds: RuleItemResponse[];
   races: RuleItemResponse[];
   abilities: RuleItemResponse[];
@@ -19,13 +38,17 @@ export interface CharacterSheetProps {
   /** Standard languages (OTHER + language:rarity:standard) for Languages picker. */
   standardLanguageOptions?: RuleItemResponse[];
   classesLoading: boolean;
+  subclassesLoading?: boolean;
   backgroundsLoading: boolean;
   racesLoading: boolean;
   abilitiesLoading: boolean;
   equipmentItemsLoading: boolean;
   onChange: (data: CharacterFormData) => void;
-  /** View-only mode: blocks all input edits except current HP, temporary HP, and death saves */
-  readOnly?: boolean;
-  /** True after a blocked save attempt: required-but-empty fields flag themselves in red. */
+  /** Defaults to 'creation'. See {@link SheetMode}. */
+  mode?: SheetMode;
+  /**
+   * True after a blocked save attempt. The sheet turns it into PER-FIELD flags (see
+   * `./pending-flags`), so acting on one pending field silences only that one.
+   */
   saveAttempted?: boolean;
 }

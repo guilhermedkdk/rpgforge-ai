@@ -2,14 +2,20 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, Scale } from 'lucide-react';
+import { BookOpen, ExternalLink, FileText, Scale } from 'lucide-react';
 import { Header } from '@/components/layout/header';
 import { SiteFooter } from '@/components/layout/footer';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingState } from '@/components/ui/loading-state';
 import { packsApi } from '@/lib/api/packs';
 import { licenseLabel } from '@/lib/license';
+import { PackIcon } from '@/components/systems/pack-icon';
+
+// Same pill chip as BackLink: this page's cards are NOT clickable (each carries several real
+// outbound links), so the hover feedback belongs on the links themselves.
+const chipBase =
+  'inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs font-medium';
+const chipStatic = `${chipBase} text-muted-foreground`;
+const chipLink = `${chipBase} text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`;
 
 export default function LegalPage() {
   const { data: packs = [], isLoading } = useQuery({
@@ -44,60 +50,63 @@ export default function LegalPage() {
         {isLoading ? (
           <LoadingState />
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 content-reveal">
             {enabledPacks.map((pack) => (
-              <Card key={pack.id} className="border-border bg-card">
-                <CardHeader className="gap-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle className="font-serif text-xl text-foreground">
-                      {pack.name}
-                    </CardTitle>
-                    {pack.licenseUrl ? (
-                      <a href={pack.licenseUrl} target="_blank" rel="noreferrer">
-                        <Badge className="gap-1">
-                          {licenseLabel(pack.licenseType)}
-                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                        </Badge>
-                      </a>
-                    ) : (
-                      <Badge>{licenseLabel(pack.licenseType)}</Badge>
-                    )}
+              <section
+                key={pack.id}
+                aria-label={`Licença de ${pack.name}`}
+                className="rounded-xl border border-border bg-card p-5"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
+                    <PackIcon slug={pack.slug} className="h-6 w-6" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {pack.systemName} · versão {pack.version}
-                    {pack.publisherName ? ` · ${pack.publisherName}` : ''}
-                  </p>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {pack.description ? (
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {pack.description}
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-serif text-xl font-bold text-foreground">{pack.name}</h2>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {[pack.systemName, `versão ${pack.version}`, pack.publisherName]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
-                  ) : null}
-                  <blockquote className="border-l-2 border-primary/50 bg-muted/30 px-4 py-3 text-sm italic leading-relaxed text-foreground">
-                    {pack.attributionText}
-                  </blockquote>
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                    {pack.permalink ? (
-                      <a
-                        href={pack.permalink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        Documento original
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                      </a>
-                    ) : null}
-                    <Link
-                      href={`/library/${encodeURIComponent(pack.slug)}`}
-                      className="text-primary hover:underline"
-                    >
-                      Explorar conteúdo do pacote
-                    </Link>
                   </div>
-                </CardContent>
-              </Card>
+                  {pack.licenseUrl ? (
+                    <a href={pack.licenseUrl} target="_blank" rel="noreferrer" className={chipLink}>
+                      <Scale className="h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
+                      {licenseLabel(pack.licenseType)}
+                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <span className={chipStatic}>
+                      <Scale className="h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
+                      {licenseLabel(pack.licenseType)}
+                    </span>
+                  )}
+                </div>
+
+                {pack.description ? (
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                    {pack.description}
+                  </p>
+                ) : null}
+
+                <blockquote className="mt-4 rounded-lg border-l-2 border-primary/50 bg-muted/30 px-4 py-3 text-sm italic leading-relaxed text-foreground">
+                  {pack.attributionText}
+                </blockquote>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {pack.permalink ? (
+                    <a href={pack.permalink} target="_blank" rel="noreferrer" className={chipLink}>
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                      Documento original
+                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    </a>
+                  ) : null}
+                  <Link href={`/library/${encodeURIComponent(pack.slug)}`} className={chipLink}>
+                    <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                    Explorar conteúdo do pacote
+                  </Link>
+                </div>
+              </section>
             ))}
           </div>
         )}

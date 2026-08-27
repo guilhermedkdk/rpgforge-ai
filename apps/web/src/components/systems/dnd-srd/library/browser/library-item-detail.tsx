@@ -2,17 +2,22 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import type { PackResponse, RuleItemKind, RuleItemResponse } from '@rpgforce-ai/shared';
 import { BackLink } from '@/components/ui/back-link';
-import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/ui/loading-state';
-import { normalizeFeatureDesc } from '@/lib/dnd-srd/derived-character-stats';
-import { getBackgroundBenefits, getRaceTraits } from '@/lib/dnd-srd/rule-item-presentation';
+import {
+  normalizeFeatureDesc,
+  getBackgroundBenefits,
+  getRaceTraits,
+  type PackResponse,
+  type RuleItemKind,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { licenseLabel } from '@/lib/license';
 import { SpellRuleItemDetailBody } from '../../character-sheet/sections/spellcasting/spell-detail';
 import { useBrowseLibrary } from './use-browse-library';
 import { BrowseMarkdown, stripContentPreamble } from './browse-markdown';
 import { ClassDetail, SubclassDetail } from './class-detail';
+import { CollapsibleSectionList } from './collapsible-section-list';
 import {
   backgroundEntry,
   classEntry,
@@ -76,20 +81,29 @@ const headerChips = (item: RuleItemResponse): string[] => {
   }
 };
 
+/** Key stats as scannable tiles (cost, weight, damage, AC…) instead of a flat label/value list. */
 const StatRows = ({ rows }: { rows: Array<{ label: string; value?: string | null }> }) => {
   const filled = rows.filter((r) => r.value?.trim());
   if (filled.length === 0) return null;
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-sm">
+    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {filled.map(({ label, value }) => (
-        <React.Fragment key={label}>
-          <dt className="font-medium text-muted-foreground/70">{label}</dt>
-          <dd className="text-foreground">{value}</dd>
-        </React.Fragment>
+        <div key={label} className="rounded-xl border border-border bg-card px-3 py-2.5">
+          <dt className="text-xs text-muted-foreground">{label}</dt>
+          <dd className="mt-0.5 font-serif text-sm font-semibold text-foreground">{value}</dd>
+        </div>
       ))}
     </dl>
   );
 };
+
+/** Titled reading block: one card per species trait, background benefit or weapon property list. */
+const DetailSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <section aria-label={title} className="rounded-xl border border-border bg-card p-4">
+    <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">{title}</h2>
+    {children}
+  </section>
+);
 
 const SpellBody = ({ item }: { item: RuleItemResponse }) => {
   const classNames = tagValuesForPrefix(item, SPELL_CLASS_TAG_PREFIX).map(prettifyTagValue).sort();
@@ -100,9 +114,12 @@ const SpellBody = ({ item }: { item: RuleItemResponse }) => {
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3">
           <span className="text-xs font-medium text-muted-foreground/70">Available to</span>
           {classNames.map((name) => (
-            <Badge key={name} variant="secondary" className="px-1.5 py-0 text-[10px]">
+            <span
+              key={name}
+              className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+            >
               {name}
-            </Badge>
+            </span>
           ))}
         </div>
       )}
@@ -130,10 +147,9 @@ const SpeciesBody = ({ item }: { item: RuleItemResponse }) => {
     <div className="flex flex-col gap-4">
       <StatRows rows={sizeSpeedRows} />
       {featureTraits.map((trait) => (
-        <section key={trait.name}>
-          <h2 className="mb-1 font-serif text-lg font-semibold text-foreground">{trait.name}</h2>
+        <DetailSection key={trait.name} title={trait.name ?? ''}>
           <BrowseMarkdown>{normalizeFeatureDesc(trait.desc)}</BrowseMarkdown>
-        </section>
+        </DetailSection>
       ))}
     </div>
   );
@@ -142,12 +158,9 @@ const SpeciesBody = ({ item }: { item: RuleItemResponse }) => {
 const BackgroundBody = ({ item }: { item: RuleItemResponse }) => (
   <div className="flex flex-col gap-4">
     {getBackgroundBenefits(item).map((benefit) => (
-      <section key={benefit.name ?? benefit.type}>
-        <h2 className="mb-1 font-serif text-lg font-semibold text-foreground">
-          {benefit.name ?? benefit.type}
-        </h2>
+      <DetailSection key={benefit.name ?? benefit.type} title={benefit.name ?? benefit.type ?? ''}>
         <BrowseMarkdown>{benefit.desc ?? ''}</BrowseMarkdown>
-      </section>
+      </DetailSection>
     ))}
   </div>
 );
@@ -211,8 +224,7 @@ const EquipmentBody = ({ item }: { item: RuleItemResponse }) => {
     <div className="flex flex-col gap-4">
       <StatRows rows={rows} />
       {properties.length > 0 && (
-        <section>
-          <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">Properties</h2>
+        <DetailSection title="Properties">
           <ul className="flex list-none flex-col gap-2 p-0">
             {properties.map((p, index) => (
               <li key={index} className="text-sm">
@@ -231,7 +243,7 @@ const EquipmentBody = ({ item }: { item: RuleItemResponse }) => {
               </li>
             ))}
           </ul>
-        </section>
+        </DetailSection>
       )}
       {desc ? <BrowseMarkdown>{normalizeFeatureDesc(desc)}</BrowseMarkdown> : null}
     </div>
@@ -248,16 +260,15 @@ const RulesetBody = ({ pack, item }: { pack: PackResponse; item: RuleItemRespons
       {isLoading ? (
         <LoadingState />
       ) : (
-        children.map((rule) => (
-          <section
-            key={rule.id}
-            className="rounded-lg border border-border bg-card p-4"
-            aria-label={rule.name}
-          >
-            <h2 className="mb-2 font-serif text-lg font-semibold text-foreground">{rule.name}</h2>
-            <BrowseMarkdown>{stripContentPreamble(rule.contentMd ?? '')}</BrowseMarkdown>
-          </section>
-        ))
+        // Chapters are long reads, so the list doubles as the ruleset's index.
+        <CollapsibleSectionList
+          title="Capítulos"
+          entries={children.map((rule) => ({
+            key: rule.id,
+            title: rule.name,
+            content: <BrowseMarkdown>{stripContentPreamble(rule.contentMd ?? '')}</BrowseMarkdown>,
+          }))}
+        />
       )}
     </div>
   );
@@ -352,11 +363,16 @@ export const LibraryItemDetail = ({
       <div>
         <BackLink href={backHref}>{parent ? `Back to ${parent.name}` : 'Back to library'}</BackLink>
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline">{KIND_LABELS[item.kind]}</Badge>
+          <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            {KIND_LABELS[item.kind]}
+          </span>
           {chips.map((chip) => (
-            <Badge key={chip} variant="secondary" className="px-1.5 py-0 text-[10px]">
+            <span
+              key={chip}
+              className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+            >
               {chip}
-            </Badge>
+            </span>
           ))}
         </div>
         <h1 className="mt-2 font-serif text-3xl font-bold text-foreground">{item.name}</h1>

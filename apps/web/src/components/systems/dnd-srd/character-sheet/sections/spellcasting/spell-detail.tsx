@@ -5,16 +5,24 @@ import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import { spellChipClass, spellDetailMarkdownClass } from './spell-utils';
+import type { RuleItemResponse, SpellModifier } from '@rpgforce-ai/shared';
+import { spellChipClass, spellDetailMarkdownClass } from './spell-display';
+import { SpellModifierSection } from './spell-modifier-badges';
 
-/** Full spell stats + description (same content as the spell picker modal body). */
+/**
+ * Full spell stats + description (same content as the spell picker modal body). The stat rows stay
+ * faithful to the SRD text; features that modify the spell are listed in their own "Enhanced by"
+ * block, so the official numbers are never overwritten by derived ones.
+ */
 export function SpellRuleItemDetailBody({
   spell,
   showNameAndTags = false,
+  modifiers = [],
 }: {
   spell: RuleItemResponse;
   showNameAndTags?: boolean;
+  /** Features modifying this spell for the current character (empty outside a sheet). */
+  modifiers?: SpellModifier[];
 }) {
   const n = (spell.normalized ?? {}) as Record<string, unknown>;
   const school = (n.school as { name?: string } | undefined)?.name;
@@ -110,12 +118,13 @@ export function SpellRuleItemDetailBody({
           <span className="text-muted-foreground">{higherLevel}</span>
         </div>
       )}
+      <SpellModifierSection modifiers={modifiers} />
     </div>
   );
 }
 
-/** Spell row + expanded body — matches Mystic Arcanum picker (`feature-detail-dialog.tsx`). */
-export function MysticArcanumStyleSpellRow({
+/** Selectable, expandable spell row with a selection footer (used by the spell-picking dialogs). */
+export function SelectableSpellRow({
   spell,
   isExpanded,
   onToggleExpanded,

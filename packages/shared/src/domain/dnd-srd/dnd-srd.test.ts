@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { calcModifier } from './ability';
-import { proficiencyBonusForLevel } from './proficiency';
-import { hitDieMaxFromNotation, maxHpForLevel } from './hit-points';
+import { calcModifier } from './math/ability';
+import { proficiencyBonusForLevel } from './math/proficiency-bonus';
+import { hitDieMaxFromNotation, maxHpForLevel } from './math/hit-points';
 
 describe('calcModifier', () => {
   it('applies floor((score - 10) / 2)', () => {
@@ -66,14 +66,19 @@ describe('maxHpForLevel', () => {
     expect(maxHpForLevel({ hitDieMax: 10, conMod: 2, level: 3 })).toBe(28);
   });
 
-  it('applies Dwarven Toughness (+1 per level)', () => {
+  it('adds one +1-per-level HP feature (e.g. Dwarven Toughness or Draconic Resilience)', () => {
     // d8, con +2, level 3: base 10 + 2*(5+2)=24; +3 = 27
-    expect(maxHpForLevel({ hitDieMax: 8, conMod: 2, level: 3, dwarvenToughness: true })).toBe(27);
+    expect(maxHpForLevel({ hitDieMax: 8, conMod: 2, level: 3, bonusHpPerLevel: 1 })).toBe(27);
   });
 
-  it('returns 0 base with no hit die, but Dwarven Toughness still adds level', () => {
+  it('stacks multiple +1-per-level HP features additively', () => {
+    // same base 24; two features → +2 per level → +6 = 30
+    expect(maxHpForLevel({ hitDieMax: 8, conMod: 2, level: 3, bonusHpPerLevel: 2 })).toBe(30);
+  });
+
+  it('returns 0 base with no hit die, but per-level HP bonuses still apply', () => {
     expect(maxHpForLevel({ hitDieMax: 0, conMod: 3, level: 5 })).toBe(0);
-    expect(maxHpForLevel({ hitDieMax: 0, conMod: 3, level: 5, dwarvenToughness: true })).toBe(5);
+    expect(maxHpForLevel({ hitDieMax: 0, conMod: 3, level: 5, bonusHpPerLevel: 1 })).toBe(5);
   });
 
   it('clamps level to 1-20', () => {

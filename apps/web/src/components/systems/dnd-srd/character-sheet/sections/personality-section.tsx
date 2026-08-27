@@ -6,14 +6,14 @@ import { DeferredTextarea } from '../ui/deferred-textarea';
 import type { CharacterFormData } from '../types';
 import { updateField } from '../helpers';
 
-export interface PersonalitySectionProps {
+interface PersonalitySectionProps {
   data: CharacterFormData;
   onChange: (data: CharacterFormData) => void;
 }
 
 const textareaClassName = cn(
   'mt-1 min-h-[80px] w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground resize-none',
-  'outline-none shadow-none focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0'
+  'outline-none shadow-none focus-visible:border-ring'
 );
 
 const FIELDS = [
@@ -62,7 +62,6 @@ export function PersonalitySection({ data, onChange }: PersonalitySectionProps) 
             rows={2}
             className={textareaClassName}
             aria-label={label}
-            data-editable="true"
           />
         </div>
       ))}

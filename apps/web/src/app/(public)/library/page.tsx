@@ -2,65 +2,102 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, ChevronRight, ExternalLink, Library } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { BookOpen, ChevronRight, Clock, Library, Scale } from 'lucide-react';
 import { Header } from '@/components/layout/header';
 import { SiteFooter } from '@/components/layout/footer';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { LoadingState } from '@/components/ui/loading-state';
 import { packsApi } from '@/lib/api/packs';
 import { licenseLabel } from '@/lib/license';
 import { systemRegistry } from '@/components/systems/registry';
+import { PackIcon } from '@/components/systems/pack-icon';
 import type { PackResponse } from '@rpgforce-ai/shared';
 
-function SystemCard({ pack }: { pack: PackResponse }) {
-  const hasLibrary = Boolean(systemRegistry[pack.slug]);
+const Chip = ({ icon: Icon, label }: { icon: LucideIcon; label: string }) => (
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs text-muted-foreground">
+    <Icon className="h-3 w-3 text-primary" aria-hidden="true" />
+    {label}
+  </span>
+);
+
+const SystemCardBody = ({ pack, hasLibrary }: { pack: PackResponse; hasLibrary: boolean }) => {
+  const meta = [pack.systemName, `versão ${pack.version}`, pack.publisherName]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <Card className="flex h-full flex-col border-border bg-card">
-      <CardHeader className="gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="font-serif text-xl text-foreground">{pack.name}</CardTitle>
-          {pack.licenseUrl ? (
-            <a href={pack.licenseUrl} target="_blank" rel="noreferrer">
-              <Badge className="gap-1">
-                {licenseLabel(pack.licenseType)}
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-              </Badge>
-            </a>
-          ) : (
-            <Badge>{licenseLabel(pack.licenseType)}</Badge>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {pack.systemName} · versão {pack.version}
-          {pack.publisherName ? ` · ${pack.publisherName}` : ''}
-        </p>
-      </CardHeader>
-      {pack.description ? (
-        <CardContent className="flex-1">
-          <p className="text-sm leading-relaxed text-muted-foreground">{pack.description}</p>
-        </CardContent>
-      ) : (
-        <div className="flex-1" />
+    <>
+      {hasLibrary && (
+        <div
+          className="pointer-events-none absolute inset-0 bg-linear-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          aria-hidden="true"
+        />
       )}
-      <CardFooter className="justify-end">
-        {hasLibrary ? (
-          <Button asChild>
-            <Link href={`/library/${encodeURIComponent(pack.slug)}`}>
-              <BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
-              Explorar regras
-              <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" />
-            </Link>
-          </Button>
-        ) : (
-          <Badge variant="outline">Em breve</Badge>
+
+      <div className="relative flex items-start gap-4">
+        <div
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground transition-all duration-300 ${
+            hasLibrary ? 'group-hover:bg-primary group-hover:text-primary-foreground' : ''
+          }`}
+        >
+          <PackIcon slug={pack.slug} className="h-7 w-7" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-serif text-xl font-bold text-foreground">{pack.name}</h2>
+          <p className="mt-0.5 truncate text-sm text-muted-foreground">{meta}</p>
+        </div>
+        {hasLibrary && (
+          <ChevronRight
+            className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary"
+            aria-hidden="true"
+          />
         )}
-      </CardFooter>
-    </Card>
+      </div>
+
+      {pack.description ? (
+        <p className="relative mt-4 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+          {pack.description}
+        </p>
+      ) : null}
+
+      <div className="relative mt-auto flex flex-wrap gap-2 pt-5">
+        <Chip icon={Scale} label={licenseLabel(pack.licenseType)} />
+        {hasLibrary ? (
+          <Chip icon={BookOpen} label="Catálogo completo" />
+        ) : (
+          <Chip icon={Clock} label="Em breve" />
+        )}
+      </div>
+    </>
   );
-}
+};
+
+const SystemCard = ({ pack }: { pack: PackResponse }) => {
+  const hasLibrary = Boolean(systemRegistry[pack.slug]);
+  const shell =
+    'group relative flex h-full max-w-md flex-col overflow-hidden rounded-xl border bg-card p-6';
+
+  // A pack with no library UI has nowhere to navigate to, so it stays a plain (unclickable) card.
+  if (!hasLibrary) {
+    return (
+      <div className={`${shell} cursor-not-allowed border-border opacity-60`}>
+        <SystemCardBody pack={pack} hasLibrary={false} />
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/library/${encodeURIComponent(pack.slug)}`}
+      aria-label={`Explorar as regras de ${pack.name}`}
+      className={`${shell} border-border transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+    >
+      <SystemCardBody pack={pack} hasLibrary />
+    </Link>
+  );
+};
 
 export default function LibraryPage() {
   const {
@@ -96,23 +133,21 @@ export default function LibraryPage() {
         {isLoading ? (
           <LoadingState />
         ) : isError ? (
-          <div className="flex flex-col items-center gap-4 py-24 text-center">
-            <p className="font-serif text-lg font-semibold text-foreground">
-              Não foi possível carregar os sistemas
-            </p>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Verifique sua conexão e tente novamente.
-            </p>
-            <Button variant="outline" onClick={() => void refetch()}>
-              Tentar novamente
-            </Button>
-          </div>
+          <ErrorState
+            className="content-reveal"
+            title="Não foi possível carregar os sistemas"
+            description="Verifique sua conexão e tente novamente."
+            onRetry={() => void refetch()}
+          />
         ) : enabledPacks.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-16 text-center">
-            <p className="text-sm text-muted-foreground">Nenhum sistema disponível no momento.</p>
-          </div>
+          <EmptyState
+            className="content-reveal"
+            icon={Library}
+            title="Nenhum sistema disponível"
+            description="Assim que um sistema de regras for publicado, ele aparece aqui."
+          />
         ) : (
-          <ul className="grid list-none gap-6 p-0 md:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid list-none gap-6 p-0 md:grid-cols-2 content-reveal">
             {enabledPacks.map((pack) => (
               <li key={pack.id} className="min-w-0">
                 <SystemCard pack={pack} />

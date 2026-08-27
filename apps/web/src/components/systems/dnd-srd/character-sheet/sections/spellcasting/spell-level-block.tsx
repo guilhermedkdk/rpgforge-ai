@@ -1,11 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { X, ArrowLeftRight } from 'lucide-react';
+import { AiSpellHint } from '../../ui/ai-hint';
+import { X, ArrowLeftRight, Lock } from 'lucide-react';
 import { LoadingState } from '@/components/ui/loading-state';
 import { cn } from '@/lib/utils';
-import type { RuleItemResponse } from '@rpgforce-ai/shared';
-import type { CharacterFormData } from '@/lib/dnd-srd/character-state';
+import {
+  abilityAbbr,
+  clampSpellSlotsExpended,
+  type RuleItemResponse,
+  type CharacterFormData,
+  type SheetSpellRow,
+  type SpellModifier,
+} from '@rpgforce-ai/shared';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,15 +20,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { needsChoiceAccent, needsChoiceHighlight, numberInputNoSpinner } from '../../constants';
-import { SpellBadges, type SpellBadge } from './spell-badge';
+import type { PendingFlags } from '../../pending-flags';
+import { SpellModifierBadges } from './spell-modifier-badges';
 import { SpellRuleItemDetailBody } from './spell-detail';
-import {
-  DEFAULT_ROWS_BY_LEVEL,
-  SPELL_LIST_MAX_H_CLASS,
-  abilityAbbr,
-  clampSpellSlotsExpended,
-  type SheetSpellRow,
-} from './spell-utils';
+import { DEFAULT_ROWS_BY_LEVEL, SPELL_LIST_MAX_H_CLASS } from './spell-display';
 
 const labelClass = 'text-[8px] font-semibold uppercase tracking-widest text-muted-foreground';
 const barHeight = 'h-9';
@@ -35,16 +37,19 @@ interface SpellLevelBlockProps {
   slotAvailability: Record<number, boolean>;
   slotTotalsByLevel: Record<number, number>;
   pactMagicInfo: { slotLevel: number; totalSlots: number } | null;
-  canSelectMoreCantrips: boolean;
-  canSelectMoreLevel1Plus: boolean;
+  /**
+   * Whether a spell can still be added AT THIS LEVEL. Per level, not per sheet: the multiclass slot
+   * table opens levels no class can prepare at yet, and a `+` there used to open an empty picker.
+   */
+  canAddSpell: boolean;
   onTogglePicker: (level: number) => void;
   spellsLoading: boolean;
   catalogLoading: boolean;
   spellPackId: string | null;
   spellcastingAbility: string;
   spellAbilityMap: Map<string, string>;
-  /** Spell-name (lowercase) → modifier badges for the spell row (invocations, Potent Spellcasting, …). */
-  spellBadgesBySpellName: Map<string, SpellBadge[]>;
+  /** Spell-name (lowercase) → features modifying it (invocations, Potent Spellcasting, …). */
+  spellModifiersBySpellName: Map<string, SpellModifier[]>;
   resolveSpellRule: (name: string) => RuleItemResponse | null;
   fetchSpellDetailsOnDemand: (name: string) => void;
   onDemandSpellLoading: Record<string, boolean>;
@@ -56,7 +61,7 @@ interface SpellLevelBlockProps {
   onRemoveSpell: (level: number, index: number) => void;
   onSlotChange: (level: number, field: 'total' | 'expended', value: number) => void;
   /** True after a blocked save: the "add" affordance turns red while spells are still required. */
-  saveAttempted: boolean;
+  pendingFlags: PendingFlags;
 }
 
 export function SpellLevelBlock({
@@ -66,15 +71,14 @@ export function SpellLevelBlock({
   slotAvailability,
   slotTotalsByLevel,
   pactMagicInfo,
-  canSelectMoreCantrips,
-  canSelectMoreLevel1Plus,
+  canAddSpell,
   onTogglePicker,
   spellsLoading,
   catalogLoading,
   spellPackId,
   spellcastingAbility,
   spellAbilityMap,
-  spellBadgesBySpellName,
+  spellModifiersBySpellName,
   resolveSpellRule,
   fetchSpellDetailsOnDemand,
   onDemandSpellLoading,
@@ -84,8 +88,10 @@ export function SpellLevelBlock({
   onOpenHighElfSwap,
   onRemoveSpell,
   onSlotChange,
-  saveAttempted,
+  pendingFlags,
 }: SpellLevelBlockProps) {
+  const levelFlagKey = `spells:level:${level}`;
+  const levelFlagged = pendingFlags.isFlagged(levelFlagKey);
   const isCantrip = level === 0;
   const title = isCantrip ? 'Cantrips' : undefined;
   const isLevelLocked = !isCantrip && !slotAvailability[level];
@@ -103,7 +109,7 @@ export function SpellLevelBlock({
     ? clampSpellSlotsExpended(slots.expended, slotsTotalFromTable)
     : null;
 
-  const canAdd = isCantrip ? canSelectMoreCantrips : canSelectMoreLevel1Plus && !isLevelLocked;
+  const canAdd = canAddSpell && !isLevelLocked;
 
   // Keep fixed visual empty rows per spell level block.
   // Selection fills one row at a time, but the empty scaffold remains.
@@ -123,18 +129,12 @@ export function SpellLevelBlock({
             className="flex w-10 shrink-0 flex-col items-center justify-center self-stretch"
             id={`spell-level-${level}-label`}
           >
-            <span className={cn(labelClass, 'leading-tight block w-full text-center')}>
-              Spell
-            </span>
-            <span className={cn(labelClass, 'leading-tight block w-full text-center')}>
-              Level
-            </span>
+            <span className={cn(labelClass, 'leading-tight block w-full text-center')}>Spell</span>
+            <span className={cn(labelClass, 'leading-tight block w-full text-center')}>Level</span>
           </div>
           {isCantrip ? (
             <div className="flex flex-1 items-center justify-center min-w-0">
-              <span className={cn(labelClass, 'block w-full text-center')}>
-                {title ?? 'Level'}
-              </span>
+              <span className={cn(labelClass, 'block w-full text-center')}>{title ?? 'Level'}</span>
             </div>
           ) : (
             <div className="flex flex-1 min-w-0">
@@ -157,9 +157,10 @@ export function SpellLevelBlock({
               barHeight,
               barBg,
               !isLevelLocked && canAdd
-                ? cn('cursor-pointer border', needsChoiceHighlight(saveAttempted))
+                ? cn('cursor-pointer border', needsChoiceHighlight(levelFlagged))
                 : barBorder
             )}
+            onPointerDown={() => pendingFlags.dismiss(levelFlagKey)}
             onClick={togglePicker}
             role={!isLevelLocked && canAdd ? 'button' : undefined}
             tabIndex={!isLevelLocked && canAdd ? 0 : undefined}
@@ -174,7 +175,7 @@ export function SpellLevelBlock({
             <span
               className={cn(
                 'relative z-10 text-lg leading-none font-bold',
-                !isLevelLocked && canAdd ? needsChoiceAccent(saveAttempted) : 'text-foreground'
+                !isLevelLocked && canAdd ? needsChoiceAccent(levelFlagged) : 'text-foreground'
               )}
             >
               {level}
@@ -244,7 +245,9 @@ export function SpellLevelBlock({
 
       <div
         className={cn(
-          'flex w-full flex-col gap-1.5 overflow-y-auto pr-1',
+          // `pt-1.5` matches the row gap, giving the first row's corner marker the same room the
+          // inter-row gap gives the rest, so it straddles the top edge instead of being clipped.
+          'flex w-full flex-col gap-1.5 overflow-y-auto pr-1 pt-1.5',
           SPELL_LIST_MAX_H_CLASS[baseRowsCount]
         )}
       >
@@ -255,14 +258,11 @@ export function SpellLevelBlock({
           const demandLoading = Boolean(onDemandSpellLoading[spellKey]);
           const demandFailed = Boolean(onDemandSpellFailed[spellKey]);
           const spellAbilityBadge =
-            spellAbilityMap.get(spellKey)
-            ?? (spellcastingAbility ? abilityAbbr(spellcastingAbility) : null);
-          const spellBadges = spellBadgesBySpellName.get(spellKey) ?? [];
+            spellAbilityMap.get(spellKey) ??
+            (spellcastingAbility ? abilityAbbr(spellcastingAbility) : null);
+          const spellModifiers = spellModifiersBySpellName.get(spellKey) ?? [];
           return (
-            <div
-              key={`${s.name}-${i}`}
-              className="flex min-w-0 items-center justify-center gap-2"
-            >
+            <div key={`${s.name}-${i}`} className="flex min-w-0 items-center justify-center gap-2">
               <div className="relative flex min-h-7 flex-1 min-w-0 items-center">
                 <DropdownMenu
                   onOpenChange={(open) => {
@@ -273,13 +273,23 @@ export function SpellLevelBlock({
                     <button
                       type="button"
                       className={cn(
-                        'flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-2 py-1.5 text-left text-sm text-foreground shadow-[0_0_0_1px_rgba(250,250,250,0.03)] outline-none transition-colors hover:border-primary hover:bg-secondary/70 focus-visible:ring-2 focus-visible:ring-ring'
+                        'flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-2 py-1.5 text-left text-sm text-foreground shadow-[0_0_0_1px_rgba(250,250,250,0.03)] outline-none transition-colors hover:border-primary hover:bg-secondary/70 focus-visible:ring-2 focus-visible:ring-ring',
+                        // Granted rows: the accent IS the row's left border, so it follows the
+                        // rounded corners. `pl-1.75` (7px) hands back the 1px the thicker border
+                        // takes, keeping the text position identical (the row has 0px of slack).
+                        s.granted && 'border-l-2 border-l-primary/60 pl-1.75'
                       )}
-                      aria-label={`Spell details: ${s.name}`}
+                      aria-label={
+                        spellModifiers.length > 0
+                          ? `Spell details: ${s.name}. Enhanced by ${spellModifiers
+                              .map((m) => m.featureName)
+                              .join(', ')}`
+                          : `Spell details: ${s.name}`
+                      }
                     >
                       <span className="truncate">{s.name}</span>
                       <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                        <SpellBadges badges={spellBadges} />
+                        <SpellModifierBadges modifiers={spellModifiers} spellName={s.name} />
                         {spellAbilityBadge && (
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {spellAbilityBadge}
@@ -295,7 +305,11 @@ export function SpellLevelBlock({
                     className="max-h-[min(70vh,22rem)] max-w-lg space-y-3 overflow-y-auto p-3 text-xs"
                   >
                     {spellRule ? (
-                      <SpellRuleItemDetailBody spell={spellRule} showNameAndTags />
+                      <SpellRuleItemDetailBody
+                        spell={spellRule}
+                        showNameAndTags
+                        modifiers={spellModifiers}
+                      />
                     ) : catalogLoading ? (
                       <LoadingState inline className="justify-center py-4" />
                     ) : !spellPackId ? (
@@ -313,6 +327,11 @@ export function SpellLevelBlock({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {/* Floating corner marker, straddling the row's top-right like the section-card
+                    badges (`-top-1.5 -right-1`); sits in the gap between the name and the delete/lock
+                    control, so it never steals width. The container's `pt-1.5` keeps the first row's
+                    marker from clipping against `overflow-y-auto`. */}
+                <AiSpellHint spell={s.name} className="absolute -right-1 -top-1.5 z-20" />
               </div>
               {s.granted &&
               isHighElfLineage &&
@@ -332,27 +351,29 @@ export function SpellLevelBlock({
                       </button>
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[260px] text-xs">
-                    Swap for a different Wizard cantrip
+                  <TooltipContent side="right" className="max-w-65 text-xs">
+                    <div>Granted by {s.grantSource ?? 'a feature'}</div>
+                    <div className="text-muted-foreground">Swap for a different Wizard cantrip</div>
                   </TooltipContent>
                 </Tooltip>
               ) : s.granted ? (
+                // A lock, not a disabled X: the row can't be removed, so a remove button was the
+                // wrong affordance. Uses the slot the X already reserved, costing no row width.
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={() => onRemoveSpell(level, i)}
-                        disabled
-                        className="flex h-5 w-5 shrink-0 cursor-not-allowed items-center justify-center rounded opacity-30 transition-colors focus:outline-none"
-                        aria-label={`${s.name} (granted, cannot remove)`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                    <span
+                      role="img"
+                      aria-label={`${s.name}: granted by ${s.grantSource ?? 'a feature'}, does not count toward your picks`}
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground/50"
+                    >
+                      <Lock className="h-3 w-3" />
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[260px] text-xs">
-                    Granted by {s.grantSource ?? 'a feature'}
+                  <TooltipContent side="right" className="max-w-65 text-xs">
+                    <div>Granted by {s.grantSource ?? 'a feature'}</div>
+                    <div className="text-muted-foreground">
+                      Doesn&apos;t count toward your picks
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               ) : (

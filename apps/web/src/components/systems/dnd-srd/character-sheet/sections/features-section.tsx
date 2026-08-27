@@ -1,70 +1,99 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Swords, Scroll, ChevronRight } from 'lucide-react';
+import { Dna, GitBranch, Shield, Star, type LucideIcon } from 'lucide-react';
+import {
+  getAllFightingStyleFeatIds,
+  getFeatureChoiceState,
+  featRuleItemAsMechanicsFeature,
+  isGrapplerFeature,
+  isMagicInitiateFeature,
+  isSkilledFeature,
+  isMagicInitiateFullyChosen,
+  isSkilledFullyChosen,
+  normalizeFeatName,
+  realClassEntries,
+} from '@rpgforce-ai/shared';
+import { Swords, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { TruncatedTooltip } from '@/components/ui/tooltip';
-import {
-  getEffectiveEpicBoonAbilityScore,
-  getFightingStyleCantripGrant,
-  isAbilityScoreImprovementFullyResolved,
-  isMysticArcanumFullyChosen,
-  isSpellMasteryFullyChosen,
-  isSignatureSpellsFullyChosen,
-  isThievesCantFeatureName,
-  isMagicInitiateFeatureName,
-  isMagicInitiateFullyChosen,
-} from '@/lib/dnd-srd/character-state';
-import {
-  getElvenLineageSpellsForCharacter,
-  getFiendishLegacySpellsForCharacter,
-  getGnomishLineageSpellNamesForCharacter,
-} from '@/lib/dnd-srd/race-lineage-table-spells';
-import { getEldritchInvocationsKnown } from '@/lib/dnd-srd/spellcasting-limits';
-import { areEldritchInvocationsFullyChosen } from '@/lib/dnd-srd/eldritch-invocations';
-import { isSkilledFullyChosen } from '@/lib/dnd-srd/derived-character-stats';
 import { useCharacterComputed } from '../context';
-import { getClassExpertiseSkillKeys } from '../helpers';
+import { useAllSpells } from './spellcasting/hooks/use-all-spells';
 import { needsChoiceAccent, needsChoiceHighlight } from '../constants';
 import { Section } from '../ui/section';
 import { FeatureDetailContent } from '../features/feature-detail-dialog';
-import { normalizeFeatName } from '@/lib/dnd-srd/feat-prerequisites';
 import type { CharacterFormData } from '../types';
+import type { PendingFlags } from '../pending-flags';
 
 interface FeaturesSectionProps {
   data: CharacterFormData;
   onChange: (data: CharacterFormData) => void;
-  readOnly?: boolean;
-  saveAttempted?: boolean;
+  pendingFlags: PendingFlags;
 }
 
-export function FeaturesSection({ data, onChange, saveAttempted = false }: FeaturesSectionProps) {
-  const { featureDetails, weaponMasteryMeta, feats } = useCharacterComputed();
+/**
+ * At lg each group is `min(content, column share)`: the share (class gets double, having far more
+ * items) keeps the sum from overflowing the column, and the `max-content` cap stops a short group
+ * from stretching to its whole share — freed space is redistributed by flex to groups that still
+ * have content. A fixed px cap won't do: the sum overflows the column and puts a scrollbar on the
+ * whole component. Below lg the column grows with content (natural height + cap).
+ */
+const GROUP_FLEX_CLASS = 'max-h-72 lg:max-h-max lg:flex-[2]';
+const GROUP_FLEX_DEFAULT = 'max-h-72 lg:max-h-max lg:flex-1';
+
+function FeatureGroupBox({
+  icon: Icon,
+  label,
+  sizeClass,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  sizeClass: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-border bg-muted/40',
+        sizeClass
+      )}
+      role="listitem"
+    >
+      <div
+        className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1.5"
+        style={{ color: 'var(--muted-foreground)' }}
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="min-w-0 truncate text-xs font-medium uppercase tracking-wider">
+          {label}
+        </span>
+      </div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
+        <div className="flex w-full min-w-0 max-w-full flex-wrap gap-1.5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function FeaturesSection({ data, onChange, pendingFlags }: FeaturesSectionProps) {
+  const { featureDetails, feats, classes, races, skillsList } = useCharacterComputed();
 
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState<number | null>(null);
   const [additionalFeatDialogOpen, setAdditionalFeatDialogOpen] = useState(false);
   const [selectedAdditionalFeatId, setSelectedAdditionalFeatId] = useState<string | null>(null);
 
   const featsList = feats;
-
-  const SOURCE_ORDER: Array<'class' | 'race'> = ['class', 'race'];
-  const SOURCE_CONFIG: Record<'class' | 'race', { labelKey: string; fallback: string }> = {
-    class: { labelKey: 'class', fallback: 'Determined by class.' },
-    race: { labelKey: 'race', fallback: 'Determined by species.' },
-  };
-
-  const getGroupLabel = (source: 'class' | 'race') => {
-    if (source === 'class') {
-      const name = data.className?.trim();
-      return name ? `${name} class` : 'Class';
-    }
-    if (source === 'race') {
-      const name = data.race?.trim();
-      return name ? `${name} species` : 'Species';
-    }
-    return 'Unknown';
-  };
+  // Spell catalog (cached; same request the spellcasting section makes) so the "pending" indicators
+  // for spell-pick features (Magic Initiate, Magical Discoveries, …) cap their requirement at what
+  // the pool can still offer — matching the save gate exactly, so front and back never disagree.
+  const spellPackId =
+    classes.find((c) => c.id === data.classRuleItemId)?.packId ??
+    races.find((r) => r.id === data.raceRuleItemId)?.packId ??
+    null;
+  const { allSpells } = useAllSpells(spellPackId);
+  const spellCatalog = allSpells.length > 0 ? allSpells : undefined;
 
   type FeatureGroupItem = {
     index: number;
@@ -72,213 +101,86 @@ export function FeaturesSection({ data, onChange, saveAttempted = false }: Featu
     hasOptions: boolean;
     selectedOptionLabel: string | null;
   };
-  const bySource = new Map<'class' | 'race', FeatureGroupItem[]>();
+  type FeatureGroup = {
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    size: string;
+    fallback: string;
+    /** Empty groups render their fallback; a subclass with nothing yet is hidden instead. */
+    hideWhenEmpty: boolean;
+    items: FeatureGroupItem[];
+  };
+
+  // One group per class (and per subclass), so a Fighter/Wizard reads as two boxes instead of one
+  // pile. `sourceClassId` is what tells the two apart; without it they would merge.
+  const classEntries = realClassEntries(data);
+  const groups: FeatureGroup[] = [];
+  const groupById = new Map<string, FeatureGroup>();
+  const addGroup = (group: FeatureGroup) => {
+    groups.push(group);
+    groupById.set(group.id, group);
+  };
+
+  const multiclassed = classEntries.length > 1;
+  for (const entry of classEntries) {
+    addGroup({
+      id: `class:${entry.classRuleItemId}`,
+      label: entry.className ? `${entry.className} class` : 'Class',
+      icon: Shield,
+      // Splitting the double share across N classes keeps the column bounded (see FeatureGroupBox).
+      size: multiclassed ? GROUP_FLEX_DEFAULT : GROUP_FLEX_CLASS,
+      fallback: 'Determined by class.',
+      hideWhenEmpty: false,
+      items: [],
+    });
+    addGroup({
+      id: `subclass:${entry.classRuleItemId}`,
+      label: entry.subclass ? `${entry.subclass} subclass` : 'Subclass',
+      icon: GitBranch,
+      size: GROUP_FLEX_DEFAULT,
+      fallback: 'Determined by subclass.',
+      hideWhenEmpty: true,
+      items: [],
+    });
+  }
+  if (classEntries.length === 0) {
+    addGroup({
+      id: 'class:',
+      label: 'Class',
+      icon: Shield,
+      size: GROUP_FLEX_CLASS,
+      fallback: 'Determined by class.',
+      hideWhenEmpty: false,
+      items: [],
+    });
+  }
+  addGroup({
+    id: 'race',
+    label: data.race?.trim() ? `${data.race.trim()} species` : 'Species',
+    icon: Dna,
+    size: GROUP_FLEX_DEFAULT,
+    fallback: 'Determined by species.',
+    hideWhenEmpty: false,
+    items: [],
+  });
+
   featureDetails.forEach((f, index) => {
-    const source = (f.source ?? 'class') as 'class' | 'race' | 'background';
+    const source = (f.source ?? 'class') as 'class' | 'subclass' | 'race' | 'background';
     if (source === 'background') return;
-    if (source !== 'class' && source !== 'race') return;
-    const list = bySource.get(source) ?? [];
-    const nameLower = f.name.trim().toLowerCase();
-    let hasOptions = !!(f.options && f.options.length >= 2);
-    let selectedOptionLabel: string | null = null;
-
-    if (hasOptions && f.options) {
-      const isImprovedBlessed = nameLower === 'improved blessed strikes';
-      const isImprovedElemental = nameLower === 'improved elemental fury';
-      const baseFeatureName = isImprovedBlessed
-        ? 'Blessed Strikes'
-        : isImprovedElemental
-          ? 'Elemental Fury'
-          : f.name;
-      const selectedKey = data.raceTraitSelections?.[baseFeatureName] ?? null;
-      if (selectedKey) {
-        selectedOptionLabel = f.options.find((o) => o.key === selectedKey)?.label ?? 'chosen';
-      }
-    }
-
-    if (nameLower === 'primal knowledge') {
-      hasOptions = true;
-      if (data.primalKnowledgeSkillKey) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'keen senses') {
-      const opts = f.options ?? [];
-      if (opts.length >= 1) {
-        hasOptions = true;
-        const sel = data.raceTraitSelections?.[f.name] ?? null;
-        if (sel && opts.some((o) => o.key === sel)) {
-          selectedOptionLabel = opts.find((o) => o.key === sel)?.label ?? 'chosen';
-        } else if (opts.length === 1) {
-          selectedOptionLabel = opts[0].label;
-        }
-      }
-    }
-    if (nameLower === 'elven lineage') {
-      const opts = f.options ?? [];
-      if (opts.length >= 2) {
-        hasOptions = true;
-      }
-      const sel = data.raceTraitSelections?.[f.name] ?? null;
-      const ability = data.raceLineageSpellcastingAbility?.[f.name] ?? null;
-      const lineageLabel = sel ? (opts.find((o) => o.key === sel)?.label ?? null) : null;
-      const spells = getElvenLineageSpellsForCharacter(f.desc ?? '', opts, sel, data.level);
-      if (lineageLabel && ability && spells.length > 0) {
-        selectedOptionLabel = `${lineageLabel} (${spells.join(', ')})`;
-      } else if (lineageLabel && ability) {
-        selectedOptionLabel = lineageLabel;
-      } else {
-        selectedOptionLabel = null;
-      }
-    }
-    if (nameLower === 'fiendish legacy') {
-      const opts = f.options ?? [];
-      if (opts.length >= 2) {
-        hasOptions = true;
-      }
-      const sel = data.raceTraitSelections?.[f.name] ?? null;
-      const ability = data.raceLineageSpellcastingAbility?.[f.name] ?? null;
-      const legacyLabel = sel ? (opts.find((o) => o.key === sel)?.label ?? null) : null;
-      const spells = getFiendishLegacySpellsForCharacter(f.desc ?? '', opts, sel, data.level);
-      if (legacyLabel && ability && spells.length > 0) {
-        selectedOptionLabel = `${legacyLabel} (${spells.join(', ')})`;
-      } else if (legacyLabel && ability) {
-        selectedOptionLabel = legacyLabel;
-      } else {
-        selectedOptionLabel = null;
-      }
-    }
-    if (nameLower === 'gnomish lineage') {
-      const opts = f.options ?? [];
-      if (opts.length >= 2) {
-        hasOptions = true;
-      }
-      const sel = data.raceTraitSelections?.[f.name] ?? null;
-      const ability = data.raceLineageSpellcastingAbility?.[f.name] ?? null;
-      const lineageLabel = sel ? (opts.find((o) => o.key === sel)?.label ?? null) : null;
-      const spells = getGnomishLineageSpellNamesForCharacter(sel, opts);
-      if (lineageLabel && ability && spells.length > 0) {
-        selectedOptionLabel = `${lineageLabel} (${spells.join(', ')})`;
-      } else if (lineageLabel && ability) {
-        selectedOptionLabel = lineageLabel;
-      } else {
-        selectedOptionLabel = null;
-      }
-    }
-    if (nameLower === 'skillful') {
-      const opts = f.options ?? [];
-      if (opts.length >= 1) {
-        hasOptions = true;
-        const sel = data.raceTraitSelections?.[f.name] ?? null;
-        if (sel && opts.some((o) => o.key === sel)) {
-          selectedOptionLabel = opts.find((o) => o.key === sel)?.label ?? 'chosen';
-        }
-      }
-    }
-    if (nameLower === 'expertise') {
-      hasOptions = true;
-      const expertiseFeat = featureDetails.find(
-        (fd) => fd.source === 'class' && fd.name.trim().toLowerCase() === 'expertise'
-      );
-      const gainCount = expertiseFeat?.gainCount ?? 1;
-      const maxSelections = gainCount * 2;
-      const classExKeys = getClassExpertiseSkillKeys(data);
-      if (classExKeys.length >= maxSelections) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'deft explorer') {
-      hasOptions = true;
-      if (
-        data.deftExplorerExpertiseSkillKey &&
-        (data.deftExplorerLanguageNames?.length ?? 0) >= 2
-      ) {
-        selectedOptionLabel = 'chosen';
-      }
-    }
-    if (nameLower === 'scholar') {
-      hasOptions = true;
-      if (data.scholarExpertiseSkillKey) selectedOptionLabel = 'chosen';
-    }
-    if (isThievesCantFeatureName(f.name)) {
-      hasOptions = true;
-      if (String(data.thievesCantExtraLanguageName ?? '').trim()) {
-        selectedOptionLabel = 'chosen';
-      }
-    }
-    if (nameLower === 'metamagic') {
-      hasOptions = true;
-      const metamagicFeat = featureDetails.find(
-        (fd) => fd.source === 'class' && fd.name.trim().toLowerCase() === 'metamagic'
-      );
-      const gainCount = metamagicFeat?.gainCount ?? 1;
-      const maxSelections = gainCount * 2;
-      const selected = data.metamagicOptionKeys ?? [];
-      if (selected.length >= maxSelections) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'eldritch invocations' || nameLower === 'eldritch invocation') {
-      hasOptions = true;
-      const eiFeat = featureDetails.find(
-        (fd) =>
-          fd.source === 'class' &&
-          (fd.name.trim().toLowerCase() === 'eldritch invocations' ||
-            fd.name.trim().toLowerCase() === 'eldritch invocation')
-      );
-      const maxKnown = getEldritchInvocationsKnown(eiFeat, data.level) || (eiFeat?.gainCount ?? 0);
-      const optionDescByKey = new Map(
-        (eiFeat?.options ?? []).map((o) => [o.key, o.desc ?? ''] as const)
-      );
-      if (
-        maxKnown > 0 &&
-        areEldritchInvocationsFullyChosen(
-          data.eldritchInvocationSelections ?? [],
-          optionDescByKey,
-          maxKnown
-        )
-      ) {
-        selectedOptionLabel = 'chosen';
-      }
-    }
-    if (nameLower === 'ability score improvement') {
-      hasOptions = true;
-      if (isAbilityScoreImprovementFullyResolved(data)) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'mystic arcanum') {
-      hasOptions = true;
-      if (isMysticArcanumFullyChosen(data)) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'signature spells') {
-      hasOptions = true;
-      if (isSignatureSpellsFullyChosen(data)) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'spell mastery') {
-      hasOptions = true;
-      if (isSpellMasteryFullyChosen(data)) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'epic boon') {
-      hasOptions = true;
-      if (getEffectiveEpicBoonAbilityScore(data) != null) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'versatile') {
-      hasOptions = true;
-      if (data.versatileFeatId) selectedOptionLabel = 'chosen';
-    }
-    if (nameLower === 'fighting style') {
-      hasOptions = true;
-      const fsMode = data.fightingStyleMode ?? 'OPTION';
-      if (fsMode === 'FEAT' && data.fightingStyleFeatId) selectedOptionLabel = 'chosen';
-      else if (fsMode === 'OPTION' && data.raceTraitSelections?.['Fighting Style']) {
-        // Blessed/Druidic Warrior also requires its cantrips before it counts as done.
-        const cantripGrant = getFightingStyleCantripGrant(data);
-        if (!cantripGrant || (data.fightingStyleCantrips?.length ?? 0) >= cantripGrant.max) {
-          selectedOptionLabel = 'chosen';
-        }
-      }
-    }
-    if (nameLower === 'weapon mastery' && weaponMasteryMeta.hasWeaponMasteryFeature) {
-      hasOptions = true;
-      const current = weaponMasteryMeta.currentSelections.length;
-      const max = weaponMasteryMeta.maxSelections;
-      if (current > 0 && (max === 0 || current >= max)) selectedOptionLabel = 'chosen';
-    }
-    list.push({ index, name: f.name, hasOptions, selectedOptionLabel });
-    bySource.set(source, list);
+    if (source !== 'class' && source !== 'subclass' && source !== 'race') return;
+    const group =
+      source === 'race'
+        ? groupById.get('race')
+        : (groupById.get(`${source}:${f.sourceClassId ?? ''}`) ??
+          // Pre-multiclass data carries no class id: fall back to the first group of that kind.
+          groups.find((g) => g.id.startsWith(`${source}:`)));
+    if (!group) return;
+    const { hasOptions, selectedOptionLabel } = getFeatureChoiceState(f, data, featureDetails, {
+      allSpells: spellCatalog,
+      skillsList,
+    });
+    group.items.push({ index, name: f.name, hasOptions, selectedOptionLabel });
   });
 
   const featIdByNormalizedName = new Map<string, string>();
@@ -300,7 +202,8 @@ export function FeaturesSection({ data, onChange, saveAttempted = false }: Featu
           g?.kind === 'feat' && typeof g.featId === 'string'
       )
       .map((g) => g.featId),
-    ...(data.fightingStyleFeatId ? [data.fightingStyleFeatId] : []),
+    ...getAllFightingStyleFeatIds(data),
+    ...(data.additionalFightingStyleFeatId ? [data.additionalFightingStyleFeatId] : []),
     ...(data.epicBoonFeatId ? [data.epicBoonFeatId] : []),
     ...(data.versatileFeatId ? [data.versatileFeatId] : []),
     // Origin feats granted by Eldritch Invocations (Lessons of the First Ones).
@@ -324,150 +227,129 @@ export function FeaturesSection({ data, onChange, saveAttempted = false }: Featu
     <>
       <Section
         title="Features & Traits"
+        aiHintArea="features"
         icon={<Swords className="h-4 w-4" />}
-        className="flex min-h-0 min-w-0 flex-1 flex-col self-stretch overflow-hidden"
+        className="flex min-h-0 min-w-0 flex-1 flex-col self-stretch"
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto">
-          {featureDetails.length > 0 && (
-            <p className="shrink-0 text-xs text-muted-foreground">Click an item to see details.</p>
-          )}
-          {SOURCE_ORDER.map((source) => {
-            const items = bySource.get(source) ?? [];
-            const config = SOURCE_CONFIG[source];
-            const isEmpty = items.length === 0;
-            return (
-              <div
-                key={source}
-                className="flex max-h-72 min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-border bg-muted/40"
-                role="listitem"
-              >
-                <div
-                  className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1.5"
-                  style={{ color: 'var(--muted-foreground)' }}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto lg:overflow-y-hidden">
+          {groups
+            // A subclass group only appears once it has features (level 3+ in that class).
+            .filter((group) => !group.hideWhenEmpty || group.items.length > 0)
+            .map((group) => {
+              const items = group.items;
+              const isEmpty = items.length === 0;
+              return (
+                <FeatureGroupBox
+                  key={group.id}
+                  icon={group.icon}
+                  label={group.label}
+                  sizeClass={group.size}
                 >
-                  <Scroll className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span className="min-w-0 truncate text-xs font-medium uppercase tracking-wider">
-                    {getGroupLabel(source)}
-                  </span>
-                </div>
-                <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
-                  <div className="flex w-full min-w-0 max-w-full flex-wrap gap-1.5">
-                    {isEmpty ? (
-                      <p className="text-xs text-muted-foreground">{config.fallback}</p>
-                    ) : (
-                      items.map((item) => {
-                        const isOpen = selectedFeatureIndex === item.index;
-                        const isChoiceFeature = item.hasOptions;
-                        const needsChoice = isChoiceFeature && !item.selectedOptionLabel;
-                        const choiceButtonClass = cn(
-                          'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border px-2.5 py-0.5 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          needsChoice
-                            ? needsChoiceHighlight(saveAttempted)
-                            : 'border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80',
-                          isOpen && 'bg-primary/10 text-primary'
-                        );
-                        const defaultButtonClass = cn(
-                          'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-transparent bg-secondary/60 px-2.5 py-0.5 text-xs text-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          isOpen && 'bg-primary/20 text-primary'
-                        );
-                        const buttonClass =
-                          isChoiceFeature && needsChoice ? choiceButtonClass : defaultButtonClass;
-                        return (
-                          <button
-                            key={`${item.name}-${item.index}`}
-                            type="button"
-                            data-editable="true"
-                            onClick={() => setSelectedFeatureIndex(item.index)}
-                            className={buttonClass}
-                            aria-label={`View details for ${item.name}`}
-                            aria-pressed={isOpen}
-                          >
-                            <span className="block min-w-0 flex-1 truncate text-left">
-                              <TruncatedTooltip text={item.name} className="truncate" />
-                            </span>
-                            <ChevronRight
-                              className={cn(
-                                'h-3 w-3 shrink-0',
-                                isChoiceFeature && needsChoice
-                                  ? needsChoiceAccent(saveAttempted)
-                                  : 'text-muted-foreground'
-                              )}
-                              aria-hidden
-                            />
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {hasAdditionalFeat && (
-            <div
-              key="additional-feat"
-              className="flex max-h-72 min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-border bg-muted/40"
-              role="listitem"
-            >
-              <div
-                className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1.5"
-                style={{ color: 'var(--muted-foreground)' }}
-              >
-                <Scroll className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="min-w-0 truncate text-xs font-medium uppercase tracking-wider">
-                  Feats
-                </span>
-              </div>
-              <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
-                <div className="flex w-full min-w-0 max-w-full flex-wrap gap-1.5">
-                  {additionalFeatIds
-                    .map((id) => featsList.find((f) => f.id === id))
-                    .filter((f): f is NonNullable<typeof f> => f != null)
-                    .map((feat) => {
-                      const isOpen =
-                        additionalFeatDialogOpen && selectedAdditionalFeatId === feat.id;
-                      const featNameLower = feat.name.trim().toLowerCase();
-                      const isSkilled = featNameLower === 'skilled';
-                      const isGrappler = featNameLower === 'grappler';
-                      const needsSkilledChoice = isSkilled && !isSkilledFullyChosen(data, featsList);
-                      const needsGrapplerChoice = isGrappler && !data.grapplerAbilityScore;
-                      const isMagicInitiate = isMagicInitiateFeatureName(feat.name);
-                      const needsMagicInitiateChoice =
-                        isMagicInitiate && !isMagicInitiateFullyChosen(data);
-                      const needsChoice =
-                        needsSkilledChoice || needsGrapplerChoice || needsMagicInitiateChoice;
+                  {isEmpty ? (
+                    <p className="text-xs text-muted-foreground">{group.fallback}</p>
+                  ) : (
+                    items.map((item) => {
+                      const isOpen = selectedFeatureIndex === item.index;
+                      const isChoiceFeature = item.hasOptions;
+                      const needsChoice = isChoiceFeature && !item.selectedOptionLabel;
+                      const featureKey = `feature:${item.name}`;
+                      const featureFlagged = pendingFlags.isFlagged(featureKey);
+                      const choiceButtonClass = cn(
+                        'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border px-2.5 py-0.5 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        needsChoice
+                          ? needsChoiceHighlight(featureFlagged)
+                          : 'border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80',
+                        isOpen && 'bg-primary/10 text-primary'
+                      );
+                      const defaultButtonClass = cn(
+                        'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-transparent bg-secondary/60 px-2.5 py-0.5 text-xs text-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        isOpen && 'bg-primary/20 text-primary'
+                      );
+                      const buttonClass =
+                        isChoiceFeature && needsChoice ? choiceButtonClass : defaultButtonClass;
                       return (
                         <button
-                          key={feat.id}
+                          key={`${item.name}-${item.index}`}
                           type="button"
-                          data-editable="true"
-                          onClick={() => {
-                            setSelectedAdditionalFeatId(feat.id);
-                            setAdditionalFeatDialogOpen(true);
-                          }}
-                          className={cn(
-                            'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full px-2.5 py-0.5 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            needsChoice
-                              ? cn('border', needsChoiceHighlight(saveAttempted))
-                              : 'border border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80',
-                            isOpen && 'bg-primary/20 text-primary'
-                          )}
-                          aria-label={`View details for ${feat.name}`}
+                          onPointerDown={() => pendingFlags.dismiss(featureKey)}
+                          onClick={() => setSelectedFeatureIndex(item.index)}
+                          className={buttonClass}
+                          aria-label={`View details for ${item.name}`}
                           aria-pressed={isOpen}
                         >
                           <span className="block min-w-0 flex-1 truncate text-left">
-                            <TruncatedTooltip text={feat.name} className="truncate" />
+                            <TruncatedTooltip text={item.name} className="truncate" />
                           </span>
                           <ChevronRight
-                            className="h-3 w-3 shrink-0 text-muted-foreground"
+                            className={cn(
+                              'h-3 w-3 shrink-0',
+                              isChoiceFeature && needsChoice
+                                ? needsChoiceAccent(featureFlagged)
+                                : 'text-muted-foreground'
+                            )}
                             aria-hidden
                           />
                         </button>
                       );
-                    })}
-                </div>
-              </div>
-            </div>
+                    })
+                  )}
+                </FeatureGroupBox>
+              );
+            })}
+          {hasAdditionalFeat && (
+            <FeatureGroupBox
+              key="additional-feat"
+              icon={Star}
+              label="Feats"
+              sizeClass={GROUP_FLEX_DEFAULT}
+            >
+              {additionalFeatIds
+                .map((id) => featsList.find((f) => f.id === id))
+                .filter((f): f is NonNullable<typeof f> => f != null)
+                .map((feat) => {
+                  const isOpen = additionalFeatDialogOpen && selectedAdditionalFeatId === feat.id;
+                  // A feat is one rule item: its machine key is at the root of `normalized`.
+                  const featAsFeature = featRuleItemAsMechanicsFeature(feat);
+                  const isSkilled = isSkilledFeature(featAsFeature);
+                  const isGrappler = isGrapplerFeature(featAsFeature);
+                  const needsSkilledChoice = isSkilled && !isSkilledFullyChosen(data, featsList);
+                  const needsGrapplerChoice = isGrappler && !data.grapplerAbilityScore;
+                  const isMagicInitiate = isMagicInitiateFeature(featAsFeature);
+                  const needsMagicInitiateChoice =
+                    isMagicInitiate && !isMagicInitiateFullyChosen(data, spellCatalog);
+                  const needsChoice =
+                    needsSkilledChoice || needsGrapplerChoice || needsMagicInitiateChoice;
+                  const featKey = `feat:${feat.id}`;
+                  return (
+                    <button
+                      key={feat.id}
+                      type="button"
+                      onPointerDown={() => pendingFlags.dismiss(featKey)}
+                      onClick={() => {
+                        setSelectedAdditionalFeatId(feat.id);
+                        setAdditionalFeatDialogOpen(true);
+                      }}
+                      className={cn(
+                        'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full px-2.5 py-0.5 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        needsChoice
+                          ? cn('border', needsChoiceHighlight(pendingFlags.isFlagged(featKey)))
+                          : 'border border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80',
+                        isOpen && 'bg-primary/20 text-primary'
+                      )}
+                      aria-label={`View details for ${feat.name}`}
+                      aria-pressed={isOpen}
+                    >
+                      <span className="block min-w-0 flex-1 truncate text-left">
+                        <TruncatedTooltip text={feat.name} className="truncate" />
+                      </span>
+                      <ChevronRight
+                        className="h-3 w-3 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                })}
+            </FeatureGroupBox>
           )}
         </div>
 

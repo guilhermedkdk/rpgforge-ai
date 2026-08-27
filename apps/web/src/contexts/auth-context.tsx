@@ -34,8 +34,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loadUser();
   }, []);
 
-  // Verifica sessão apenas quando a aba ganha foco (detecta logout em outra aba/dispositivo)
-  // A expiração de token é tratada automaticamente pelo interceptor do axios (reativo)
+  // Re-check session only when the tab regains focus (detects logout in another tab/device)
+  // Token expiration is handled automatically by the axios interceptor (reactive)
   useEffect(() => {
     if (!user) return;
 
