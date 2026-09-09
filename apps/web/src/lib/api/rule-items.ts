@@ -35,10 +35,7 @@ export const ruleItemsApi = {
     return response.data;
   },
 
-  getByIdOrSlug: async (
-    idOrSlug: string,
-    packId?: string
-  ): Promise<RuleItemResponse> => {
+  getByIdOrSlug: async (idOrSlug: string, packId?: string): Promise<RuleItemResponse> => {
     const params = packId ? `?packId=${encodeURIComponent(packId)}` : '';
     const response = await apiClient.get<RuleItemResponse>(
       `/rule-items/${encodeURIComponent(idOrSlug)}${params}`

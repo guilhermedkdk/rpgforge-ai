@@ -20,6 +20,8 @@
       }
     ],
     "paths": {
+      "zod": ["./node_modules/zod"],
+      "zod/*": ["./node_modules/zod/*"],
       "@/*": ["./src/*"],
       "@rpgforce-ai/shared": ["../../packages/shared/src"],
       "@rpgforce-ai/shared/*": ["../../packages/shared/src/*"]

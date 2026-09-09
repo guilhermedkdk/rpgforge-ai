@@ -1,0 +1,23 @@
+node_modules
+**/node_modules
+**/dist
+
+# Must go with dist: tsc reads it, concludes the build is current and emits nothing, leaving the
+# image with no dist at all.
+**/*.tsbuildinfo
+**/.next
+**/.turbo
+.git
+.github
+.vscode
+.claude
+
+# Secrets must never reach an image layer.
+**/.env
+**/.env.*
+!**/.env.example
+
+**/*.log
+**/coverage
+docs
+README.md

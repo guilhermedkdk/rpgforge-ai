@@ -7,31 +7,130 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Rate-limit tier as much as a permission level: ADMIN accounts are never throttled.
+enum UserRole {
+  USER
+  ADMIN
+}
+
+/// Identity providers an account can be linked to. Mirrors OAUTH_PROVIDER_IDS in shared.
+enum OAuthProvider {
+  GOOGLE
+  DISCORD
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id    String @id @default(uuid())
+  email String @unique
+  /// Null for an account that only ever signed in through a provider. Anything comparing a password
+  /// must handle that: a null here is "no password set", never "any password matches".
+  password String?
+  role     UserRole @default(USER)
+  /// Public handle: the profile lives at /u/{username}. Derived from the email on register.
+  username String   @unique
+  /// Shown wherever there is room for a name; the email is never public.
+  displayName String?
+  /// The avatar CHOICE, and the only place it lives: a gallery id (see PROFILE_AVATAR_IDS), or
+  /// `provider:<id>` for a linked provider's picture, or null for the initials. One column so the
+  /// choice cannot contradict itself; the pictures themselves live on OAuthAccount.
+  avatarId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   refreshTokens   RefreshToken[]
+  oauthAccounts   OAuthAccount[]
   characterSheets CharacterSheet[]
   generationRuns  GenerationRun[]
+  aiUsage         AiUsage[]
+  favorites       SheetFavorite[]
 
   @@map("users")
 }
 
+/// One paid AI call: which one, how many tokens it burned and what that cost.
+/// Written for EVERY call, saved draft or not, because an abandoned wizard costs the same money.
+model AiUsage {
+  id String @id @default(uuid())
+  /// Null for calls with nobody behind them (the ingestion CLI, an anonymous search).
+  userId String?
+  /// 'generation.questions' | 'generation.character' | 'search.embedding'
+  operation        String
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  // Part of promptTokens served from the provider's prompt cache, billed at ~90% off.
+  cachedPromptTokens Int @default(0)
+  totalTokens      Int
+  /// Integer micro-dollars (1 USD = 1_000_000), so no float drift across millions of rows. Zero
+  /// when the model has no price configured: the token counts stay true either way.
+  costMicroUsd Int
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("ai_usage")
+}
+
+/// A sheet someone bookmarked from the explore feed. Cascades with either side.
+model SheetFavorite {
+  userId           String
+  characterSheetId String
+  createdAt        DateTime @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+
+  @@id([userId, characterSheetId])
+  @@index([userId, createdAt])
+  @@index([characterSheetId])
+  @@map("sheet_favorites")
+}
+
+/// A provider identity linked to an account. One row per provider per user.
+model OAuthAccount {
+  id       String        @id @default(uuid())
+  userId   String
+  provider OAuthProvider
+  /// The provider's stable subject (`sub` for Google). This, never the e-mail, is what identifies
+  /// the account on sign-in: an address can be reassigned, the subject cannot.
+  providerAccountId String
+  /// The address at the provider when the link was made. Display only.
+  email     String?
+  /// This provider's picture, refreshed on every sign-in through it. Each provider keeps its own,
+  /// so unlinking one never leaves another's account showing a dead hotlink.
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
+  id String @id @default(uuid())
+
+  /// SHA-256 of the token, never the token itself: a database dump must not hand out live sessions.
+  tokenHash String @unique
+
   userId    String
   expiresAt DateTime
+
+  /// When rotation replaced this token. Kept rather than deleted so a later presentation can be
+  /// told apart from an unknown token: inside the grace window it is a racing tab, outside it is
+  /// a stolen token and every session of the user is dropped.
+  usedAt DateTime?
+
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([token])
   @@map("refresh_tokens")
 }
 
@@ -92,6 +191,10 @@ model CharacterSheet {
   name          String
   data          Json
   schemaVersion Int      @default(1)
+  // Sheets are private until the owner publishes them; publishedAt orders the explore feed by the
+  // moment of publishing, which is not the moment of the last edit.
+  isPublic      Boolean   @default(false)
+  publishedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -99,9 +202,11 @@ model CharacterSheet {
   pack Pack @relation(fields: [packId], references: [id], onDelete: Restrict)
 
   generationRun GenerationRun?
+  favorites     SheetFavorite[]
 
   @@index([userId])
   @@index([userId, updatedAt])
+  @@index([isPublic, publishedAt])
   @@map("character_sheets")
 }
 

@@ -64,3 +64,5 @@ Thumbs.db
 # Local-only (not versioned)
 apps/api/scripts/
 context.md
+# Local MCP server config (machine-specific, carries a local DSN)
+.mcp.json
