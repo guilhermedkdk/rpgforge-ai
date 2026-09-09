@@ -33,7 +33,7 @@ function parseWeaponMasteryCountFromDesc(desc: string): number | null {
  */
 export function computeWeaponMasteryMaxSelections(
   feature: WeaponMasteryFeature | undefined,
-  currentLevel: number,
+  currentLevel: number
 ): number {
   if (!feature) return 0;
   const table =
@@ -49,9 +49,8 @@ export function computeWeaponMasteryMaxSelections(
 }
 
 /** Bucket key for a Weapon Mastery instance: the granting class, `''` on pre-multiclass data. */
-export const weaponMasteryClassKey = (
-  feature: { sourceClassId?: string } | undefined
-): string => feature?.sourceClassId ?? '';
+export const weaponMasteryClassKey = (feature: { sourceClassId?: string } | undefined): string =>
+  feature?.sourceClassId ?? '';
 
 /** What THIS class's Weapon Mastery grants, read at its own level. */
 export function getWeaponMasteryMaxForFeature(
@@ -79,7 +78,9 @@ export function getWeaponMasteryPicks(
   const key = weaponMasteryClassKey(feature);
   // A sheet saved before the split has one bare bucket; it belongs to whichever class is asking, as
   // long as only one grants the feature (the derivation rebinds it as soon as it runs).
-  return byClass[key] ?? (key !== '' && Object.keys(byClass).length <= 1 ? (byClass[''] ?? []) : []);
+  return (
+    byClass[key] ?? (key !== '' && Object.keys(byClass).length <= 1 ? (byClass[''] ?? []) : [])
+  );
 }
 
 /** Replaces one class's picks, leaving every other class's list untouched. */

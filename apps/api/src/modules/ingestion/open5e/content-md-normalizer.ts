@@ -99,11 +99,13 @@ function normalizeClassContentMd(raw: Raw): string {
     parts.push(renderSection('Traços principais', tableLikeToBullets(coreTraits.desc)));
   }
 
-  const hitPoints = raw.hit_points as {
-    hit_dice_name?: string;
-    hit_points_at_1st_level?: string;
-    hit_points_at_higher_levels?: string;
-  } | undefined;
+  const hitPoints = raw.hit_points as
+    | {
+        hit_dice_name?: string;
+        hit_points_at_1st_level?: string;
+        hit_points_at_higher_levels?: string;
+      }
+    | undefined;
   if (hitPoints) {
     const hpLines: string[] = [];
     if (hitPoints.hit_dice_name) hpLines.push(`- **Dado de Vida:** ${hitPoints.hit_dice_name}`);
@@ -132,7 +134,8 @@ function normalizeClassContentMd(raw: Raw): string {
     for (const f of tableFeatures) {
       const colName = (f.name as string) ?? '';
       if (colName && !colOrder.includes(colName)) colOrder.push(colName);
-      const data = (f.data_for_class_table as Array<{ level?: number; column_value?: string }>) ?? [];
+      const data =
+        (f.data_for_class_table as Array<{ level?: number; column_value?: string }>) ?? [];
       for (const row of data) {
         const level = Number(row.level);
         if (!levelMap.has(level)) levelMap.set(level, {});
@@ -162,7 +165,8 @@ function normalizeClassContentMd(raw: Raw): string {
     if (Array.isArray(gainedAt)) {
       for (const x of gainedAt) {
         if (typeof x === 'number') levels.push(x);
-        else if (x && typeof x === 'object' && 'level' in x) levels.push(Number((x as { level?: number }).level));
+        else if (x && typeof x === 'object' && 'level' in x)
+          levels.push(Number((x as { level?: number }).level));
       }
     }
     for (const lvl of levels) {
@@ -224,7 +228,9 @@ function normalizeBackgroundContentMd(raw: Raw): string {
     byType.get(t)!.push(b);
   }
   const typeOrder = [...BACKGROUND_TYPE_ORDER];
-  const otherTypes = Array.from(byType.keys()).filter((t) => !typeOrder.includes(t)).sort();
+  const otherTypes = Array.from(byType.keys())
+    .filter((t) => !typeOrder.includes(t))
+    .sort();
   const allTypes = [...typeOrder, ...otherTypes];
   const benefitParts: string[] = [];
   for (const typeKey of allTypes) {
@@ -289,10 +295,7 @@ function normalizeSpeciesContentMd(raw: Raw): string {
 
 // --- Public API --------------------------------------------------------------
 
-export function normalizeContentMdForKind(
-  kind: 'CLASS' | 'BACKGROUND' | 'RACE',
-  raw: Raw
-): string {
+export function normalizeContentMdForKind(kind: 'CLASS' | 'BACKGROUND' | 'RACE', raw: Raw): string {
   switch (kind) {
     case 'CLASS':
       return normalizeClassContentMd(raw);

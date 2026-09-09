@@ -50,19 +50,17 @@ export const PACT_OF_TOME_GRANT_SOURCE = 'Pact of the Tome';
 
 /** Book of Shadows is complete only when all 3 cantrips and 2 ritual spells are chosen. */
 export function isPactOfTomeBookComplete(
-  pactOfTomeSpellNames: { cantrips?: string[]; rituals?: string[] } | undefined | null,
+  pactOfTomeSpellNames: { cantrips?: string[]; rituals?: string[] } | undefined | null
 ): boolean {
   const cantrips = pactOfTomeSpellNames?.cantrips ?? [];
   const rituals = pactOfTomeSpellNames?.rituals ?? [];
-  return (
-    cantrips.length >= PACT_OF_TOME_MAX_CANTRIPS && rituals.length >= PACT_OF_TOME_MAX_RITUALS
-  );
+  return cantrips.length >= PACT_OF_TOME_MAX_CANTRIPS && rituals.length >= PACT_OF_TOME_MAX_RITUALS;
 }
 
 /** True when one of the selected invocations is Pact of the Tome (its Book of Shadows is then required). */
 export function isPactOfTomeSelected(
   selections: EldritchInvocationSelection[],
-  optionDescByKey: Map<string, string>,
+  optionDescByKey: Map<string, string>
 ): boolean {
   return selections.some((s) => isPactOfTomeOption(optionDescByKey.get(s.key)));
 }
@@ -70,7 +68,7 @@ export function isPactOfTomeSelected(
 /** A single selected instance is complete when its required sub-choice (cantrip / feat) is filled. */
 export function isInvocationSelectionComplete(
   selection: EldritchInvocationSelection,
-  optionDescByKey: Map<string, string>,
+  optionDescByKey: Map<string, string>
 ): boolean {
   const desc = optionDescByKey.get(selection.key) ?? '';
   if (invocationRequiresCantrip(desc)) {
@@ -86,7 +84,7 @@ export function isInvocationSelectionComplete(
 export function areEldritchInvocationsFullyChosen(
   selections: EldritchInvocationSelection[],
   optionDescByKey: Map<string, string>,
-  invocationsKnown: number,
+  invocationsKnown: number
 ): boolean {
   if (selections.length !== invocationsKnown) return false;
   return selections.every((s) => isInvocationSelectionComplete(s, optionDescByKey));
@@ -113,7 +111,7 @@ interface InvocationPrerequisiteContext {
  */
 export function eldritchInvocationPrerequisiteAllowsSelect(
   prerequisite: string | undefined,
-  params: InvocationPrerequisiteContext,
+  params: InvocationPrerequisiteContext
 ): boolean {
   const raw = prerequisite?.trim();
   if (!raw) return true;
@@ -140,13 +138,23 @@ export function eldritchInvocationPrerequisiteAllowsSelect(
       (o) =>
         o.key !== params.currentOptionKey &&
         o.label.trim().toLowerCase() === fragment &&
-        params.selectedInvocationKeys.includes(o.key),
+        params.selectedInvocationKeys.includes(o.key)
     );
     if (!hasFeature && !hasInvocation) return false;
   }
 
   const invRe = /\b(?:the\s+)?([A-Za-z][A-Za-z'\s-]{2,50}?)\s+invocation\b/gi;
-  const ignorePhrase = new Set(['eldritch', 'your', 'this', 'other', 'one', 'any', 'an', 'new', 'additional']);
+  const ignorePhrase = new Set([
+    'eldritch',
+    'your',
+    'this',
+    'other',
+    'one',
+    'any',
+    'an',
+    'new',
+    'additional',
+  ]);
   for (const m of flat.matchAll(invRe)) {
     const phrase = m[1].trim().toLowerCase().replace(/\s+/g, ' ');
     if (phrase.length < 4 || ignorePhrase.has(phrase)) continue;
@@ -167,7 +175,7 @@ export function eldritchInvocationPrerequisiteAllowsSelect(
 export function pruneEldritchInvocationSelections(
   selections: EldritchInvocationSelection[],
   options: EldritchInvocationOptionMeta[],
-  ctx: { characterLevel: number; featureNamesLower: string[] },
+  ctx: { characterLevel: number; featureNamesLower: string[] }
 ): EldritchInvocationSelection[] {
   const optionByKey = new Map(options.map((o) => [o.key, o]));
   const allInvocationOptions = options.map((o) => ({ key: o.key, label: o.label }));

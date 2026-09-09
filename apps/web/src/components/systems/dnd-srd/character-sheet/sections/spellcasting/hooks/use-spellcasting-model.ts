@@ -1,7 +1,35 @@
 'use client';
 
 import * as React from 'react';
-import { getEffectiveEpicBoonAbilityScore, getEffectiveModifier, getFightingStyleCantripGrant, getFightingStylePick, getOptionGrantedExtraCantrips, getMaxCantrips, getMaxPreparedSpells, getPrimalChampionBodyAndMindBonusFlags, getTotalAbilityScoreImprovementFromGains, isElvenLineageFeature, isFiendishLegacyFeature, isGnomishLineageFeature, isOtherworldlyPresenceFeature, getElvenLineageSpellsForCharacter, getFiendishLegacySpellsForCharacter, getGnomishLineageExplicitGrants, findSpellcastingFeatureDetail, abilityAbbr, clampSpellSlotsExpended, computeSpellSlots, attributePickedSpells, readSpellcastingAbility, type CastingClass, type CharacterFormData, type FeatureDetail, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  computeSpellcastingStats,
+  getEffectiveEpicBoonAbilityScore,
+  getEffectiveModifier,
+  getFightingStyleCantripGrant,
+  getFightingStylePick,
+  getOptionGrantedExtraCantrips,
+  getMaxCantrips,
+  getMaxPreparedSpells,
+  getPrimalChampionBodyAndMindBonusFlags,
+  getTotalAbilityScoreImprovementFromGains,
+  isElvenLineageFeature,
+  isFiendishLegacyFeature,
+  isGnomishLineageFeature,
+  isOtherworldlyPresenceFeature,
+  getElvenLineageSpellsForCharacter,
+  getFiendishLegacySpellsForCharacter,
+  getGnomishLineageExplicitGrants,
+  findSpellcastingFeatureDetail,
+  abilityAbbr,
+  clampSpellSlotsExpended,
+  computeSpellSlots,
+  attributePickedSpells,
+  readSpellcastingAbility,
+  type CastingClass,
+  type CharacterFormData,
+  type FeatureDetail,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 
 interface UseSpellcastingModelArgs {
   data: CharacterFormData;
@@ -34,7 +62,7 @@ export function useSpellcastingModel({
     const details = data.featureDetails ?? [];
     return readSpellcastingAbility(
       findSpellcastingFeatureDetail(details),
-      details.filter((f) => f.source === 'class'),
+      details.filter((f) => f.source === 'class')
     );
   }, [data.featureDetails, isClassSelected]);
 
@@ -63,7 +91,10 @@ export function useSpellcastingModel({
       const abbr = abilityAbbr(ability);
 
       if (isGnomishLineageFeature(f)) {
-        addNames(getGnomishLineageExplicitGrants(key, opts).map((g) => g.name), abbr);
+        addNames(
+          getGnomishLineageExplicitGrants(key, opts).map((g) => g.name),
+          abbr
+        );
         continue;
       }
 
@@ -98,7 +129,9 @@ export function useSpellcastingModel({
   const activeRaceLineageAbilities = React.useMemo((): string[] => {
     const sel = data.raceTraitSelections ?? {};
     const out: string[] = [];
-    for (const [featureName, ability] of Object.entries(data.raceLineageSpellcastingAbility ?? {})) {
+    for (const [featureName, ability] of Object.entries(
+      data.raceLineageSpellcastingAbility ?? {}
+    )) {
       if (!ability || !sel[featureName]) continue;
       out.push(ability);
     }
@@ -109,10 +142,10 @@ export function useSpellcastingModel({
   // are fixed by the grant itself and outrank the owning class's ability.
   const grantedSpellAbilityMap = React.useMemo((): Map<string, string> => {
     const map = new Map<string, string>(raceLineageAbilityMap);
-    for (const gain of (data.magicInitiateChoicesByGain ?? [])) {
+    for (const gain of data.magicInitiateChoicesByGain ?? []) {
       if (!gain?.spellcastingAbility) continue;
       const abbr = abilityAbbr(gain.spellcastingAbility);
-      for (const name of (gain.cantripNames ?? [])) {
+      for (const name of gain.cantripNames ?? []) {
         if (name) map.set(name.trim().toLowerCase(), abbr);
       }
       if (gain.spellName) map.set(gain.spellName.trim().toLowerCase(), abbr);
@@ -186,10 +219,9 @@ export function useSpellcastingModel({
       getEffectiveEpicBoonAbilityScore(data),
       hasPrimalChampion,
       hasBodyAndMind,
-      data.grapplerAbilityScore,
+      data.grapplerAbilityScore
     );
-    const dc = 8 + prof + m;
-    const atk = prof + m;
+    const { saveDc: dc, attackBonus: atk } = computeSpellcastingStats(prof, m);
     return { dc, atkStr: atk >= 0 ? `+${atk}` : `${atk}` };
   };
 
@@ -257,7 +289,13 @@ export function useSpellcastingModel({
     }
     for (const [name, abbr] of grantedSpellAbilityMap) map.set(name, abbr);
     return map;
-  }, [castersWithFeature, ownership, grantedSpellAbilityMap, data.featureDetails, data.spellsByLevel]);
+  }, [
+    castersWithFeature,
+    ownership,
+    grantedSpellAbilityMap,
+    data.featureDetails,
+    data.spellsByLevel,
+  ]);
 
   const maxCantrips = React.useMemo(() => {
     if (singleClassFallback) {

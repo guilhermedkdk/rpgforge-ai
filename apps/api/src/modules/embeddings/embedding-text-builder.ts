@@ -13,13 +13,12 @@ interface EmbeddableRuleItem {
 type Norm = Record<string, unknown>;
 
 const asObj = (v: unknown): Norm | null => (v && typeof v === 'object' ? (v as Norm) : null);
-const str = (v: unknown): string | null =>
-  typeof v === 'string' && v.trim() ? v.trim() : null;
+const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 /** Reads a `{ name }` object or a bare string. */
-const named = (v: unknown): string | null =>
-  typeof v === 'string' ? str(v) : str(asObj(v)?.name);
+const named = (v: unknown): string | null => (typeof v === 'string' ? str(v) : str(asObj(v)?.name));
 
-const languageRarityOf = (normalized: unknown): string | null => str(asObj(normalized)?.languageRarity);
+const languageRarityOf = (normalized: unknown): string | null =>
+  str(asObj(normalized)?.languageRarity);
 
 /** Provenance header lines injected into contentMd by ingestion — pure noise for embeddings, and
  * identical across every class/race/background/ruleset, which would inflate their mutual similarity. */
@@ -83,7 +82,8 @@ function itemFacts(n: Norm): string[] {
   } else if (armor) {
     const category = str(armor.category);
     facts.push(category ? `${category} armor` : 'armor');
-    const ac = str(armor.acDisplay) ?? (typeof armor.acBase === 'number' ? String(armor.acBase) : null);
+    const ac =
+      str(armor.acDisplay) ?? (typeof armor.acBase === 'number' ? String(armor.acBase) : null);
     if (ac) facts.push(`AC ${ac}`);
     if (typeof armor.strengthScoreRequired === 'number')
       facts.push(`requires Strength ${armor.strengthScoreRequired}`);

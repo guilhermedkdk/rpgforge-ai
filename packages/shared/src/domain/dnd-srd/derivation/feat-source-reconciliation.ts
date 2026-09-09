@@ -30,7 +30,12 @@ function extractMiLockedSpellList(name: string): MagicInitiateSpellList | null {
 }
 
 function normalizeMiFeatName(name: string): string {
-  return name.trim().toLowerCase().replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -46,7 +51,7 @@ export function computeActiveFeatSources(
   featsList: RuleItemResponse[],
   versatileFeatId: string | null | undefined,
   eldritchInvocationSelections: EldritchInvocationSelection[] | undefined,
-  matches: (name: string) => boolean,
+  matches: (name: string) => boolean
 ): Array<{ key: string; label: string; featName: string }> {
   const result: Array<{ key: string; label: string; featName: string }> = [];
 
@@ -105,7 +110,7 @@ export function computeActiveMiSourceInfo(
   abilityScoreImprovementByGain: (AbilityScoreImprovementGainChoice | null)[] | undefined,
   featsList: RuleItemResponse[],
   versatileFeatId?: string | null,
-  eldritchInvocationSelections?: EldritchInvocationSelection[],
+  eldritchInvocationSelections?: EldritchInvocationSelection[]
 ): Array<{ key: string; lockedSpellList: MagicInitiateSpellList | null; label: string }> {
   return computeActiveFeatSources(
     featureDetails,
@@ -113,7 +118,7 @@ export function computeActiveMiSourceInfo(
     featsList,
     versatileFeatId,
     eldritchInvocationSelections,
-    matchesMagicInitiate,
+    matchesMagicInitiate
   ).map(({ key, label, featName }) => ({
     key,
     label,
@@ -130,7 +135,7 @@ export function computeActiveSkilledSources(
   abilityScoreImprovementByGain: (AbilityScoreImprovementGainChoice | null)[] | undefined,
   featsList: RuleItemResponse[],
   versatileFeatId?: string | null,
-  eldritchInvocationSelections?: EldritchInvocationSelection[],
+  eldritchInvocationSelections?: EldritchInvocationSelection[]
 ): Array<{ key: string; label: string }> {
   return computeActiveFeatSources(
     featureDetails,
@@ -138,7 +143,7 @@ export function computeActiveSkilledSources(
     featsList,
     versatileFeatId,
     eldritchInvocationSelections,
-    isSkilledFeatureName,
+    isSkilledFeatureName
   ).map(({ key, label }) => ({ key, label }));
 }
 
@@ -148,14 +153,14 @@ export const SKILLED_PICKS_PER_SOURCE = 3;
 /** Skilled is complete only when every active source has all of its picks filled. */
 export function isSkilledFullyChosen(
   data: CharacterFormData,
-  featsList: RuleItemResponse[],
+  featsList: RuleItemResponse[]
 ): boolean {
   const sources = computeActiveSkilledSources(
     data.featureDetails ?? [],
     data.abilityScoreImprovementByGain,
     featsList,
     data.versatileFeatId,
-    data.eldritchInvocationSelections,
+    data.eldritchInvocationSelections
   );
   const bySource = data.skilledChoicesBySource ?? {};
   return sources.every((s) => (bySource[s.key]?.length ?? 0) >= SKILLED_PICKS_PER_SOURCE);
@@ -172,7 +177,7 @@ const SKILL_CHOICE_PREFIX = 'skill:';
  */
 export function reconcileSkilledChoices(
   data: CharacterFormData,
-  featsList: RuleItemResponse[],
+  featsList: RuleItemResponse[]
 ): Pick<
   CharacterFormData,
   'skilledChoicesBySource' | 'skilledProficiencyChoices' | 'skillProficiencies'
@@ -182,7 +187,7 @@ export function reconcileSkilledChoices(
     data.abilityScoreImprovementByGain,
     featsList,
     data.versatileFeatId,
-    data.eldritchInvocationSelections,
+    data.eldritchInvocationSelections
   ).map((s) => s.key);
 
   // Migration: no source map yet but a flat list exists → chunk it into active sources (3 each).
@@ -215,7 +220,7 @@ export function reconcileSkilledChoices(
   const keptSkillKeys = new Set(
     flat
       .filter((id) => id.startsWith(SKILL_CHOICE_PREFIX))
-      .map((id) => id.slice(SKILL_CHOICE_PREFIX.length)),
+      .map((id) => id.slice(SKILL_CHOICE_PREFIX.length))
   );
   const nextSkillProf = { ...(data.skillProficiencies ?? {}) };
   for (const old of data.skilledProficiencyChoices ?? []) {
@@ -241,14 +246,14 @@ export function reconcileSkilledChoices(
  */
 export function reconcileMagicInitiateChoices(
   data: CharacterFormData,
-  featsList: RuleItemResponse[],
+  featsList: RuleItemResponse[]
 ): Pick<CharacterFormData, 'magicInitiateChoicesBySource' | 'magicInitiateChoicesByGain'> {
   const activeSlots = computeActiveMiSourceInfo(
     data.featureDetails ?? [],
     data.abilityScoreImprovementByGain,
     featsList,
     data.versatileFeatId,
-    data.eldritchInvocationSelections,
+    data.eldritchInvocationSelections
   );
 
   // Migration: old position-based array but no source map → seed the map from it.

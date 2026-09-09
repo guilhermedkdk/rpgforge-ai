@@ -65,7 +65,7 @@ describe('isBaseAbilityAllocationComplete', () => {
       isBaseAbilityAllocationComplete({
         ...data,
         backgroundAbilityScoreIncrease: { Strength: 3 },
-      }),
+      })
     ).toBe(true);
   });
 });
@@ -89,8 +89,8 @@ describe('isClassSkillSelectionComplete', () => {
     expect(
       isClassSkillSelectionComplete(
         { ...data, skillProficiencies: { insight: true, athletics: true, stealth: true } },
-        skillsList,
-      ),
+        skillsList
+      )
     ).toBe(true);
   });
 
@@ -118,8 +118,8 @@ describe('areStandardLanguagesComplete', () => {
     expect(
       areStandardLanguagesComplete(
         { ...data, standardLanguageNames: ['Common', 'Elvish', 'Giant'] },
-        STANDARD_LANGUAGES,
-      ),
+        STANDARD_LANGUAGES
+      )
     ).toBe(true);
   });
 
@@ -156,7 +156,7 @@ describe('getPendingToolProficiencyChoices', () => {
       getPendingToolProficiencyChoices({
         ...createDefaultCharacterData(),
         proficiencies: 'Weapon Proficiencies: Choose 2 martial weapons',
-      }),
+      })
     ).toEqual([]);
   });
 });
@@ -176,8 +176,20 @@ describe('multiclass class-skill budgets', () => {
       classRuleItemId: 'wizard',
       className: 'Wizard',
       classes: [
-        { classRuleItemId: 'wizard', className: 'Wizard', subclassRuleItemId: null, subclass: '', level: 1 },
-        { classRuleItemId: 'bard', className: 'Bard', subclassRuleItemId: null, subclass: '', level: 1 },
+        {
+          classRuleItemId: 'wizard',
+          className: 'Wizard',
+          subclassRuleItemId: null,
+          subclass: '',
+          level: 1,
+        },
+        {
+          classRuleItemId: 'bard',
+          className: 'Bard',
+          subclassRuleItemId: null,
+          subclass: '',
+          level: 1,
+        },
       ],
       classSkillOptions: { keys: ['arcana', 'history'], chooseN: 2 },
       classSkillOptionsByClass: {
@@ -194,9 +206,9 @@ describe('multiclass class-skill budgets', () => {
       'Wizard 2/2',
       'Bard 0/1',
     ]);
-    expect(isClassSkillSelectionComplete(wizardBard({ arcana: true, history: true }), skillsList)).toBe(
-      false,
-    );
+    expect(
+      isClassSkillSelectionComplete(wizardBard({ arcana: true, history: true }), skillsList)
+    ).toBe(false);
   });
 
   it('is complete once the Bard pick is placed too', () => {
@@ -211,10 +223,7 @@ describe('multiclass class-skill budgets', () => {
   // The narrow list is filled first, so an "any skill" allowance cannot swallow a pick that only
   // the Wizard list could have justified and leave the Wizard budget looking short.
   it('fills the most restrictive budget first', () => {
-    const budgets = getClassSkillBudgets(
-      wizardBard({ arcana: true, stealth: true }),
-      skillsList,
-    );
+    const budgets = getClassSkillBudgets(wizardBard({ arcana: true, stealth: true }), skillsList);
     expect(budgets[0].selectedKeys).toEqual(['arcana']);
     expect(budgets[1].selectedKeys).toEqual(['stealth']);
   });
@@ -234,8 +243,20 @@ describe('class-skill prerequisite gate honours every class budget', () => {
       classRuleItemId: 'wizard',
       className: 'Wizard',
       classes: [
-        { classRuleItemId: 'wizard', className: 'Wizard', subclassRuleItemId: null, subclass: '', level: 1 },
-        { classRuleItemId: 'bard', className: 'Bard', subclassRuleItemId: null, subclass: '', level: 1 },
+        {
+          classRuleItemId: 'wizard',
+          className: 'Wizard',
+          subclassRuleItemId: null,
+          subclass: '',
+          level: 1,
+        },
+        {
+          classRuleItemId: 'bard',
+          className: 'Bard',
+          subclassRuleItemId: null,
+          subclass: '',
+          level: 1,
+        },
       ],
       classSkillOptions: { keys: ['arcana', 'history'], chooseN: 2 },
       classSkillOptionsByClass: {
@@ -247,7 +268,7 @@ describe('class-skill prerequisite gate honours every class budget', () => {
 
   it('stays blocked while the Bard skill is missing', () => {
     expect(
-      getExpertiseSelectionPrerequisiteMessage(sheet({ arcana: true, history: true }), skillsList),
+      getExpertiseSelectionPrerequisiteMessage(sheet({ arcana: true, history: true }), skillsList)
     ).toMatch(/Complete all class skill choices/);
   });
 
@@ -255,8 +276,8 @@ describe('class-skill prerequisite gate honours every class budget', () => {
     expect(
       getExpertiseSelectionPrerequisiteMessage(
         sheet({ arcana: true, history: true, stealth: true }),
-        skillsList,
-      ),
+        skillsList
+      )
     ).toBeNull();
   });
 });

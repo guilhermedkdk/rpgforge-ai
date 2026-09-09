@@ -15,12 +15,10 @@ const nameMatches = (feature: FeatureDetail, name: string): boolean =>
 /** Class-sourced features, optionally narrowed to one class. */
 export function classFeatures(
   featureDetails: CharacterFormData['featureDetails'] | undefined,
-  classRuleItemId?: string | null,
+  classRuleItemId?: string | null
 ): FeatureDetail[] {
   return (featureDetails ?? []).filter(
-    (f) =>
-      f.source === 'class' &&
-      (classRuleItemId == null || f.sourceClassId === classRuleItemId),
+    (f) => f.source === 'class' && (classRuleItemId == null || f.sourceClassId === classRuleItemId)
   );
 }
 
@@ -28,7 +26,7 @@ export function classFeatures(
 export function findClassFeatures(
   featureDetails: CharacterFormData['featureDetails'] | undefined,
   name: string,
-  classRuleItemId?: string | null,
+  classRuleItemId?: string | null
 ): FeatureDetail[] {
   return classFeatures(featureDetails, classRuleItemId).filter((f) => nameMatches(f, name));
 }
@@ -40,8 +38,7 @@ export function findClassFeatures(
  */
 export function sumClassFeatureGainCount(
   featureDetails: CharacterFormData['featureDetails'] | undefined,
-  name: string,
+  name: string
 ): number {
   return findClassFeatures(featureDetails, name).reduce((sum, f) => sum + (f.gainCount ?? 1), 0);
 }
-

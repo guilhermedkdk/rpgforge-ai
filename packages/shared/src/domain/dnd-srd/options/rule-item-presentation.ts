@@ -164,13 +164,15 @@ export function getMulticlassSummary(item: RuleItemResponse): MulticlassSummary 
   if (g.skillChoice) {
     const from = g.skillChoice.from === 'any' ? 'of your choice' : "from this class's skill list";
     grants.push(
-      `Proficiency in ${g.skillChoice.count === 1 ? 'one skill' : `${g.skillChoice.count} skills`} ${from}`,
+      `Proficiency in ${g.skillChoice.count === 1 ? 'one skill' : `${g.skillChoice.count} skills`} ${from}`
     );
   }
   if (g.toolProficiencies) {
     const choose = g.toolProficiencies.match(/^Choose\s+\d+\s+(.+)$/i);
     grants.push(
-      choose ? `Proficiency with one ${choose[1]} of your choice` : `Proficiency with ${g.toolProficiencies}`,
+      choose
+        ? `Proficiency with one ${choose[1]} of your choice`
+        : `Proficiency with ${g.toolProficiencies}`
     );
   }
   return { requirement, grants };

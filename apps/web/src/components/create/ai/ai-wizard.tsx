@@ -1,12 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Anvil, Dices, Feather, Lightbulb, Pencil, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { systemRegistry } from '@/components/systems/registry';
 import { BrowseMarkdown } from '@/components/systems/dnd-srd/library/browser/browse-markdown';
+import { LoadingState } from '@/components/ui/loading-state';
 import { useStepActions } from '@/components/create/step-actions-slot';
+import { useAuthGate } from '@/contexts/auth-gate';
+import { useSessionDraft } from '@/hooks/use-session-draft';
+import { DRAFT_KEYS, takeSessionDraft } from '@/lib/session-draft';
 import { useAiGeneration } from './use-ai-generation';
 import type {
   PackResponse,
@@ -22,7 +26,21 @@ interface AiWizardProps {
 
 type SubStep = 'prompt' | 'questions' | 'review';
 
+/** Everything the wizard would otherwise lose to the provider round trip. */
+interface AiWizardDraft {
+  subStep: SubStep;
+  prompt: string;
+  note: string;
+  questions: GenerationQuestion[];
+  answers: Record<string, string>;
+  result: GenerateCharacterResponse | null;
+  generationId?: string;
+}
+
 const MIN_PROMPT = 3;
+
+const SIGN_IN_REASON =
+  'Sua ideia continua aqui. Entre para a IA montar a ficha, e voltamos exatamente para este ponto.';
 
 // Deliberately far apart: each one pulls a different class, tone and level, and none names a class
 // (the wizard is the one interpreting). Four variations of the same forest hero show nothing.
@@ -58,8 +76,45 @@ export function AiWizard({ pack, onExit }: AiWizardProps) {
   const [result, setResult] = useState<GenerateCharacterResponse | null>(null);
   // Opaque id of this wizard interaction; carried to the save so the server can persist it.
   const [generationId, setGenerationId] = useState<string | undefined>(undefined);
+  const [draftRestored, setDraftRestored] = useState(false);
 
-  const { loading, error, setError, fetchQuestions, generate } = useAiGeneration();
+  const { requireAuth, promptSignIn } = useAuthGate();
+
+  // Restored after mount: the server pass has no sessionStorage to read.
+  useEffect(() => {
+    const draft = takeSessionDraft<AiWizardDraft>(DRAFT_KEYS.createAi);
+    if (draft) {
+      setSubStep(draft.subStep);
+      setPrompt(draft.prompt);
+      setNote(draft.note);
+      setQuestions(draft.questions);
+      setAnswers(draft.answers);
+      setResult(draft.result);
+      setGenerationId(draft.generationId);
+    }
+    setDraftRestored(true);
+  }, []);
+
+  // The call to replay if the API turns out to want a session. Set on every attempt, so a 401 from
+  // an expired session reopens the dialog for the RIGHT call rather than the first one ever made.
+  const replayRef = useRef<(() => void) | null>(null);
+
+  const { loading, error, setError, fetchQuestions, generate } = useAiGeneration({
+    onUnauthorized: () => {
+      const replay = replayRef.current;
+      if (replay) promptSignIn(replay, { reason: SIGN_IN_REASON });
+    },
+  });
+
+  useSessionDraft<AiWizardDraft>(DRAFT_KEYS.createAi, () => ({
+    subStep,
+    prompt,
+    note,
+    questions,
+    answers,
+    result,
+    generationId,
+  }));
 
   const entry = systemRegistry[pack.slug];
   const promptReady = prompt.trim().length >= MIN_PROMPT;
@@ -68,8 +123,14 @@ export function AiWizard({ pack, onExit }: AiWizardProps) {
   // interpretation note and a disabled button, with no way forward.
   const allQuestionsAnswered = questions.every((q) => (answers[q.id] ?? '').trim().length > 0);
 
-  const handleFetchQuestions = async () => {
-    if (!promptReady) return;
+  // Asks for the session BEFORE spending the round trip, and keeps the 401 path as the safety net
+  // for a session that expired while the page sat open.
+  const gate = (action: () => void) => {
+    replayRef.current = action;
+    requireAuth(action, { reason: SIGN_IN_REASON });
+  };
+
+  const runFetchQuestions = async () => {
     const res = await fetchQuestions({ packId: pack.id, prompt: prompt.trim() });
     if (!res) return;
     setGenerationId(res.generationId);
@@ -79,7 +140,12 @@ export function AiWizard({ pack, onExit }: AiWizardProps) {
     setSubStep('questions');
   };
 
-  const handleGenerate = async () => {
+  const handleFetchQuestions = () => {
+    if (!promptReady) return;
+    gate(() => void runFetchQuestions());
+  };
+
+  const runGenerate = async () => {
     const answerList = questions
       .map((q) => {
         const answer = (answers[q.id] ?? '').trim();
@@ -98,6 +164,8 @@ export function AiWizard({ pack, onExit }: AiWizardProps) {
     setResult(res);
     setSubStep('review');
   };
+
+  const handleGenerate = () => gate(() => void runGenerate());
 
   const delegatesToEditor = subStep === 'review' && !!result && !!entry;
 
@@ -121,6 +189,10 @@ export function AiWizard({ pack, onExit }: AiWizardProps) {
               continueIcon: 'none',
             }
   );
+
+  // Held for the one tick the draft takes to read: a restored wizard must not paint the empty prompt
+  // step first and then jump to the questions it already has.
+  if (!draftRestored) return <LoadingState />;
 
   // Review: hand the generated draft to the system's editor for adjust + save.
   if (delegatesToEditor && result && entry) {

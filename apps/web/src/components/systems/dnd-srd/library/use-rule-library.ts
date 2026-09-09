@@ -32,7 +32,7 @@ interface RuleLibrary {
 
 export const useRuleLibrary = (
   packId: string | null | undefined,
-  keys: readonly RuleLibraryKey[] = EDITOR_LIBRARY_KEYS,
+  keys: readonly RuleLibraryKey[] = EDITOR_LIBRARY_KEYS
 ): RuleLibrary => {
   const requestedKeys = useMemo(() => new Set(keys), [keys]);
 
@@ -41,7 +41,7 @@ export const useRuleLibrary = (
     () =>
       requestedKeys.has(ALL_ITEMS_KEY) ||
       RULE_LIBRARY_QUERIES.some((q) => q.itemTags != null && requestedKeys.has(q.key)),
-    [requestedKeys],
+    [requestedKeys]
   );
 
   const fetchConfigs = useMemo(
@@ -49,9 +49,9 @@ export const useRuleLibrary = (
       RULE_LIBRARY_QUERIES.filter(
         (q) =>
           q.itemTags == null &&
-          (requestedKeys.has(q.key) || (q.key === ALL_ITEMS_KEY && needsAllItems)),
+          (requestedKeys.has(q.key) || (q.key === ALL_ITEMS_KEY && needsAllItems))
       ),
-    [requestedKeys, needsAllItems],
+    [requestedKeys, needsAllItems]
   );
 
   const fetchKeysKey = fetchConfigs.map((c) => c.key).join(',');
@@ -72,7 +72,7 @@ export const useRuleLibrary = (
             class: c.params?.class,
             limit: c.params?.limit,
             includeRaw: c.includeRaw,
-          }),
+          })
         ),
       }),
   });
@@ -89,7 +89,8 @@ export const useRuleLibrary = (
 
     // Fetched lists come straight from the batch; ITEM sub-catalogs are sliced from `allItems`.
     for (const config of RULE_LIBRARY_QUERIES) {
-      const requested = requestedKeys.has(config.key) || (config.key === ALL_ITEMS_KEY && needsAllItems);
+      const requested =
+        requestedKeys.has(config.key) || (config.key === ALL_ITEMS_KEY && needsAllItems);
       if (!requested) continue;
       loading[config.key] = isLoading;
       if (config.itemTags == null) {
@@ -131,15 +132,15 @@ export const useRuleLibrary = (
       'item:category:artisan': lists.artisanTools,
       'item:category:tools': lists.tools,
     }),
-    [lists],
+    [lists]
   );
 
   const standardLanguages = useMemo(
     () =>
       [...lists.standardLanguages].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
       ),
-    [lists.standardLanguages],
+    [lists.standardLanguages]
   );
 
   return { lists, loading, weapons, adventuringGear, toolItemsByCategory, standardLanguages };

@@ -1,6 +1,13 @@
 'use client';
 
-import { getExpertiseMaxForFeature, getExpertisePicks, getExpertisePicksFromOtherClasses, getExpertiseSelectionPrerequisiteMessage, setExpertisePicks, type CharacterFormData } from '@rpgforce-ai/shared';
+import {
+  getExpertiseMaxForFeature,
+  getExpertisePicks,
+  getExpertisePicksFromOtherClasses,
+  getExpertiseSelectionPrerequisiteMessage,
+  setExpertisePicks,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
 import { RequirementAlert, SelectionSection } from '../shared/selection';
 import { FeatureOptionRow } from '../shared/feature-option-row';
 import { getSkillNameFromList } from '../shared/skill-name';

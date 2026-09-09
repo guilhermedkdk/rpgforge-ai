@@ -33,6 +33,8 @@ interface UseSheetSaveFlowArgs {
   allSpells: RuleItemResponse[];
   /** Equipment name → rule-item id, for serializing the equipment text back to ids. */
   itemIdByLookupKey: Map<string, string>;
+  /** Answer to a 401: raise the sign-in dialog and replay the save, instead of a dead-end message. */
+  onUnauthorized?: () => void;
 }
 
 // The red flagging decays on its own, so it can never become a permanent state of the sheet. Two
@@ -65,6 +67,7 @@ export function useSheetSaveFlow({
   toolItemsByCategory,
   allSpells,
   itemIdByLookupKey,
+  onUnauthorized,
 }: UseSheetSaveFlowArgs) {
   // After a blocked save, sections flag their required-but-empty fields in red (live, until valid).
   const [saveAttempted, setSaveAttempted] = useState(false);
@@ -82,6 +85,7 @@ export function useSheetSaveFlow({
 
   const { save, saving, saved, saveError, setSaveError, saveErrorStatus } = useSaveSheet({
     onValidationRejected: flagIncompleteSheet,
+    onUnauthorized,
   });
 
   const buildPayload = useCallback(

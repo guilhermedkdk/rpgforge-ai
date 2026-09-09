@@ -22,7 +22,7 @@ interface SelectButtonConfig {
 export const accordionRowHeaderClass = (isSelected: boolean): string =>
   cn(
     'cursor-pointer flex w-full items-center justify-between px-3 py-2 text-left transition-colors hover:bg-muted/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-    isSelected && 'bg-primary/5',
+    isSelected && 'bg-primary/5'
   );
 
 export function AccordionRowCheckBadge() {
@@ -43,7 +43,7 @@ export const accordionSelectButtonClass = (isSelected: boolean, disabled?: boole
       ? 'cursor-pointer border-border bg-muted/40 text-muted-foreground hover:bg-muted/60'
       : disabled
         ? 'cursor-not-allowed border-border/60 bg-muted/20 text-muted-foreground/50'
-        : 'cursor-pointer border-primary/70 bg-primary/5 text-primary hover:bg-primary/10',
+        : 'cursor-pointer border-primary/70 bg-primary/5 text-primary hover:bg-primary/10'
   );
 
 interface SpellAccordionRowProps {
@@ -93,28 +93,13 @@ export function SpellAccordionRow({
       >
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
           <span
-            className={cn(
-              'text-sm font-medium',
-              isSelected ? 'text-primary' : 'text-foreground',
-            )}
+            className={cn('text-sm font-medium', isSelected ? 'text-primary' : 'text-foreground')}
           >
             {spell.name}
           </span>
-          {school && (
-            <span className={spellChipClass}>
-              {school}
-            </span>
-          )}
-          {concentration && (
-            <span className={spellChipClass}>
-              Concentration
-            </span>
-          )}
-          {ritual && (
-            <span className={spellChipClass}>
-              Ritual
-            </span>
-          )}
+          {school && <span className={spellChipClass}>{school}</span>}
+          {concentration && <span className={spellChipClass}>Concentration</span>}
+          {ritual && <span className={spellChipClass}>Ritual</span>}
         </div>
         <div className="ml-2 flex shrink-0 items-center gap-1.5">
           {isSelected && selectButton ? <AccordionRowCheckBadge /> : null}

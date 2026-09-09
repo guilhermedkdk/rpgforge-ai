@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Dna, GitBranch, Shield, Star, type LucideIcon } from 'lucide-react';
 import {
-  getAllFightingStyleFeatIds,
   getFeatureChoiceState,
   featRuleItemAsMechanicsFeature,
   isGrapplerFeature,
@@ -11,7 +10,7 @@ import {
   isSkilledFeature,
   isMagicInitiateFullyChosen,
   isSkilledFullyChosen,
-  normalizeFeatName,
+  getCharacterFeatIds,
   realClassEntries,
 } from '@rpgforce-ai/shared';
 import { Swords, ChevronRight } from 'lucide-react';
@@ -183,38 +182,12 @@ export function FeaturesSection({ data, onChange, pendingFlags }: FeaturesSectio
     group.items.push({ index, name: f.name, hasOptions, selectedOptionLabel });
   });
 
-  const featIdByNormalizedName = new Map<string, string>();
-  for (const feat of featsList) {
-    const key = normalizeFeatName(feat.name ?? '');
-    if (!key || featIdByNormalizedName.has(key)) continue;
-    featIdByNormalizedName.set(key, feat.id);
-  }
-  const backgroundFeatIds = (featureDetails ?? [])
-    .filter((f) => f.source === 'background')
-    .map((f) => featIdByNormalizedName.get(normalizeFeatName(f.name ?? '')) ?? null)
-    .filter((id): id is string => id != null);
-
-  const additionalFeatIds = [
-    ...backgroundFeatIds,
-    ...(data.abilityScoreImprovementByGain ?? [])
-      .filter(
-        (g): g is { kind: 'feat'; featId: string } =>
-          g?.kind === 'feat' && typeof g.featId === 'string'
-      )
-      .map((g) => g.featId),
-    ...getAllFightingStyleFeatIds(data),
-    ...(data.additionalFightingStyleFeatId ? [data.additionalFightingStyleFeatId] : []),
-    ...(data.epicBoonFeatId ? [data.epicBoonFeatId] : []),
-    ...(data.versatileFeatId ? [data.versatileFeatId] : []),
-    // Origin feats granted by Eldritch Invocations (Lessons of the First Ones).
-    ...(data.eldritchInvocationSelections ?? [])
-      .map((s) => s.featId)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0),
-  ].filter((id, idx, arr) => arr.indexOf(id) === idx);
+  // Same shared list the PDF export renders under FEATS.
+  const additionalFeatIds = getCharacterFeatIds(data, featsList);
   const hasAdditionalFeat = additionalFeatIds.length > 0;
   const hasGrapplerFeat = additionalFeatIds.some((id) => {
     const feat = featsList.find((f) => f.id === id);
-    return normalizeFeatName(feat?.name ?? '') === 'grappler';
+    return feat != null && isGrapplerFeature(featRuleItemAsMechanicsFeature(feat));
   });
 
   useEffect(() => {
@@ -364,7 +337,7 @@ export function FeaturesSection({ data, onChange, pendingFlags }: FeaturesSectio
           }}
         >
           <DialogContent
-            className="flex max-h-[85vh] min-h-0 w-full min-w-[360px] max-w-2xl flex-col overflow-hidden"
+            className="flex max-h-[85vh] min-h-0 max-w-2xl flex-col overflow-hidden"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <FeatureDetailContent

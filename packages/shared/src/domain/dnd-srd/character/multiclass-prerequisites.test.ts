@@ -3,6 +3,7 @@ import type { RuleItemResponse } from '../../../types/ruleitem';
 import { createDefaultCharacterData } from './character-factory';
 import { setClassEntryLevel, syncClassMirrors } from './class-entries';
 import {
+  getMulticlassPrerequisites,
   getSheetMulticlassPrerequisiteMisses,
   planMulticlassPrerequisiteRemovals,
 } from './multiclass-prerequisites';
@@ -102,6 +103,16 @@ const soldier = {
   },
   raw: {},
 } as unknown as RuleItemResponse;
+
+// Two REQUIRED abilities, the shape a single-ability fixture cannot catch.
+const monk = classItem({
+  id: 'class-monk',
+  name: 'Monk',
+  key: 'monk',
+  die: 'd8',
+  saves: ['Strength', 'Dexterity'],
+  primaryAbilities: { mode: 'all', abilities: ['Dexterity', 'Wisdom'] },
+});
 
 const classes = [fighter, warlock];
 
@@ -234,7 +245,7 @@ describe('multiclass prerequisites over the life of the sheet', () => {
     });
 
     expect(getSheetMulticlassPrerequisiteMisses(broken, classes).map((m) => m.className)).toContain(
-      'Fighter',
+      'Fighter'
     );
     expect(planMulticlassPrerequisiteRemovals(broken, classes).map((e) => e.className)).toEqual([
       'Warlock',
@@ -245,5 +256,46 @@ describe('multiclass prerequisites over the life of the sheet', () => {
     const data = buildSheet();
     const single = syncClassMirrors({ ...data, classes: [data.classes![0]] });
     expect(getSheetMulticlassPrerequisiteMisses(single, classes)).toEqual([]);
+  });
+});
+
+describe('what an unmet prerequisite reports', () => {
+  it('carries EVERY primary ability of an "all" requirement, not only the one that fell short', () => {
+    const check = getMulticlassPrerequisites({
+      attributes: { Dexterity: 16, Wisdom: 8 },
+      currentClassItems: [fighter],
+      newClassItem: monk,
+    });
+
+    expect(check.ok).toBe(false);
+    expect(check.missing).toEqual([
+      {
+        abilities: ['Dexterity', 'Wisdom'],
+        mode: 'all',
+        ability: 'Wisdom',
+        actual: 8,
+        required: 13,
+        className: 'Monk',
+      },
+    ]);
+  });
+
+  it('carries every alternative of an "any" requirement, pointing at the closest score', () => {
+    const check = getMulticlassPrerequisites({
+      attributes: { Strength: 10, Dexterity: 12, Charisma: 15 },
+      currentClassItems: [warlock],
+      newClassItem: fighter,
+    });
+
+    expect(check.missing).toEqual([
+      {
+        abilities: ['Strength', 'Dexterity'],
+        mode: 'any',
+        ability: 'Dexterity',
+        actual: 12,
+        required: 13,
+        className: 'Fighter',
+      },
+    ]);
   });
 });

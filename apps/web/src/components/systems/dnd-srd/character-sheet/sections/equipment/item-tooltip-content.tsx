@@ -8,9 +8,10 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
   const tags = item.tagKeys;
 
   const weightRaw = typeof norm.weight === 'string' ? parseFloat(norm.weight) : null;
-  const weightText = weightRaw != null && weightRaw > 0
-    ? `${weightRaw % 1 === 0 ? weightRaw : weightRaw} ${norm.weightUnit ?? 'lb'}`
-    : null;
+  const weightText =
+    weightRaw != null && weightRaw > 0
+      ? `${weightRaw % 1 === 0 ? weightRaw : weightRaw} ${norm.weightUnit ?? 'lb'}`
+      : null;
 
   const categoryLabel = (() => {
     if (tags.includes('weapon:type:simple')) return 'Simple Weapon';
@@ -52,9 +53,7 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
             {categoryLabel}
           </span>
         )}
-        {weightText && (
-          <span className="text-[11px] text-muted-foreground">{weightText}</span>
-        )}
+        {weightText && <span className="text-[11px] text-muted-foreground">{weightText}</span>}
       </div>
 
       {weaponObj && (
@@ -90,7 +89,9 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
           {armorObj.strengthScoreRequired != null && (
             <p className="text-[11px]">
               <span className="text-muted-foreground">Str required: </span>
-              <span className="font-medium text-foreground">{String(armorObj.strengthScoreRequired)}</span>
+              <span className="font-medium text-foreground">
+                {String(armorObj.strengthScoreRequired)}
+              </span>
             </p>
           )}
           {armorObj.grantsStealthDisadvantage === true && (

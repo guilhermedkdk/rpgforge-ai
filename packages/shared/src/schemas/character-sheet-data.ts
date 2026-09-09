@@ -91,7 +91,7 @@ const spellcastingSchema = z
           total: z.number().optional(),
           expended: z.number().optional(),
         })
-        .catchall(z.unknown()),
+        .catchall(z.unknown())
     ),
     // Wizard-only; omitted entirely for non-wizards.
     wizardSpellbookByLevel: z.record(z.string(), z.array(z.string())).optional(),

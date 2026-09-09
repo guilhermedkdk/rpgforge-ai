@@ -43,7 +43,7 @@ export function RaceLineageSpellcastingAbilityPicker({
               'flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-sm font-medium transition-colors',
               selected === ability
                 ? 'border-primary/70 bg-primary/5 text-primary'
-                : 'border-border bg-card text-foreground hover:bg-muted/40',
+                : 'border-border bg-card text-foreground hover:bg-muted/40'
             )}
           >
             {ability}

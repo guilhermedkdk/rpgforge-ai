@@ -45,7 +45,7 @@ export function getArmorProficiencyCategories(data: CharacterFormData): Set<stri
 /** Whether the character is trained in this armor/shield item's category. */
 export function isArmorItemProficient(
   item: RuleItemResponse | null,
-  categories: Set<string>,
+  categories: Set<string>
 ): boolean {
   if (!item) return false;
   const norm = (item.normalized ?? {}) as Record<string, unknown>;
@@ -61,7 +61,7 @@ export function isArmorItemProficient(
 /** AC granted by an armor item (base + capped Dex); null when the item carries no armor data. */
 export function computeArmorClassFromArmor(
   armorItem: RuleItemResponse | null,
-  dexMod: number,
+  dexMod: number
 ): number | null {
   if (!armorItem) return null;
   const norm = (armorItem.normalized ?? {}) as Record<string, unknown>;
@@ -86,7 +86,7 @@ export function computeArmorClassFromArmor(
 /** Armor strength requirement met (or none required). */
 function armorMeetsStrengthRequirement(
   equippedArmor: RuleItemResponse | null,
-  strengthScore: number,
+  strengthScore: number
 ): boolean {
   if (!equippedArmor) return true;
   const norm = (equippedArmor.normalized ?? {}) as Record<string, unknown>;
@@ -133,7 +133,7 @@ export function computeEffectiveArmorClass({
       epicBoonAbilityScore,
       hasPrimalChampion,
       hasBodyAndMind,
-      data.grapplerAbilityScore,
+      data.grapplerAbilityScore
     );
   const dexMod = modOf('Dexterity');
   const strengthScore = getEffectiveAttribute(
@@ -143,15 +143,15 @@ export function computeEffectiveArmorClass({
     epicBoonAbilityScore,
     hasPrimalChampion,
     hasBodyAndMind,
-    data.grapplerAbilityScore,
+    data.grapplerAbilityScore
   );
 
   const unarmoredDefenseFeature = featureDetails.find(
-    (f) => f.name.trim().toLowerCase() === 'unarmored defense',
+    (f) => f.name.trim().toLowerCase() === 'unarmored defense'
   );
   const unarmoredDefenseText = (unarmoredDefenseFeature?.desc ?? '').toLowerCase();
   const bodyAndMindFeatureListed = featureDetails.some(
-    (f) => f.name.trim().toLowerCase() === 'body and mind',
+    (f) => f.name.trim().toLowerCase() === 'body and mind'
   );
 
   const equippedArmor = data.equippedArmorId
@@ -185,7 +185,7 @@ export function computeEffectiveArmorClass({
       unarmoredDefenseText.includes('wielding a shield') ||
       unarmoredDefenseText.includes('wield a shield'),
     hasDraconicResilience: featureDetails.some(
-      (f) => f.source === 'subclass' && isDraconicResilienceFeatureName(f.name),
+      (f) => f.source === 'subclass' && isDraconicResilienceFeatureName(f.name)
     ),
     defenseStyleApplies:
       hasSelectedFightingStyle(data, feats, 'defense') &&

@@ -1,6 +1,15 @@
 'use client';
 
-import { getCommonLanguageItem, getKnownLanguageNamesExcept, MAX_STANDARD_LANGUAGES_TOTAL, normalizeStandardLanguageNames, stripToolItemPriceSuffix, THIEVES_CANT_DISPLAY_NAME, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  getCommonLanguageItem,
+  getKnownLanguageNamesExcept,
+  MAX_STANDARD_LANGUAGES_TOTAL,
+  normalizeStandardLanguageNames,
+  stripToolItemPriceSuffix,
+  THIEVES_CANT_DISPLAY_NAME,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { RequirementAlert, SelectionSection } from '../shared/selection';
 import { FeatureOptionRow } from '../shared/feature-option-row';
 
@@ -18,7 +27,7 @@ export function ThievesCantLanguagePickerBlock({
 }) {
   const normalizedStandard = normalizeStandardLanguageNames(
     data.standardLanguageNames,
-    standardLanguageOptions,
+    standardLanguageOptions
   );
   const standardLanguagesComplete = normalizedStandard.length >= MAX_STANDARD_LANGUAGES_TOTAL;
   const knownElsewhere = getKnownLanguageNamesExcept(data, 'thievesCant', standardLanguageOptions);

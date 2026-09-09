@@ -33,7 +33,7 @@ export function AdditionalFightingStylePanel({
   const ownedFeatIdsSet = buildOwnedFeatIdsSet(data, featsList);
   const effectiveAttributeScores = buildEffectiveAttributeScores(data);
   const featureNamesLower = new Set(
-    (data.featureDetails ?? []).map((fd) => fd.name.trim().toLowerCase()),
+    (data.featureDetails ?? []).map((fd) => fd.name.trim().toLowerCase())
   );
 
   return (
@@ -50,7 +50,7 @@ export function AdditionalFightingStylePanel({
             prerequisite,
             data,
             effectiveAttributeScores,
-            featureNamesLower,
+            featureNamesLower
           );
           const isSelected = selectedFeatId === f.id || isAlreadyOwned;
           const isDisabled =

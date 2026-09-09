@@ -44,7 +44,9 @@ export function SignatureSpellsSpellPickerPanel({
     const fromSavant = data.evocationSavantSpellbookByLevel?.[L] ?? [];
     const set = new Set<string>();
     for (const n of [...fromLevel, ...fromScroll, ...fromSavant]) {
-      const t = String(n ?? '').trim().toLowerCase();
+      const t = String(n ?? '')
+        .trim()
+        .toLowerCase();
       if (t) set.add(t);
     }
     return set;
@@ -56,7 +58,7 @@ export function SignatureSpellsSpellPickerPanel({
 
   const spellbookL3ListKey = React.useMemo(
     () => [...spellbookLevel3NameSet].sort().join('\n'),
-    [spellbookLevel3NameSet],
+    [spellbookLevel3NameSet]
   );
 
   const classItem = classes.find((c) => c.id === data.classRuleItemId);
@@ -70,16 +72,16 @@ export function SignatureSpellsSpellPickerPanel({
             .filter(
               (s) =>
                 ruleItemSpellLevel(s) === SIGNATURE_SPELLS_SPELL_LEVEL &&
-                spellbookLevel3NameSet.has(s.name.trim().toLowerCase()),
+                spellbookLevel3NameSet.has(s.name.trim().toLowerCase())
             )
             .sort((a, b) => a.name.localeCompare(b.name)),
-    [allSpells, spellbookLevel3NameSet],
+    [allSpells, spellbookLevel3NameSet]
   );
 
   const ensureSlots = (d: CharacterFormData): (string | null)[] =>
     Array.from(
       { length: SIGNATURE_SPELLS_SLOT_COUNT },
-      (_, i) => (d.signatureSpellsSpellNames ?? [])[i] ?? null,
+      (_, i) => (d.signatureSpellsSpellNames ?? [])[i] ?? null
     );
 
   const bySlot = ensureSlots(data);
@@ -87,14 +89,24 @@ export function SignatureSpellsSpellPickerPanel({
 
   const spellNameSelected = (spellName: string) => {
     const k = spellName.trim().toLowerCase();
-    return bySlot.some((x) => String(x ?? '').trim().toLowerCase() === k);
+    return bySlot.some(
+      (x) =>
+        String(x ?? '')
+          .trim()
+          .toLowerCase() === k
+    );
   };
 
   const removeSpellFromSelection = (spellName: string) => {
     const next = ensureSlots(data);
     const k = spellName.trim().toLowerCase();
     for (let i = 0; i < SIGNATURE_SPELLS_SLOT_COUNT; i++) {
-      if (String(next[i] ?? '').trim().toLowerCase() === k) next[i] = null;
+      if (
+        String(next[i] ?? '')
+          .trim()
+          .toLowerCase() === k
+      )
+        next[i] = null;
     }
     onChange({ ...data, signatureSpellsSpellNames: next });
   };
@@ -104,7 +116,15 @@ export function SignatureSpellsSpellPickerPanel({
     if (!trimmed) return;
     const k = trimmed.toLowerCase();
     const next = ensureSlots(data);
-    if (next.some((x) => String(x ?? '').trim().toLowerCase() === k)) return;
+    if (
+      next.some(
+        (x) =>
+          String(x ?? '')
+            .trim()
+            .toLowerCase() === k
+      )
+    )
+      return;
     const firstEmpty = next.findIndex((x) => !String(x ?? '').trim());
     if (firstEmpty < 0) return;
     next[firstEmpty] = trimmed;

@@ -7,15 +7,12 @@ import { PERSISTED_CHARACTER_SCHEMA_VERSION } from '../../../schemas/character-s
 import type { CharacterFormData } from './character-form-data';
 import type { RuleItemResponse } from '../../../types/ruleitem';
 import { countAvailableSpells, spellClassTag } from '../spells/spells';
+import { getDefaultAttributes, getDefaultSavingThrows } from '../features/feature-matchers';
 import {
-  getDefaultAttributes,
-  getDefaultSavingThrows,
-  
-  
-} from '../features/feature-matchers';
-import { isMysticArcanumFeature,
+  isMysticArcanumFeature,
   isSignatureSpellsFeature,
-  isSpellMasteryFeature } from '../features/feature-mechanics';
+  isSpellMasteryFeature,
+} from '../features/feature-mechanics';
 import { coerceNonNegativeWalletInt, WALLET_COIN_MAX } from '../equipment/wallet';
 import { flattenPersistedSheet, isPersistedCharacterSheet } from './character-persistence';
 import { emptyClassEntry, syncClassMirrors } from './class-entries';

@@ -2,7 +2,13 @@
 
 import * as React from 'react';
 import { ruleItemsApi } from '@/lib/api/rule-items';
-import { ruleItemSpellLevel, spellClassTag, spellNameToKebabSlug, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  ruleItemSpellLevel,
+  spellClassTag,
+  spellNameToKebabSlug,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { useAllSpells } from './use-all-spells';
 
 const EMPTY_SPELLS: RuleItemResponse[] = [];

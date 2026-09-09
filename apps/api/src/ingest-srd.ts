@@ -1,13 +1,7 @@
 /**
- * Standalone script to run SRD ingestion (full or by scope).
+ * SRD ingestion, full or by scope.
  *
- * Full ingestion (all types, many API calls):
- *   pnpm --filter @rpgforce-ai/api run ingest:srd
- *   node dist/ingest-srd.js
- *
- * Ingest only one type (fewer API calls, lighter on Open5e):
- *   pnpm --filter @rpgforce-ai/api run ingest:srd items
- *   node dist/ingest-srd.js spells
+ *   pnpm --filter @rpgforce-ai/api run ingest:srd [scope]
  *
  * Scopes: all | items | spells | feats | backgrounds | races | abilities | classes | rulesets
  */
@@ -38,7 +32,11 @@ const SUMMARY_LABELS: Record<string, string> = {
 
 const TABLE_WIDTH = 48;
 
-function printSummary(result: { packId: string; counts: Record<string, number>; durationMs: number }) {
+function printSummary(result: {
+  packId: string;
+  counts: Record<string, number>;
+  durationMs: number;
+}) {
   const total = Object.entries(result.counts).reduce((sum, [, n]) => sum + n, 0);
 
   const rows = Object.entries(result.counts)
@@ -74,7 +72,10 @@ function printSummary(result: { packId: string; counts: Record<string, number>; 
   console.log(`├${border}┤`);
   console.log(padRow('Total de itens', String(total)));
   console.log(padRow('Duração', `${(result.durationMs / 1000).toFixed(2)}s`));
-  const packIdDisplay = result.packId.length > TABLE_WIDTH - 14 ? `${result.packId.slice(0, TABLE_WIDTH - 15)}…` : result.packId;
+  const packIdDisplay =
+    result.packId.length > TABLE_WIDTH - 14
+      ? `${result.packId.slice(0, TABLE_WIDTH - 15)}…`
+      : result.packId;
   console.log(padRow('Pack ID', packIdDisplay));
   console.log(`└${border}┘`);
   console.log('');

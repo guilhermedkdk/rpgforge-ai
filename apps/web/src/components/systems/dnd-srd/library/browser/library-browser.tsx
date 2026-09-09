@@ -356,18 +356,19 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
           </nav>
 
           <div className="flex flex-col gap-3 rounded-lg border border-border bg-card/50 p-3 sm:p-4">
+            {/* Same markup as the Explorar search: no `type="search"`, because that is what makes
+                the browser draw its own clear "x" in one field and not the other. */}
             <div className="relative max-w-md">
               <Search
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <Input
-                type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={activeCategory?.searchPlaceholder}
                 aria-label={activeCategory?.searchPlaceholder}
-                className="bg-secondary pl-10"
+                className="pl-9"
               />
             </div>
 

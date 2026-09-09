@@ -1,7 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { getFightingStylePick, setFightingStylePick, spellsForClass, type CharacterFormData, type FightingStyleCantripGrant } from '@rpgforce-ai/shared';
+import {
+  getFightingStylePick,
+  setFightingStylePick,
+  spellsForClass,
+  type CharacterFormData,
+  type FightingStyleCantripGrant,
+} from '@rpgforce-ai/shared';
 import type { FeatureDetail } from '../shared/types';
 import { useAllSpells } from '../../../sections/spellcasting/hooks/use-all-spells';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -37,14 +43,14 @@ export function FightingStyleCantripPanel({
   const spells = React.useMemo(
     () =>
       spellsForClass(allSpells, grant.spellList).filter(
-        (s) => Number((s.normalized as Record<string, unknown> | undefined)?.level ?? 0) === 0,
+        (s) => Number((s.normalized as Record<string, unknown> | undefined)?.level ?? 0) === 0
       ),
-    [allSpells, grant.spellList],
+    [allSpells, grant.spellList]
   );
 
   const cantrips = React.useMemo(
     () => [...spells].sort((a, b) => a.name.localeCompare(b.name)),
-    [spells],
+    [spells]
   );
 
   const selected = getFightingStylePick(data, feat).cantrips.filter(Boolean);

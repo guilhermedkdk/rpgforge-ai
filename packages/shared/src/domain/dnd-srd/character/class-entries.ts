@@ -28,7 +28,7 @@ export function totalClassLevel(classes: readonly ClassEntry[]): number {
 /** Level in one specific class; 0 when the character has no levels in it. */
 export function classLevelOf(
   data: Pick<CharacterFormData, 'classes'>,
-  classRuleItemId: string | null | undefined,
+  classRuleItemId: string | null | undefined
 ): number {
   if (!classRuleItemId) return 0;
   const entry = (data.classes ?? []).find((c) => c.classRuleItemId === classRuleItemId);
@@ -44,7 +44,7 @@ export function classLevelOf(
  */
 export function featureClassLevel(
   data: Pick<CharacterFormData, 'classes' | 'level'>,
-  feature: { sourceClassId?: string | null } | null | undefined,
+  feature: { sourceClassId?: string | null } | null | undefined
 ): number {
   const own = classLevelOf(data, feature?.sourceClassId);
   return own > 0 ? own : Math.max(1, data.level ?? 1);
@@ -112,7 +112,10 @@ export function addClassEntry(data: CharacterFormData, entry: ClassEntry): Chara
   return syncClassMirrors({ ...data, classes: [...existing, entry] });
 }
 
-export function removeClassEntry(data: CharacterFormData, classRuleItemId: string): CharacterFormData {
+export function removeClassEntry(
+  data: CharacterFormData,
+  classRuleItemId: string
+): CharacterFormData {
   const classes = (data.classes ?? []).filter((c) => c.classRuleItemId !== classRuleItemId);
   if (classes.length === (data.classes ?? []).length) return data;
   return syncClassMirrors({ ...data, classes });
@@ -122,7 +125,7 @@ export function removeClassEntry(data: CharacterFormData, classRuleItemId: strin
 export function setClassEntryLevel(
   data: CharacterFormData,
   classRuleItemId: string,
-  level: number,
+  level: number
 ): CharacterFormData {
   const classes = data.classes ?? [];
   const idx = classes.findIndex((c) => c.classRuleItemId === classRuleItemId);
@@ -142,14 +145,12 @@ export function setClassEntryLevel(
 export function setClassEntryIdentity(
   data: CharacterFormData,
   index: number,
-  identity: { classRuleItemId: string; className: string },
+  identity: { classRuleItemId: string; className: string }
 ): CharacterFormData {
   const classes = data.classes ?? [];
   if (index < 0 || index >= classes.length) return data;
   const next = classes.map((c, i) =>
-    i === index
-      ? { ...c, ...identity, subclassRuleItemId: null, subclass: '' }
-      : c,
+    i === index ? { ...c, ...identity, subclassRuleItemId: null, subclass: '' } : c
   );
   return syncClassMirrors({ ...data, classes: next });
 }
@@ -157,7 +158,7 @@ export function setClassEntryIdentity(
 export function setClassEntrySubclass(
   data: CharacterFormData,
   classRuleItemId: string,
-  subclass: { subclassRuleItemId: string | null; subclass: string },
+  subclass: { subclassRuleItemId: string | null; subclass: string }
 ): CharacterFormData {
   const classes = data.classes ?? [];
   const idx = classes.findIndex((c) => c.classRuleItemId === classRuleItemId);

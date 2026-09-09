@@ -16,7 +16,10 @@ import { isMagicInitiateFullyChosen } from '../character/character-factory';
 import { isEldritchInvocationsFeature } from '../features/feature-mechanics';
 import { getPendingToolProficiencyChoices } from '../proficiencies/tool-proficiencies';
 import { isClassSkillSelectionComplete } from '../proficiencies/skills';
-import { areStandardLanguagesComplete, MAX_STANDARD_LANGUAGES_TOTAL } from '../proficiencies/languages';
+import {
+  areStandardLanguagesComplete,
+  MAX_STANDARD_LANGUAGES_TOTAL,
+} from '../proficiencies/languages';
 import { getFeatureChoiceState } from '../features/feature-choice-state';
 import { normalizeFeatName } from '../features/feat-prerequisites';
 import { isSubclassOfClass } from '../features/class-detection';
@@ -43,7 +46,12 @@ import {
   getMaxPreparedSpells,
   wizardSpellbookMaxByLevel,
 } from '../spells/spellcasting-limits';
-import { countAvailableSpells, ruleItemIsRitual, ruleItemSpellLevel, spellClassTag } from '../spells/spells';
+import {
+  countAvailableSpells,
+  ruleItemIsRitual,
+  ruleItemSpellLevel,
+  spellClassTag,
+} from '../spells/spells';
 import { attributePickedSpells, getCastingClasses } from '../spells/class-spellcasting';
 
 function collectToolProficiencyErrors(data: CharacterFormData): string[] {
@@ -156,7 +164,7 @@ export function getCharacterSheetSaveValidationErrors(
       errors.push(
         classEntries.length > 1
           ? `Selecione a subclasse de ${entry.className || 'sua classe'}.`
-          : 'Selecione a subclasse (Subclass).',
+          : 'Selecione a subclasse (Subclass).'
       );
     }
   }
@@ -170,10 +178,16 @@ export function getCharacterSheetSaveValidationErrors(
     // Same entry point the sheet's own cue reads, so the field that turns red and the error that
     // blocks the save can never disagree. Scores are the EFFECTIVE ones (background bonus, ASI...).
     for (const miss of getSheetMulticlassPrerequisiteMisses(data, ctx.classes)) {
+      // The WHOLE requirement, never just the ability that fell short: a Monk demands Dexterity and
+      // Wisdom, and naming one of them reads as the only one it wants.
+      const abilities = miss.abilities.join(miss.mode === 'any' ? ' ou ' : ' e ');
+      // Which ability the score belongs to only matters when the class names more than one.
+      const score =
+        miss.abilities.length > 1
+          ? `você tem ${miss.actual} em ${miss.ability}`
+          : `você tem ${miss.actual}`;
       errors.push(
-        miss.alternatives.length > 0
-          ? `Multiclasse em ${miss.className} exige ${miss.alternatives.join(' ou ')} 13.`
-          : `Multiclasse em ${miss.className} exige ${miss.ability} 13: você tem ${miss.actual}.`,
+        `Multiclasse em ${miss.className} exige ${abilities} ${miss.required}: ${score}.`
       );
     }
   }
@@ -202,7 +216,9 @@ export function getCharacterSheetSaveValidationErrors(
       data.backgroundAbilityScoreIncrease
     )
   ) {
-    errors.push('Distribua todos os pontos de atributo do antecedente (Background Ability Bonuses).');
+    errors.push(
+      'Distribua todos os pontos de atributo do antecedente (Background Ability Bonuses).'
+    );
   }
 
   if (!areStandardLanguagesComplete(data, ctx.standardLanguageOptions)) {
@@ -211,7 +227,9 @@ export function getCharacterSheetSaveValidationErrors(
   }
 
   if (!isClassSkillSelectionComplete(data, ctx.skillsList)) {
-    errors.push('Complete todas as perícias obrigatórias da classe na seção Skills (Class Skills).');
+    errors.push(
+      'Complete todas as perícias obrigatórias da classe na seção Skills (Class Skills).'
+    );
   }
 
   errors.push(...collectToolProficiencyErrors(data));
@@ -229,24 +247,31 @@ export function getCharacterSheetSaveValidationErrors(
   // Equipment item choices — validate per source so class/background keys are checked correctly.
   const classOptText =
     data.startingEquipmentSelectedIndex != null
-      ? (data.startingEquipmentOptions?.options?.[data.startingEquipmentSelectedIndex]?.text ?? null)
+      ? (data.startingEquipmentOptions?.options?.[data.startingEquipmentSelectedIndex]?.text ??
+        null)
       : null;
   const bgOptText =
     data.backgroundEquipmentSelectedIndex != null
-      ? (data.backgroundEquipmentOptions?.options?.[data.backgroundEquipmentSelectedIndex]?.text ?? null)
+      ? (data.backgroundEquipmentOptions?.options?.[data.backgroundEquipmentSelectedIndex]?.text ??
+        null)
       : null;
-  const { classLines: classEquip, backgroundLines: bgEquip, manualLines: manualEquip } =
-    splitEquipmentBySource(
-      data.equipment ?? '',
-      classOptText,
-      bgOptText,
-      data.equipmentSourceByLine
-    );
+  const {
+    classLines: classEquip,
+    backgroundLines: bgEquip,
+    manualLines: manualEquip,
+  } = splitEquipmentBySource(
+    data.equipment ?? '',
+    classOptText,
+    bgOptText,
+    data.equipmentSourceByLine
+  );
   const hasPlaceholder = (lines: string[], placeholder: string) =>
     lines.some((l) => l.trim().toLowerCase() === placeholder);
 
-  if (hasPlaceholder(classEquip, MUSICAL_INSTRUMENT_PLACEHOLDER_LINE) ||
-    hasPlaceholder(manualEquip, MUSICAL_INSTRUMENT_PLACEHOLDER_LINE)) {
+  if (
+    hasPlaceholder(classEquip, MUSICAL_INSTRUMENT_PLACEHOLDER_LINE) ||
+    hasPlaceholder(manualEquip, MUSICAL_INSTRUMENT_PLACEHOLDER_LINE)
+  ) {
     if (!data.toolProficiencyChoices?.['Musical Instrument of your choice']?.length) {
       errors.push('Escolha um instrumento musical no equipamento inicial da classe.');
     }
@@ -257,8 +282,10 @@ export function getCharacterSheetSaveValidationErrors(
     }
   }
 
-  if (hasPlaceholder(classEquip, HOLY_SYMBOL_PLACEHOLDER_LINE) ||
-    hasPlaceholder(manualEquip, HOLY_SYMBOL_PLACEHOLDER_LINE)) {
+  if (
+    hasPlaceholder(classEquip, HOLY_SYMBOL_PLACEHOLDER_LINE) ||
+    hasPlaceholder(manualEquip, HOLY_SYMBOL_PLACEHOLDER_LINE)
+  ) {
     if (!data.holySymbolChoiceItemIds?.class) {
       errors.push('Escolha um Holy Symbol no equipamento inicial da classe.');
     }
@@ -314,7 +341,13 @@ export function getCharacterSheetSaveValidationErrors(
   };
   // required = min(configured max, how many are actually selectable). `cap`-only-loosens: a smaller
   // pool can never make the sheet impossible to save. Falls back to the raw max when no catalog.
-  const capToAvailable = (max: number, tagKeys: string[], minLevel: number, maxLevel: number, exclude?: Set<string>): number =>
+  const capToAvailable = (
+    max: number,
+    tagKeys: string[],
+    minLevel: number,
+    maxLevel: number,
+    exclude?: Set<string>
+  ): number =>
     ctx.allSpells && classNameForSpells
       ? Math.min(max, countAvailableSpells(ctx.allSpells, tagKeys, minLevel, maxLevel, exclude))
       : max;
@@ -421,9 +454,7 @@ export function getCharacterSheetSaveValidationErrors(
   }
 
   // Spellbook capacity follows the WIZARD level, not the character level.
-  const wizardCaster = castingClasses.find(
-    (c) => c.className.trim().toLowerCase() === 'wizard'
-  );
+  const wizardCaster = castingClasses.find((c) => c.className.trim().toLowerCase() === 'wizard');
   const wizardLevel =
     wizardCaster?.level ??
     ((data.className ?? '').trim().toLowerCase() === 'wizard' ? spellLevel : 0);
@@ -457,7 +488,10 @@ export function getCharacterSheetSaveValidationErrors(
       // Cap at what the pack can supply (any-class cantrips / level-1 rituals) so a tiny pool can't
       // leave the book impossible to fill. Pools are huge here, so this practically never triggers.
       const reqCantrips = ctx.allSpells
-        ? Math.min(PACT_OF_TOME_MAX_CANTRIPS, ctx.allSpells.filter((s) => ruleItemSpellLevel(s) === 0).length)
+        ? Math.min(
+            PACT_OF_TOME_MAX_CANTRIPS,
+            ctx.allSpells.filter((s) => ruleItemSpellLevel(s) === 0).length
+          )
         : PACT_OF_TOME_MAX_CANTRIPS;
       const reqRituals = ctx.allSpells
         ? Math.min(

@@ -1260,7 +1260,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
           built while the dialog is open (search/quantities state resets on unmount). */}
       <Dialog open={equipmentAddOpen} onOpenChange={setEquipmentAddOpen}>
         <DialogContent
-          className="flex max-h-[78vh] w-[min(92vw,560px)] max-w-none flex-col gap-0 p-0"
+          className="flex max-h-[78vh] max-w-[560px] flex-col gap-0 p-0"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="border-b border-border px-5 py-4">

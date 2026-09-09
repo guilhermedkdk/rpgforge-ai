@@ -13,9 +13,7 @@ export const expertiseClassKey = (feature: { sourceClassId?: string } | undefine
   feature?.sourceClassId ?? '';
 
 /** What THIS class's Expertise grants: 2 skills per gain. */
-export function getExpertiseMaxForFeature(
-  feature: { gainCount?: number } | undefined
-): number {
+export function getExpertiseMaxForFeature(feature: { gainCount?: number } | undefined): number {
   if (!feature) return 0;
   return (feature.gainCount ?? 1) * 2;
 }
@@ -27,7 +25,9 @@ export function getExpertisePicks(
 ): string[] {
   const byClass = data.expertiseSkillKeysByClass ?? {};
   const key = expertiseClassKey(feature);
-  return byClass[key] ?? (key !== '' && Object.keys(byClass).length <= 1 ? (byClass[''] ?? []) : []);
+  return (
+    byClass[key] ?? (key !== '' && Object.keys(byClass).length <= 1 ? (byClass[''] ?? []) : [])
+  );
 }
 
 /** Replaces one class's picks, leaving every other class's list untouched. */

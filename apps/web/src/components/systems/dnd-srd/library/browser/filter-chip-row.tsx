@@ -1,13 +1,17 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import {
+  FILTER_CHIP_ACTIVE,
+  FILTER_CHIP_CLASS,
+  FILTER_CHIP_IDLE,
+} from '@/components/ui/filter-chip';
 import type { FilterOption } from './browse-config';
 
-const chipClass =
-  'cursor-pointer rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
-const chipIdleClass =
-  'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground';
-const chipActiveClass = 'border-primary bg-primary text-primary-foreground';
+// This row was where the chip style started; it now shares it with every other filter in the app.
+const chipClass = FILTER_CHIP_CLASS;
+const chipIdleClass = FILTER_CHIP_IDLE;
+const chipActiveClass = FILTER_CHIP_ACTIVE;
 
 export const FilterChipRow = ({
   label,

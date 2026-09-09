@@ -26,7 +26,7 @@ interface AddEquipmentShopProps {
     equipmentName: string,
     effectiveQty: number,
     costGP: number | undefined,
-    packTotalCost: number | undefined,
+    packTotalCost: number | undefined
   ) => void;
 }
 
@@ -35,11 +35,18 @@ interface AddEquipmentShopProps {
  * (hundreds of elements) are only built while the dialog is open — as inline children they were
  * rebuilt on every sheet render even with the dialog closed.
  */
-export function AddEquipmentShop({ coins, availableGP, equipment, onAddItem }: AddEquipmentShopProps) {
+export function AddEquipmentShop({
+  coins,
+  availableGP,
+  equipment,
+  onAddItem,
+}: AddEquipmentShopProps) {
   const { weapons, armors, adventuringGear, toolItemsByCategory } = useRuleLibraryData();
   const [search, setSearch] = useState('');
   const [addQuantities, setAddQuantities] = useState<Record<string, number>>({});
-  const [activeCategory, setActiveCategory] = useState<'weapons' | 'armor' | 'tools' | 'gear'>('weapons');
+  const [activeCategory, setActiveCategory] = useState<'weapons' | 'armor' | 'tools' | 'gear'>(
+    'weapons'
+  );
 
   const allToolItems = useMemo(() => {
     const artisanTools = toolItemsByCategory['item:category:artisan'] ?? [];
@@ -59,15 +66,15 @@ export function AddEquipmentShop({ coins, availableGP, equipment, onAddItem }: A
       weapons
         .filter((w) => w.name.trim().toLowerCase() !== 'unarmed strike')
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [weapons],
+    [weapons]
   );
   const sortedArmors = useMemo(
     () => [...armors].sort((a, b) => a.name.localeCompare(b.name)),
-    [armors],
+    [armors]
   );
   const sortedAdventuringGear = useMemo(
     () => [...adventuringGear].sort((a, b) => a.name.localeCompare(b.name)),
-    [adventuringGear],
+    [adventuringGear]
   );
 
   const searchLower = search.trim().toLowerCase();
@@ -101,9 +108,15 @@ export function AddEquipmentShop({ coins, availableGP, equipment, onAddItem }: A
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="min-w-0 truncate cursor-pointer rounded-lg border border-border/50 bg-muted/60 px-2.5 py-1 text-foreground">{displayName}</span>
+              <span className="min-w-0 truncate cursor-pointer rounded-lg border border-border/50 bg-muted/60 px-2.5 py-1 text-foreground">
+                {displayName}
+              </span>
             </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-[300px] max-h-[60vh] overflow-y-auto p-3" sideOffset={8}>
+            <TooltipContent
+              side="right"
+              className="max-w-[300px] max-h-[60vh] overflow-y-auto p-3"
+              sideOffset={8}
+            >
               <ItemTooltipContent item={item} />
             </TooltipContent>
           </Tooltip>
@@ -113,19 +126,17 @@ export function AddEquipmentShop({ coins, availableGP, equipment, onAddItem }: A
             </span>
           )}
         </span>
-        {costGP != null ? (() => {
-          const { text, currency } = formatCostInfo(costGP);
-          const colorClass = {
-            gp: 'text-amber-600 dark:text-amber-400',
-            sp: 'text-slate-400 dark:text-slate-300',
-            cp: 'text-orange-600 dark:text-orange-500',
-          }[currency];
-          return (
-            <span className={cn('shrink-0 text-xs tabular-nums', colorClass)}>
-              {text}
-            </span>
-          );
-        })() : (
+        {costGP != null ? (
+          (() => {
+            const { text, currency } = formatCostInfo(costGP);
+            const colorClass = {
+              gp: 'text-amber-600 dark:text-amber-400',
+              sp: 'text-slate-400 dark:text-slate-300',
+              cp: 'text-orange-600 dark:text-orange-500',
+            }[currency];
+            return <span className={cn('shrink-0 text-xs tabular-nums', colorClass)}>{text}</span>;
+          })()
+        ) : (
           <span className="shrink-0 text-xs text-muted-foreground/40">—</span>
         )}
         <span className="flex shrink-0 items-center gap-0.5">
@@ -222,69 +233,67 @@ export function AddEquipmentShop({ coins, availableGP, equipment, onAddItem }: A
       {/* Category tabs + list */}
       <Tabs
         value={activeCategory}
-        onValueChange={(v) =>
-          setActiveCategory(v as 'weapons' | 'armor' | 'tools' | 'gear')
-        }
+        onValueChange={(v) => setActiveCategory(v as 'weapons' | 'armor' | 'tools' | 'gear')}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
-            <div className="border-b border-border px-4 pt-3 pb-0">
-              <TabsList className="h-8 w-full gap-1 bg-transparent p-0">
-                <TabsTrigger
-                  value="weapons"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Weapons
-                </TabsTrigger>
-                <TabsTrigger
-                  value="armor"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Armor
-                </TabsTrigger>
-                <TabsTrigger
-                  value="tools"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Tools
-                </TabsTrigger>
-                <TabsTrigger
-                  value="gear"
-                  className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                >
-                  Gear
-                </TabsTrigger>
-              </TabsList>
-            </div>
+        <div className="border-b border-border px-4 pt-3 pb-0">
+          <TabsList className="h-8 w-full gap-1 bg-transparent p-0">
+            <TabsTrigger
+              value="weapons"
+              className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Weapons
+            </TabsTrigger>
+            <TabsTrigger
+              value="armor"
+              className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Armor
+            </TabsTrigger>
+            <TabsTrigger
+              value="tools"
+              className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Tools
+            </TabsTrigger>
+            <TabsTrigger
+              value="gear"
+              className="h-8 flex-1 cursor-pointer rounded-none border-b-2 border-transparent px-2 text-xs transition-[background-color,color,border-radius] duration-150 hover:rounded-t-md hover:bg-muted/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Gear
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-            <TabsContent value="weapons" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredWeapons.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No weapons found.</p>
-              ) : (
-                filteredWeapons.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-            <TabsContent value="armor" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredArmors.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No armor found.</p>
-              ) : (
-                filteredArmors.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-            <TabsContent value="tools" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredArtisanTools.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No tools found.</p>
-              ) : (
-                filteredArtisanTools.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-            <TabsContent value="gear" className="mt-0 flex-1 overflow-y-auto p-2">
-              {filteredAdventuringGear.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No gear found.</p>
-              ) : (
-                filteredAdventuringGear.map((item) => renderAddItemRow(item))
-              )}
-            </TabsContent>
-          </Tabs>
+        <TabsContent value="weapons" className="mt-0 flex-1 overflow-y-auto p-2">
+          {filteredWeapons.length === 0 ? (
+            <p className="px-3 py-4 text-center text-sm text-muted-foreground">No weapons found.</p>
+          ) : (
+            filteredWeapons.map((item) => renderAddItemRow(item))
+          )}
+        </TabsContent>
+        <TabsContent value="armor" className="mt-0 flex-1 overflow-y-auto p-2">
+          {filteredArmors.length === 0 ? (
+            <p className="px-3 py-4 text-center text-sm text-muted-foreground">No armor found.</p>
+          ) : (
+            filteredArmors.map((item) => renderAddItemRow(item))
+          )}
+        </TabsContent>
+        <TabsContent value="tools" className="mt-0 flex-1 overflow-y-auto p-2">
+          {filteredArtisanTools.length === 0 ? (
+            <p className="px-3 py-4 text-center text-sm text-muted-foreground">No tools found.</p>
+          ) : (
+            filteredArtisanTools.map((item) => renderAddItemRow(item))
+          )}
+        </TabsContent>
+        <TabsContent value="gear" className="mt-0 flex-1 overflow-y-auto p-2">
+          {filteredAdventuringGear.length === 0 ? (
+            <p className="px-3 py-4 text-center text-sm text-muted-foreground">No gear found.</p>
+          ) : (
+            filteredAdventuringGear.map((item) => renderAddItemRow(item))
+          )}
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

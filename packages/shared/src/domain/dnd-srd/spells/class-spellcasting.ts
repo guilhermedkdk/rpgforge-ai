@@ -44,11 +44,11 @@ const DECLARES = String.raw`is\s+(?:your|the)\s+spellcasting\s+ability`;
 const ABILITY_PATTERNS: RegExp[] = [
   new RegExp(
     `Spellcasting Ability[:.]\\s*(${ABILITY_ALTERNATION})\\b[\\s\\S]{0,120}?${DECLARES}`,
-    'i',
+    'i'
   ),
   new RegExp(
     `Spellcasting Ability[\\s\\S]{0,80}?(${ABILITY_ALTERNATION})\\b[\\s\\S]{0,120}?${DECLARES}`,
-    'i',
+    'i'
   ),
   new RegExp(`\\b(${ABILITY_ALTERNATION})\\b\\s+${DECLARES}`, 'i'),
   new RegExp(`spellcasting\\s+ability\\s+is\\s*(${ABILITY_ALTERNATION})\\b`, 'i'),
@@ -61,7 +61,7 @@ const ABILITY_PATTERNS: RegExp[] = [
  */
 export function readSpellcastingAbility(
   feature: FeatureDetail | null | undefined,
-  fallbackDetails?: readonly FeatureDetail[],
+  fallbackDetails?: readonly FeatureDetail[]
 ): string {
   const sourceText =
     feature?.desc ??
@@ -110,7 +110,7 @@ function maxPreparedSpellLevelFromFeature(feature: FeatureDetail, level: number)
   for (let index = 0; index < SLOT_ORDINALS.length; index += 1) {
     const label = SLOT_ORDINALS[index];
     const table = tables.find(
-      (t) => t.label.toLowerCase().includes(label) && t.label.toLowerCase().includes('slot'),
+      (t) => t.label.toLowerCase().includes(label) && t.label.toLowerCase().includes('slot')
     );
     if (!table) continue;
     if (parseTableInt(getTableValueAtLevel(table.rows, level)) > 0) max = index + 1;
@@ -142,7 +142,7 @@ export interface CastingClass {
 /** The class that granted a feature by display name, for grants attached to a class-feature option. */
 function sourceClassIdOfFeature(
   details: readonly FeatureDetail[],
-  displayName: string,
+  displayName: string
 ): string | null {
   const target = displayName.trim().toLowerCase();
   const hit = details.find((f) => f.name.trim().toLowerCase() === target);
@@ -159,7 +159,7 @@ function sourceClassIdOfFeature(
  */
 export function getCastingClasses(
   data: CharacterFormData,
-  classItems: ReadonlyArray<RuleItemResponse>,
+  classItems: ReadonlyArray<RuleItemResponse>
 ): CastingClass[] {
   const entries = realClassEntries(data);
   const details = data.featureDetails ?? [];
@@ -194,7 +194,7 @@ export function getCastingClasses(
       feature,
       spellcastingAbility: readSpellcastingAbility(
         feature,
-        own.filter((f) => f.source === 'class'),
+        own.filter((f) => f.source === 'class')
       ),
       spellTagKey: spellClassTag(className),
       maxCantrips:
@@ -313,4 +313,15 @@ export function attributePickedSpells({
   }
 
   return { ownerByRow, pickedCantrips, pickedPrepared };
+}
+
+/** Spell save DC and attack bonus for one casting ability. */
+export function computeSpellcastingStats(
+  proficiencyBonus: number,
+  abilityModifier: number
+): { saveDc: number; attackBonus: number } {
+  return {
+    saveDc: 8 + proficiencyBonus + abilityModifier,
+    attackBonus: proficiencyBonus + abilityModifier,
+  };
 }

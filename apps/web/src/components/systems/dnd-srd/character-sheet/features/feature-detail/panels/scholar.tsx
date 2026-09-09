@@ -16,7 +16,7 @@ export function ScholarPanel({ data, onChange, skillsList }: ScholarPanelProps) 
   const proficientMap = data.skillProficiencies ?? {};
   const allowedSet = new Set<string>(SCHOLAR_ALLOWED_SKILL_KEYS);
   const scholarSkills = skillsList.filter(
-    (s) => allowedSet.has(s.key) && proficientMap[s.key] === true,
+    (s) => allowedSet.has(s.key) && proficientMap[s.key] === true
   );
   const current = data.scholarExpertiseSkillKey ?? null;
 

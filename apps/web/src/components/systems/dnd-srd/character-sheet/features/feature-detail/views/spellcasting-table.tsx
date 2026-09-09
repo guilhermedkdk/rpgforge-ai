@@ -39,10 +39,7 @@ export function SpellcastingTableView({ feat }: SpellcastingTableViewProps) {
   const narrowTableClass = 'mb-0! border-collapse w-auto!';
   const wideTableClass = 'w-full mb-0 border-collapse';
 
-  const renderLevelValueTable = (
-    rows: Array<{ level: number; value: string }>,
-    key: string,
-  ) => (
+  const renderLevelValueTable = (rows: Array<{ level: number; value: string }>, key: string) => (
     <div key={key} className="mt-1 mb-1 overflow-x-auto">
       <table className={narrowTableClass}>
         <thead>
@@ -70,10 +67,11 @@ export function SpellcastingTableView({ feat }: SpellcastingTableViewProps) {
   const slotsTbls = tableData.filter((t) => t.label.toLowerCase().includes('slots'));
   const preparedTbl = tableData.find((t) => t.label === 'Prepared Spells');
 
-  const getValueAtLevel = (rows: Array<{ level: number; value: string }>, level: number): string => {
-    const sorted = [...rows]
-      .filter((r) => r.level <= level)
-      .sort((a, b) => b.level - a.level);
+  const getValueAtLevel = (
+    rows: Array<{ level: number; value: string }>,
+    level: number
+  ): string => {
+    const sorted = [...rows].filter((r) => r.level <= level).sort((a, b) => b.level - a.level);
     return sorted[0]?.value ?? '—';
   };
 

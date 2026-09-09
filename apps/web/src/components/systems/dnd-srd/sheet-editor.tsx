@@ -23,6 +23,9 @@ import {
 import { CharacterSheet } from '@/components/systems/dnd-srd/character-sheet';
 import { useRuleLibrary } from './library/use-rule-library';
 import { useAllSpells } from './character-sheet/sections/spellcasting/hooks/use-all-spells';
+import { useAuthGate } from '@/contexts/auth-gate';
+import { useSessionDraft } from '@/hooks/use-session-draft';
+import { DRAFT_KEYS, takeSessionDraft } from '@/lib/session-draft';
 import { useCharacterFormState } from './hooks/use-character-form-state';
 import { useSheetDerivation } from './hooks/use-sheet-derivation';
 import { useSheetSaveFlow } from './hooks/use-sheet-save-flow';
@@ -89,6 +92,9 @@ function buildSkillChoicesResetPatch(
 // completed action instead of a page flash.
 const SAVE_CONFIRMATION_MS = 700;
 
+const SIGN_IN_REASON =
+  'Sua ficha continua aqui. Entre para salvá-la, e voltamos exatamente para este ponto.';
+
 export function SheetEditor({
   pack,
   onBack,
@@ -100,6 +106,11 @@ export function SheetEditor({
 }: SheetEditorProps) {
   const router = useRouter();
   const { data, setData, featsRef, recalc, handleChange } = useCharacterFormState();
+  const { requireAuth, promptSignIn } = useAuthGate();
+  // The save to replay if the API turns out to want a session.
+  const replayRef = useRef<(() => void) | null>(null);
+  // Declared up here because the draft restore below has to arm it before any edit happens.
+  const userInteractedRef = useRef(false);
 
   // Holds the "Salvo!" confirmation while the post-save redirect is pending.
   const [redirecting, setRedirecting] = useState(false);
@@ -248,6 +259,10 @@ export function SheetEditor({
       toolItemsByCategory,
       allSpells,
       itemIdByLookupKey,
+      onUnauthorized: () => {
+        const replay = replayRef.current;
+        if (replay) promptSignIn(replay, { reason: SIGN_IN_REASON });
+      },
     });
 
   const equipmentItemsLoading =
@@ -262,15 +277,27 @@ export function SheetEditor({
   const prevBackgroundIdForSkillsRef = useRef(data.backgroundRuleItemId ?? null);
   const hydratedDraftRef = useRef(false);
 
-  // Hydrate an in-memory AI draft once — same merge+derive path a saved sheet takes, minus the fetch.
+  // Hydrate once — same merge+derive path a saved sheet takes, minus the fetch.
+  //
+  // A stored draft outranks `initialData`: it is that same sheet plus whatever was changed after the
+  // wizard handed it over, and it is what a sign-in round trip left behind. It restores before the
+  // rule catalog resolves, so the sheet never paints empty first.
   useEffect(() => {
-    if (!initialData || hydratedDraftRef.current) return;
+    if (hydratedDraftRef.current) return;
+    const stored = takeSessionDraft<CharacterFormData>(DRAFT_KEYS.createManual);
+    const source =
+      stored ??
+      (initialData
+        ? mergeCharacterFormDataFromApi(initialData, PERSISTED_CHARACTER_SCHEMA_VERSION)
+        : null);
+    if (!source) return;
     hydratedDraftRef.current = true;
-    const merged = mergeCharacterFormDataFromApi(initialData, PERSISTED_CHARACTER_SCHEMA_VERSION);
-    prevClassIdForSpellsRef.current = merged.classRuleItemId ?? null;
-    prevBackgroundIdForSkillsRef.current = merged.backgroundRuleItemId ?? null;
+    // Without this a restored draft counts as untouched, and leaving the page would wipe it.
+    if (stored) userInteractedRef.current = true;
+    prevClassIdForSpellsRef.current = source.classRuleItemId ?? null;
+    prevBackgroundIdForSkillsRef.current = source.backgroundRuleItemId ?? null;
     requestRederive();
-    recalc(() => merged);
+    recalc(() => source);
   }, [initialData, recalc, requestRederive]);
 
   // Clear manually-selected spells, slots and skill choices when the class itself changes. The
@@ -324,7 +351,6 @@ export function SheetEditor({
   // A draft only exists in memory: leaving the page throws it away (an AI draft cost a model call to
   // produce), so the guard is armed as soon as there is something to lose and disarmed once saved.
   const [savedOk, setSavedOk] = useState(false);
-  const userInteractedRef = useRef(false);
   const hasDraft = !savedOk && (initialData != null || userInteractedRef.current);
   const guard = useUnsavedChangesGuard(hasDraft);
 
@@ -335,7 +361,7 @@ export function SheetEditor({
 
   // Hold the "Salvo!" confirmation for a beat, then open the saved sheet (the success toast carries
   // over to the destination).
-  const handleSave = async () => {
+  const runSave = async () => {
     const id = await validateAndSave();
     if (!id) return;
     setSavedOk(true);
@@ -343,11 +369,21 @@ export function SheetEditor({
     redirectTimerRef.current = setTimeout(() => router.push(`/sheets/${id}`), SAVE_CONFIRMATION_MS);
   };
 
+  // Asks for the session BEFORE validating and posting; the 401 path stays as the safety net for a
+  // session that expired while the sheet sat open.
+  const handleSave = () => {
+    const replay = () => void runSave();
+    replayRef.current = replay;
+    requireAuth(replay, { reason: SIGN_IN_REASON });
+  };
+
+  useSessionDraft<CharacterFormData>(DRAFT_KEYS.createManual, () => data);
+
   // The bar itself belongs to the create page, which keeps it mounted across every step; this only
   // supplies what it shows. Inline handlers are fine here: the slot keeps them in a ref.
   useStepActions({
     onBack: () => guard.guard(onBack),
-    onContinue: () => void handleSave(),
+    onContinue: handleSave,
     canContinue: !catalogLoading,
     loading: saving || redirecting,
     continueLabel: saved || redirecting ? 'Salvo!' : 'Salvar Ficha',

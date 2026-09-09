@@ -46,7 +46,9 @@ export function SpellMasterySpellPickerPanel({
       const fromLevel = data.wizardSpellbookByLevel?.[lvl] ?? [];
       const fromScroll = data.wizardSpellbookByScrollByLevel?.[lvl] ?? [];
       for (const n of [...fromLevel, ...fromScroll]) {
-        const t = String(n ?? '').trim().toLowerCase();
+        const t = String(n ?? '')
+          .trim()
+          .toLowerCase();
         if (t) out[lvl].add(t);
       }
     }
@@ -55,8 +57,10 @@ export function SpellMasterySpellPickerPanel({
 
   const spellbookKey = React.useMemo(
     () =>
-      SPELL_MASTERY_LEVELS.map((lvl) => [...spellbookNamesByLevel[lvl]].sort().join('|')).join('\n'),
-    [spellbookNamesByLevel],
+      SPELL_MASTERY_LEVELS.map((lvl) => [...spellbookNamesByLevel[lvl]].sort().join('|')).join(
+        '\n'
+      ),
+    [spellbookNamesByLevel]
   );
 
   const spellsForLevel = React.useMemo(() => {
@@ -69,7 +73,7 @@ export function SpellMasterySpellPickerPanel({
               .filter(
                 (s) =>
                   ruleItemSpellLevel(s) === lvl &&
-                  spellbookNamesByLevel[lvl].has(s.name.trim().toLowerCase()),
+                  spellbookNamesByLevel[lvl].has(s.name.trim().toLowerCase())
               )
               .sort((a, b) => a.name.localeCompare(b.name));
     }

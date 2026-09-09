@@ -27,9 +27,8 @@ const EMPTY_PICK: FightingStylePick = {
 };
 
 /** Bucket key for a Fighting Style instance: the granting class, `''` on pre-multiclass data. */
-export const fightingStyleClassKey = (
-  feature: { sourceClassId?: string } | undefined
-): string => feature?.sourceClassId ?? '';
+export const fightingStyleClassKey = (feature: { sourceClassId?: string } | undefined): string =>
+  feature?.sourceClassId ?? '';
 
 /** This class's pick; a legacy bare bucket answers while it is the only one stored. */
 export function getFightingStylePick(

@@ -7,9 +7,7 @@ export function isShieldItem(item: RuleItemResponse): boolean {
   const categoryLower = armorCategory.toLowerCase();
   const nameLower = (item.name ?? '').toLowerCase();
   return (
-    categoryLower.includes('shield') ||
-    nameLower.includes('shield') ||
-    nameLower.includes('escudo')
+    categoryLower.includes('shield') || nameLower.includes('shield') || nameLower.includes('escudo')
   );
 }
 

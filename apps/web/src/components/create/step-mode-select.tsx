@@ -5,7 +5,7 @@ import {
   BadgeCheck,
   BookOpen,
   Eye,
-  Flame,
+  Split,
   PenLine,
   ShieldCheck,
   SlidersHorizontal,
@@ -58,7 +58,7 @@ export const StepModeSelect = ({ selectedMode, onSelect }: StepModeSelectProps) 
     <>
       <div className="mb-8 text-center">
         <div className="mb-4 flex justify-center">
-          <Flame className="h-12 w-12 text-primary" aria-hidden="true" />
+          <Split className="h-12 w-12 text-primary" aria-hidden="true" />
         </div>
         <h1 className="font-serif text-3xl font-bold text-foreground text-balance">
           Como você quer forjar?

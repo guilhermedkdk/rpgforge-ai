@@ -147,9 +147,7 @@ export function getClassSkillBudgets(
   const exempt = getBonusClassSkillBudgetExemptKeys(data);
   const proficient = data.skillProficiencies ?? {};
   const unassigned = new Set(
-    allKeys.filter(
-      (k) => proficient[k] && !backgroundSkillKeys.includes(k) && !exempt.includes(k)
-    )
+    allKeys.filter((k) => proficient[k] && !backgroundSkillKeys.includes(k) && !exempt.includes(k))
   );
 
   const ordered = [...raw].sort((a, b) => a.optionKeys.length - b.optionKeys.length);

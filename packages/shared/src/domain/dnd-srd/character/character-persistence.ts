@@ -170,7 +170,9 @@ export function flattenPersistedSheet(raw: unknown): Partial<CharacterFormData> 
     // is write-only for them, so nothing is restored here.
     if (Array.isArray(proficiencies.languages)) {
       out.standardLanguageNames = (proficiencies.languages as unknown[])
-        .map((l) => (l && typeof l === 'object' ? String((l as { name?: unknown }).name ?? '') : ''))
+        .map((l) =>
+          l && typeof l === 'object' ? String((l as { name?: unknown }).name ?? '') : ''
+        )
         .filter(Boolean);
     }
     // Tools are stored flat (no "Choose…" slot key); stash them so the derivation step can

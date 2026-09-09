@@ -7,16 +7,6 @@ export const ATTRIBUTES = [
   'Charisma',
 ] as const;
 
-/** Ability key from API (raw/normalized) -> attribute name used in form */
-export const ABILITY_KEY_TO_ATTR: Record<string, string> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
-};
-
 /** Temporary hit points field max (clamp on change, same pattern as current HP). */
 export const SHEET_TEMPORARY_HP_INPUT_MAX = 999;
 

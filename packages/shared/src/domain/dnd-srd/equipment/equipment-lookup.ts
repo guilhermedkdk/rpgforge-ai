@@ -145,7 +145,9 @@ export function resolveEquipmentItemId(
     const id = lookup.get(k);
     if (id) return id;
   }
-  const stripped = String(lineName).replace(/\s+of\s+your\s+choice\s*$/i, '').trim();
+  const stripped = String(lineName)
+    .replace(/\s+of\s+your\s+choice\s*$/i, '')
+    .trim();
   if (stripped !== lineName) {
     for (const k of canonicalEquipmentLookupKeys(stripped)) {
       const id = lookup.get(k);
@@ -166,13 +168,11 @@ export function resolveEquipmentItemId(
 function parseToolChoiceCategoryTags(key: string): string[] | null {
   const m = key.match(/^Choose\s+(?:\d+|one)\s+(?:(?:kind|type)\s+of\s+)?(.+)$/i);
   if (!m) return null;
-  return m[1]
-    .split(/\s+or\s+/i)
-    .map((p) => {
-      const n = p.trim().toLowerCase().replace(/[‘’']/g, "'").replace(/\s+/g, ' ');
-      const slug = TOOL_CATEGORY_TO_TAG[n] ?? n.replace(/\s+/g, '-').replace(/'/g, '');
-      return itemCategoryTag(slug);
-    });
+  return m[1].split(/\s+or\s+/i).map((p) => {
+    const n = p.trim().toLowerCase().replace(/[‘’']/g, "'").replace(/\s+/g, ' ');
+    const slug = TOOL_CATEGORY_TO_TAG[n] ?? n.replace(/\s+/g, '-').replace(/'/g, '');
+    return itemCategoryTag(slug);
+  });
 }
 
 /**

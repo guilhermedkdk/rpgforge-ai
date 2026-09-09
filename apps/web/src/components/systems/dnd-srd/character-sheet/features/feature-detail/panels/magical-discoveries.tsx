@@ -13,7 +13,11 @@ import {
 import { useAllSpells } from '../../../sections/spellcasting/hooks/use-all-spells';
 import { SpellAccordionRow } from '../shared/spell-accordion-row';
 import { SelectionSection } from '../shared/selection';
-import { SpellLevelAccordion, SpellPickerScroll, useSpellRowExpansion } from '../shared/spell-picker';
+import {
+  SpellLevelAccordion,
+  SpellPickerScroll,
+  useSpellRowExpansion,
+} from '../shared/spell-picker';
 
 const MAGICAL_DISCOVERIES_LISTS = ['Cleric', 'Druid', 'Wizard'] as const;
 const MAGICAL_DISCOVERIES_PICKS = 2;
@@ -59,7 +63,7 @@ export function MagicalDiscoveriesPanel({
   const ensureSlots = (d: CharacterFormData): (string | null)[] =>
     Array.from(
       { length: MAGICAL_DISCOVERIES_PICKS },
-      (_, i) => (d.magicalDiscoveriesSpellNames ?? [])[i] ?? null,
+      (_, i) => (d.magicalDiscoveriesSpellNames ?? [])[i] ?? null
     );
 
   const bySlot = ensureSlots(data);
@@ -67,14 +71,24 @@ export function MagicalDiscoveriesPanel({
 
   const spellNameSelected = (spellName: string) => {
     const k = spellName.trim().toLowerCase();
-    return bySlot.some((x) => String(x ?? '').trim().toLowerCase() === k);
+    return bySlot.some(
+      (x) =>
+        String(x ?? '')
+          .trim()
+          .toLowerCase() === k
+    );
   };
 
   const removeSpellFromSelection = (spellName: string) => {
     const next = ensureSlots(data);
     const k = spellName.trim().toLowerCase();
     for (let i = 0; i < MAGICAL_DISCOVERIES_PICKS; i++) {
-      if (String(next[i] ?? '').trim().toLowerCase() === k) next[i] = null;
+      if (
+        String(next[i] ?? '')
+          .trim()
+          .toLowerCase() === k
+      )
+        next[i] = null;
     }
     onChange({ ...data, magicalDiscoveriesSpellNames: next });
   };
@@ -84,7 +98,15 @@ export function MagicalDiscoveriesPanel({
     if (!trimmed) return;
     const k = trimmed.toLowerCase();
     const next = ensureSlots(data);
-    if (next.some((x) => String(x ?? '').trim().toLowerCase() === k)) return;
+    if (
+      next.some(
+        (x) =>
+          String(x ?? '')
+            .trim()
+            .toLowerCase() === k
+      )
+    )
+      return;
     const firstEmpty = next.findIndex((x) => !String(x ?? '').trim());
     if (firstEmpty < 0) return;
     next[firstEmpty] = trimmed;

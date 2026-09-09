@@ -7,8 +7,7 @@ interface LevelValueTableProps {
   rows: LevelValueRow[];
 }
 
-const thClass =
-  'border border-border px-2 py-1 bg-muted text-left text-foreground font-medium';
+const thClass = 'border border-border px-2 py-1 bg-muted text-left text-foreground font-medium';
 const tdClass = 'border border-border px-2 py-1 align-top text-muted-foreground';
 
 /** Shared narrow Level/Value table used by feature class-table columns. */

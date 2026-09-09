@@ -21,7 +21,12 @@ export const TOOL_CATEGORY_TO_TAG: Record<string, string> = {
 export const itemCategoryTag = (slug: string): string => `item:category:${slug}`;
 
 /** Tool-category slugs whose items make up the "Choose N tools" catalog. */
-export const TOOL_CATEGORY_SLUGS = ['gaming-set', 'musical-instrument', 'artisan', 'tools'] as const;
+export const TOOL_CATEGORY_SLUGS = [
+  'gaming-set',
+  'musical-instrument',
+  'artisan',
+  'tools',
+] as const;
 
 /** Full `item:category:*` tag keys for every tool category (DB-query filter for the tool catalog). */
 export const TOOL_CATEGORY_TAGS: string[] = TOOL_CATEGORY_SLUGS.map(itemCategoryTag);
@@ -33,12 +38,7 @@ export type ParsedToolChoose = {
 };
 
 function phraseToToolCategorySlug(phrase: string): string | null {
-  const normalized = phrase
-    .trim()
-    .toLowerCase()
-    .replace(/[‘’']/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalized = phrase.trim().toLowerCase().replace(/[‘’']/g, "'").replace(/\s+/g, ' ').trim();
   if (!normalized) return null;
   if (TOOL_CATEGORY_TO_TAG[normalized]) return TOOL_CATEGORY_TO_TAG[normalized];
   return normalized.replace(/\s+/g, '-').replace(/'/g, '') || null;

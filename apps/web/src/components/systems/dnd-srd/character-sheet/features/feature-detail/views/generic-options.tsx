@@ -1,7 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { isThievesCantFeature, isTypeChoiceSubclassFeatureName, splitDeftExplorerDesc, splitDescAtFirstTable, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  isThievesCantFeature,
+  isTypeChoiceSubclassFeatureName,
+  splitDeftExplorerDesc,
+  splitDescAtFirstTable,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { SubclassTypeChoicePanel } from '../panels/subclass-type-choice';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,10 +30,7 @@ import {
   featureSelectionRowClass,
 } from '../shared/feature-option-row';
 
-const READ_ONLY_OPTION_NAMES = new Set([
-  'improved blessed strikes',
-  'improved elemental fury',
-]);
+const READ_ONLY_OPTION_NAMES = new Set(['improved blessed strikes', 'improved elemental fury']);
 
 const SKIP_INLINE_OPTION_NAMES = new Set([
   'keen senses',
@@ -147,9 +151,7 @@ export function GenericOptionsView({
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{intro}</ReactMarkdown>
             </div>
           )}
-          <div
-            className={cn('flex flex-col gap-4', intro.length > 0 && SELECTION_INLINE_TOP_RULE)}
-          >
+          <div className={cn('flex flex-col gap-4', intro.length > 0 && SELECTION_INLINE_TOP_RULE)}>
             <div
               className="max-h-80 space-y-2 overflow-y-auto pb-2 pr-1"
               role="list"
@@ -161,7 +163,7 @@ export function GenericOptionsView({
                 const { isSelected, lockedByOther, select } = optionSelectionState(
                   baseFeatureName,
                   featureName,
-                  option.key,
+                  option.key
                 );
                 const isDisabled = isReadOnly || lockedByOther;
                 return (
@@ -274,12 +276,12 @@ export function GenericOptionsView({
     if (optionBelowTitle && rawLower.includes(optionBelowTitle.toLowerCase())) {
       const re = new RegExp(
         `\\*{0,2}\\s*${escapeRegExp(optionBelowTitle)}\\.?\\s*\\*{0,2}[\\s\\S]*$`,
-        'i',
+        'i'
       );
       const m = re.exec(rawDesc);
       const cutIndex = m && m.index != null ? m.index : -1;
       const base = cutIndex >= 0 ? rawDesc.slice(0, cutIndex).trim() : rawDesc.trim();
-      return (base.replace(/\*+\s*$/, '').trim()) || rawDesc;
+      return base.replace(/\*+\s*$/, '').trim() || rawDesc;
     }
     return rawDesc || 'No description available.';
   })();
@@ -316,9 +318,7 @@ export function GenericOptionsView({
               className={cn(featureSelectionRowClass(lockedByOther), 'mb-2 last:mb-0 w-full')}
             >
               <span className={featureSelectionCheckboxClass(isSelected)} aria-hidden>
-                {isSelected ? (
-                  <Check className="h-3 w-3" strokeWidth={2.5} />
-                ) : null}
+                {isSelected ? <Check className="h-3 w-3" strokeWidth={2.5} /> : null}
               </span>
               <span className="flex min-w-0 flex-1 items-center text-left text-xs font-medium leading-4 text-foreground">
                 {children}
@@ -343,12 +343,16 @@ export function GenericOptionsView({
           const firstCellText = getTextContent(firstChild);
           const isHeaderRow = React.isValidElement(firstChild) && firstChild.type === 'th';
           const opt = featureOpts.find(
-            (o) => firstCellText.trim().toLowerCase() === o.label.trim().toLowerCase(),
+            (o) => firstCellText.trim().toLowerCase() === o.label.trim().toLowerCase()
           );
           const selectionColClass =
             'w-10 min-w-10 max-w-10 border border-border align-middle text-center py-2 px-1';
           const emptyColCell = isHeaderRow ? (
-            <th className={cn(selectionColClass, 'bg-muted/50')} scope="col" aria-label="Selection" />
+            <th
+              className={cn(selectionColClass, 'bg-muted/50')}
+              scope="col"
+              aria-label="Selection"
+            />
           ) : (
             <td className={selectionColClass} />
           );
@@ -365,9 +369,7 @@ export function GenericOptionsView({
             <td className="relative w-10 min-w-10 max-w-10 border border-border p-0 align-middle">
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className={featureSelectionCheckboxClass(isSelected)} aria-hidden>
-                  {isSelected ? (
-                    <Check className="h-3 w-3" strokeWidth={2.5} />
-                  ) : null}
+                  {isSelected ? <Check className="h-3 w-3" strokeWidth={2.5} /> : null}
                 </span>
               </div>
               <span className="invisible inline-block w-px select-none py-2" aria-hidden>
@@ -393,7 +395,7 @@ export function GenericOptionsView({
                   ? 'cursor-not-allowed opacity-60'
                   : isSelected
                     ? 'cursor-pointer bg-primary/10'
-                    : 'cursor-pointer hover:bg-muted/40',
+                    : 'cursor-pointer hover:bg-muted/40'
               )}
             >
               {checkboxCell}

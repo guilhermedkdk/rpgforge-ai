@@ -18,14 +18,21 @@ import type { CharacterFormData } from './character-form-data';
 
 /** One unmet ability requirement, carrying the class that imposes it so the UI can explain why. */
 export interface MulticlassPrerequisiteMiss {
-  /** Full ability name, e.g. 'Strength'. For an 'any' requirement, the best candidate. */
+  /**
+   * EVERY primary ability of the class, in pack order, whatever `mode` says. The UI states the whole
+   * requirement: naming only the ability that fell short made a Monk read as "Needs Dexterity 13"
+   * when it demands Dexterity AND Wisdom.
+   */
+  abilities: string[];
+  /** `any`: 13 in ONE of `abilities` (Fighter). `all`: 13 in each of them (Monk). */
+  mode: 'any' | 'all';
+  /** Where to point the player: the closest ability for `any`, the lowest one for `all`. */
   ability: string;
-  required: number;
+  /** Score of `ability` on the sheet. */
   actual: number;
+  required: number;
   /** Class whose primary ability this is (the new one, or one already on the sheet). */
   className: string;
-  /** True when 13 in ANY of `alternatives` satisfies it (Fighter: Strength or Dexterity). */
-  alternatives: string[];
 }
 
 export interface MulticlassPrerequisiteResult {
@@ -38,7 +45,7 @@ const scoreOf = (attributes: Record<string, number> | undefined, ability: string
 
 /** The class's hit die as `d10`, read from `normalized.hitPoints`; empty when absent. */
 export function getClassHitDie(
-  classItem: Pick<RuleItemResponse, 'normalized'> | null | undefined,
+  classItem: Pick<RuleItemResponse, 'normalized'> | null | undefined
 ): string {
   const hp = (classItem?.normalized as { hitPoints?: { hitDiceName?: string } } | undefined)
     ?.hitPoints;
@@ -48,7 +55,7 @@ export function getClassHitDie(
 
 /** Primary abilities for a class; null when the pack has no multiclassing block for it. */
 export function getClassPrimaryAbilities(
-  classItem: Pick<RuleItemResponse, 'normalized'> | null | undefined,
+  classItem: Pick<RuleItemResponse, 'normalized'> | null | undefined
 ): MulticlassPrimaryAbilities | null {
   if (!classItem) return null;
   return readClassMulticlassing(classItem.normalized)?.primaryAbilities ?? null;
@@ -56,7 +63,7 @@ export function getClassPrimaryAbilities(
 
 function checkOne(
   attributes: Record<string, number> | undefined,
-  classItem: RuleItemResponse,
+  classItem: RuleItemResponse
 ): MulticlassPrerequisiteMiss | null {
   const primary = getClassPrimaryAbilities(classItem);
   // No data for this class means no gate: a missing pack field must never block a legal build.
@@ -78,11 +85,12 @@ function checkOne(
   const pick = primary.mode === 'any' ? focus : worst;
 
   return {
+    abilities: primary.abilities,
+    mode: primary.mode,
     ability: pick.ability,
-    required: MULTICLASS_PREREQUISITE_SCORE,
     actual: pick.actual,
+    required: MULTICLASS_PREREQUISITE_SCORE,
     className: classItem.name,
-    alternatives: primary.mode === 'any' ? primary.abilities : [],
   };
 }
 
@@ -134,7 +142,7 @@ export function getMulticlassCombinationErrors(input: {
  */
 export function getSheetMulticlassPrerequisiteMisses(
   data: CharacterFormData,
-  classes: RuleItemResponse[],
+  classes: RuleItemResponse[]
 ): MulticlassPrerequisiteMiss[] {
   const entries = realClassEntries(data);
   if (entries.length <= 1) return [];
@@ -149,18 +157,15 @@ export function getSheetMulticlassPrerequisiteMisses(
 }
 
 /**
- * Which classes have to leave the sheet for the combination to be legal again.
+ * Which classes have to leave for the combination to be legal again.
  *
- * The SRD checks BOTH sides, so the class that FAILS is often the initial one, and that one cannot
- * be dropped: it grants the saving throws, the full proficiencies and the starting equipment. With a
- * single class there is no multiclass requirement at all, so removing the OTHERS is what makes an
- * initial-class miss legal. Hence: drop the failing multiclassed entries first (last one first, the
- * most recent decision), then keep dropping from the end until nothing fails. Never index 0, and the
- * loop always terminates because one class can never miss.
+ * The failing class is often the INITIAL one, which cannot be dropped: it grants the saving throws,
+ * proficiencies and starting equipment. With a single class there is no requirement at all, so
+ * dropping the others is what makes an initial-class miss legal. Never index 0.
  */
 export function planMulticlassPrerequisiteRemovals(
   data: CharacterFormData,
-  classes: RuleItemResponse[],
+  classes: RuleItemResponse[]
 ): ClassEntry[] {
   const attributes = getCharacterAbilityScores(data);
   const byId = new Map(classes.map((c) => [c.id, c]));

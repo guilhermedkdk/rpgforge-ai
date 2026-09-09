@@ -16,7 +16,11 @@ import {
 import { useAllSpells } from '../../../sections/spellcasting/hooks/use-all-spells';
 import { SpellAccordionRow } from '../shared/spell-accordion-row';
 import { SelectionSection } from '../shared/selection';
-import { SpellLevelAccordion, SpellPickerScroll, useSpellRowExpansion } from '../shared/spell-picker';
+import {
+  SpellLevelAccordion,
+  SpellPickerScroll,
+  useSpellRowExpansion,
+} from '../shared/spell-picker';
 
 const EVOCATION_SCHOOL_TAG = 'spell:school:evocation';
 

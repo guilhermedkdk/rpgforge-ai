@@ -124,12 +124,12 @@ export function SpellPickerDialog({
               />
             </div>
 
-            {spellsLoading && (
-              <LoadingState inline className="shrink-0 justify-center py-8" />
-            )}
+            {spellsLoading && <LoadingState inline className="shrink-0 justify-center py-8" />}
 
             {!spellsLoading && filtered.length === 0 && (
-              <div className="shrink-0 py-6 text-center text-muted-foreground">No spells found.</div>
+              <div className="shrink-0 py-6 text-center text-muted-foreground">
+                No spells found.
+              </div>
             )}
 
             {!spellsLoading && filtered.length > 0 && (
@@ -160,9 +160,7 @@ export function SpellPickerDialog({
                               {spell.name}
                             </span>
                             {school && <span className={spellChipClass}>{school}</span>}
-                            {concentration && (
-                              <span className={spellChipClass}>Concentration</span>
-                            )}
+                            {concentration && <span className={spellChipClass}>Concentration</span>}
                             {ritual && <span className={spellChipClass}>Ritual</span>}
                           </div>
                         </div>

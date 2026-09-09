@@ -10,7 +10,6 @@ import { persistedCharacterDataSchema } from '@rpgforce-ai/shared';
 // The API's 400 body enumerates every pending choice — dev-facing detail. It is never rendered:
 // an incomplete sheet is surfaced by `onValidationRejected` (red fields + one short toast).
 const saveErrorMessage = (e: unknown): string => {
-  if (isAxiosError(e) && e.response?.status === 401) return 'Faça login para salvar a ficha.';
   if (isAxiosError(e) && e.response?.status === 404) return 'Esta ficha foi excluída.';
   if (isAxiosError(e) && e.response?.status === 400) return 'Ficha incompleta ou inválida.';
   return 'Não foi possível salvar a ficha.';
@@ -30,6 +29,11 @@ interface UseSaveSheetOptions {
    * caller can show its own inline field highlighting rather than a message.
    */
   onValidationRejected?: () => void;
+  /**
+   * Called instead of setting `saveError` when the API refuses for lack of a session, so the caller
+   * can raise the sign-in dialog and replay the save with the sheet still on screen.
+   */
+  onUnauthorized?: () => void;
 }
 
 /**
@@ -37,10 +41,15 @@ interface UseSaveSheetOptions {
  * success toast, sheets-list invalidation and the transient "Salvo!" flash.
  * Returns the sheet id on success (new id when created), null on failure.
  */
-export const useSaveSheet = ({ onValidationRejected }: UseSaveSheetOptions = {}) => {
+export const useSaveSheet = ({
+  onValidationRejected,
+  onUnauthorized,
+}: UseSaveSheetOptions = {}) => {
   const queryClient = useQueryClient();
   const onValidationRejectedRef = useRef(onValidationRejected);
   onValidationRejectedRef.current = onValidationRejected;
+  const onUnauthorizedRef = useRef(onUnauthorized);
+  onUnauthorizedRef.current = onUnauthorized;
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -87,6 +96,11 @@ export const useSaveSheet = ({ onValidationRejected }: UseSaveSheetOptions = {})
         if (status === 400 && onValidationRejectedRef.current) {
           setSaveError(null);
           onValidationRejectedRef.current();
+          return null;
+        }
+        if (status === 401 && onUnauthorizedRef.current) {
+          setSaveError(null);
+          onUnauthorizedRef.current();
           return null;
         }
         setSaveError(saveErrorMessage(e));

@@ -7,6 +7,7 @@ import {
   type PackResponse,
   type RuleItemResponse,
   type CharacterSheetWithRulesResponse,
+  type PublicSheetWithRulesResponse,
 } from '@rpgforce-ai/shared';
 import type { ComponentType, ReactNode } from 'react';
 import { DndClassEmblem } from './dnd-srd/art/class-emblems';
@@ -64,6 +65,8 @@ export interface SystemEntry {
   renderSheetManager: (
     props: SheetManagerBaseProps & { data: CharacterSheetWithRulesResponse }
   ) => ReactNode;
+  /** The published sheet page: the same sheet, read-only, for anyone. */
+  renderPublicSheet: (props: { data: PublicSheetWithRulesResponse }) => ReactNode;
   editor: ComponentType<SheetEditorBaseProps>;
   library: ComponentType<LibraryBrowserBaseProps>;
   libraryItem: ComponentType<LibraryItemBaseProps>;
@@ -76,6 +79,11 @@ export interface SystemEntry {
 const DndSrdSheetManager = dynamic(
   () => import('./dnd-srd/sheet-manager').then((m) => ({ default: m.SheetManager })),
   { ssr: false }
+);
+
+const DndSrdPublicSheet = dynamic(
+  () => import('./dnd-srd/public-sheet-view').then((m) => ({ default: m.PublicSheetView })),
+  { ssr: false, loading: () => <LoadingState /> }
 );
 
 const DndSrdSheetEditor = dynamic(
@@ -106,6 +114,19 @@ export const systemRegistry: Record<string, SystemEntry> = {
       <DndSrdSheetManager
         sheetId={sheetId}
         onBack={onBack}
+        pack={data.pack}
+        initialData={mergeCharacterFormDataFromApi(data.sheet.data, data.sheet.schemaVersion)}
+        initialIsPublic={data.sheet.isPublic}
+        preloadedRuleItems={{
+          byId: data.ruleItems,
+          abilities: data.abilities,
+          languages: data.languages,
+          toolItems: data.toolItems,
+        }}
+      />
+    ),
+    renderPublicSheet: ({ data }) => (
+      <DndSrdPublicSheet
         pack={data.pack}
         initialData={mergeCharacterFormDataFromApi(data.sheet.data, data.sheet.schemaVersion)}
         preloadedRuleItems={{

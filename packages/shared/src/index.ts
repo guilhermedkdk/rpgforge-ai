@@ -1,4 +1,7 @@
 export * from './types/auth';
+export * from './types/profile-avatar';
+export * from './types/oauth';
+export * from './types/admin';
 export * from './types/character-sheet';
 export * from './types/pack';
 export * from './types/ruleitem';

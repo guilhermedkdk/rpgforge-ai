@@ -24,13 +24,15 @@ describe('assembleArmorClass', () => {
   });
 
   it('uses the equipped armor AC and ignores the unarmored base', () => {
-    expect(assembleArmorClass({ ...base, dexMod: 3, armorAc: 16, hasArmorEquipped: true })).toBe(16);
+    expect(assembleArmorClass({ ...base, dexMod: 3, armorAc: 16, hasArmorEquipped: true })).toBe(
+      16
+    );
   });
 
   it('Unarmored Defense with Constitution (Barbarian): 10 + Dex + Con', () => {
-    expect(
-      assembleArmorClass({ ...base, dexMod: 2, conMod: 3, hasUnarmoredDefense: true }),
-    ).toBe(15);
+    expect(assembleArmorClass({ ...base, dexMod: 2, conMod: 3, hasUnarmoredDefense: true })).toBe(
+      15
+    );
   });
 
   it('Unarmored Defense with Wisdom (Monk): 10 + Dex + Wis', () => {
@@ -42,7 +44,7 @@ describe('assembleArmorClass', () => {
         wisMod: 4,
         hasUnarmoredDefense: true,
         unarmoredDefenseUsesWis: true,
-      }),
+      })
     ).toBe(16);
   });
 
@@ -56,25 +58,36 @@ describe('assembleArmorClass', () => {
         unarmoredDefenseRequiresNoShield: true,
         hasShieldEquipped: true,
         shieldBonusApplies: true,
-      }),
+      })
     ).toBe(14); // 10 + Dex(2) + shield(2); no Con because the shield disables it
   });
 
   it('Draconic Resilience takes the best-of unarmored base (10 + Dex + Cha)', () => {
-    expect(
-      assembleArmorClass({ ...base, dexMod: 1, chaMod: 4, hasDraconicResilience: true }),
-    ).toBe(15); // max(10+1, 10+1+4)
+    expect(assembleArmorClass({ ...base, dexMod: 1, chaMod: 4, hasDraconicResilience: true })).toBe(
+      15
+    ); // max(10+1, 10+1+4)
   });
 
   it('proficient shield adds +2 on top of any base', () => {
     expect(
-      assembleArmorClass({ ...base, dexMod: 2, armorAc: 14, hasArmorEquipped: true, shieldBonusApplies: true }),
+      assembleArmorClass({
+        ...base,
+        dexMod: 2,
+        armorAc: 14,
+        hasArmorEquipped: true,
+        shieldBonusApplies: true,
+      })
     ).toBe(16);
   });
 
   it('Defense fighting style adds +1', () => {
     expect(
-      assembleArmorClass({ ...base, armorAc: 15, hasArmorEquipped: true, defenseStyleApplies: true }),
+      assembleArmorClass({
+        ...base,
+        armorAc: 15,
+        hasArmorEquipped: true,
+        defenseStyleApplies: true,
+      })
     ).toBe(16);
   });
 

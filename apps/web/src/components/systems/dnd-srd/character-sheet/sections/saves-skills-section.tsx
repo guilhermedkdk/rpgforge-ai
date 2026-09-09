@@ -11,13 +11,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  calcModifier,
+  computeSavingThrowRows,
+  computeSkillRows,
   getBonusClassSkillBudgetExemptKeys,
   getClassSkillBudgets,
-  getEffectiveAttribute,
-  getEffectiveExpertiseSkillKeys,
-  getOptionWisdomCheckBonusSkillKeys,
-  isJackOfAllTradesFeature,
 } from '@rpgforce-ai/shared';
 import { useCharacterComputed } from '../context';
 import { Section } from '../ui/section';
@@ -26,7 +23,7 @@ import {
   featureSelectionRowClass,
 } from '../features/feature-detail/shared/feature-option-row';
 import { toggleMulticlassClassSkill, updateClassSkillSelection } from '../helpers';
-import { ATTRIBUTES, ABILITY_KEY_TO_ATTR, needsChoiceHighlight } from '../constants';
+import { needsChoiceHighlight } from '../constants';
 import type { CharacterFormData } from '../types';
 import type { PendingFlags } from '../pending-flags';
 
@@ -58,36 +55,13 @@ export function SavesSkillsSection({
   locked = false,
   pendingFlags,
 }: SavesSkillsSectionProps) {
-  const {
-    proficiencyBonus,
-    combinedAbilityBonuses,
-    effectiveEpicBoonAbilityScore,
-    featureDetails,
-    skillsList,
-    hasPrimalChampion,
-    hasBodyAndMind,
-    auraOfProtectionBonus,
-    abilitiesLoading,
-  } = useCharacterComputed();
+  const { proficiencyBonus, featureDetails, skillsList, abilitiesLoading } = useCharacterComputed();
 
   const [classSkillsOpen, setClassSkillsOpen] = useState(false);
 
-  const hasJackOfAllTrades = featureDetails.some(
-    (f) => f.source === 'class' && isJackOfAllTradesFeature(f)
-  );
-
-  // Class-feature options that add +WIS (min +1) to certain Intelligence checks: Cleric Thaumaturge
-  // (Arcana/Religion) and Druid Magician (Arcana/Nature). Same Wisdom score drives both.
-  const wisCheckBonusSkillKeys = getOptionWisdomCheckBonusSkillKeys(data);
-  const optionWisScore = getEffectiveAttribute(
-    data.attributes,
-    combinedAbilityBonuses,
-    'Wisdom',
-    effectiveEpicBoonAbilityScore,
-    hasPrimalChampion,
-    hasBodyAndMind,
-    data.grapplerAbilityScore
-  );
+  // Same shared math the PDF export renders, so a printed sheet can't disagree with this one.
+  const savingThrowRows = computeSavingThrowRows({ data, featureDetails, proficiencyBonus });
+  const skillRows = computeSkillRows({ data, proficiencyBonus, skillsList });
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:h-full">
@@ -106,41 +80,20 @@ export function SavesSkillsSection({
         className="min-w-0 w-full"
       >
         <div className="space-y-2" role="list" aria-label="Saving throws">
-          {ATTRIBUTES.map((attr) => {
-            const effectiveAttr = getEffectiveAttribute(
-              data.attributes,
-              combinedAbilityBonuses,
-              attr,
-              effectiveEpicBoonAbilityScore,
-              hasPrimalChampion,
-              hasBodyAndMind,
-              data.grapplerAbilityScore
-            );
-            const baseMod = effectiveAttr === 0 ? 0 : calcModifier(effectiveAttr);
-            const isSaveProficient = Boolean(data.savingThrows[attr]);
-            const pb = proficiencyBonus ?? 0;
-            const jackOfAllTradesSaveBonus =
-              hasJackOfAllTrades && !isSaveProficient && proficiencyBonus != null
-                ? Math.floor(pb / 2)
-                : 0;
-            const totalMod =
-              baseMod +
-              (isSaveProficient && proficiencyBonus != null ? proficiencyBonus : 0) +
-              jackOfAllTradesSaveBonus +
-              auraOfProtectionBonus;
-            const modStr = totalMod >= 0 ? `+${totalMod}` : `${totalMod}`;
+          {savingThrowRows.map(({ attribute: attr, proficient, modifier }) => {
+            const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
             return (
               <div key={attr} className="flex items-center gap-2" role="listitem">
                 <span
                   className={cn(
                     'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
-                    data.savingThrows[attr]
+                    proficient
                       ? 'bg-primary border-primary text-primary-foreground'
                       : 'text-muted-foreground/50'
                   )}
                   aria-hidden
                 >
-                  {data.savingThrows[attr] ? <Check className="h-3 w-3" strokeWidth={2.5} /> : null}
+                  {proficient ? <Check className="h-3 w-3" strokeWidth={2.5} /> : null}
                 </span>
                 <span className="flex flex-1 items-center justify-between text-sm text-foreground">
                   <span>{attr}</span>
@@ -405,32 +358,9 @@ export function SavesSkillsSection({
           </div>
         ) : (
           <div className="space-y-2" role="list" aria-label="Skills">
-            {skillsList.map((skill) => {
-              // Thaumaturge (Arcana/Religion) / Magician (Arcana/Nature): +WIS (min +1) to the check.
-              const optionWisBonus = wisCheckBonusSkillKeys.has(skill.key)
-                ? Math.max(1, calcModifier(optionWisScore))
-                : 0;
-              const attr = ABILITY_KEY_TO_ATTR[skill.abilityKey] ?? 'Strength';
-              const effectiveAttr = getEffectiveAttribute(
-                data.attributes,
-                combinedAbilityBonuses,
-                attr,
-                effectiveEpicBoonAbilityScore,
-                hasPrimalChampion,
-                hasBodyAndMind,
-                data.grapplerAbilityScore
-              );
-              const baseMod = effectiveAttr === 0 ? 0 : calcModifier(effectiveAttr);
-              const proficient = data.skillProficiencies[skill.key] ?? false;
-              // Class picks (per class) plus Scholar and Deft Explorer, from the one shared reader.
-              const hasExpertise = getEffectiveExpertiseSkillKeys(data).includes(skill.key);
-              const totalMod =
-                baseMod +
-                (proficient && proficiencyBonus != null
-                  ? proficiencyBonus * (hasExpertise ? 2 : 1)
-                  : 0) +
-                optionWisBonus;
-              const modStr = totalMod >= 0 ? `+${totalMod}` : `${totalMod}`;
+            {skillRows.map((skill) => {
+              const { proficient, expertise: hasExpertise, modifier } = skill;
+              const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
               return (
                 <div key={skill.key} className="flex items-center gap-2" role="listitem">
                   <span

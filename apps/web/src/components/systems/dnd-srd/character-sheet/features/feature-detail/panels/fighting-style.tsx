@@ -1,7 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { buildOwnedFeatIdsSet, getFightingStyleCantripGrant, getFightingStylePick, setFightingStylePick, buildEffectiveAttributeScores, evaluateFeatPrerequisite, getFeatMeta, isFightingStyleFeat, type RuleItemResponse, type CharacterFormData } from '@rpgforce-ai/shared';
+import {
+  buildOwnedFeatIdsSet,
+  getFightingStyleCantripGrant,
+  getFightingStylePick,
+  setFightingStylePick,
+  buildEffectiveAttributeScores,
+  evaluateFeatPrerequisite,
+  getFeatMeta,
+  isFightingStyleFeat,
+  type RuleItemResponse,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -52,7 +63,7 @@ export function FightingStylePanel({
     ? fightingStyleFeatsAll.filter(
         (f) =>
           f.name.trim().toLowerCase().replace(/\.+$/, '') !==
-          optionBelowTitleLower.replace(/\.+$/, ''),
+          optionBelowTitleLower.replace(/\.+$/, '')
       )
     : fightingStyleFeatsAll;
 
@@ -73,7 +84,7 @@ export function FightingStylePanel({
     ? styleOptionsRaw.filter(
         (o) =>
           o.label.trim().toLowerCase().replace(/\.+$/, '') ===
-          optionBelowTitleLower.replace(/\.+$/, ''),
+          optionBelowTitleLower.replace(/\.+$/, '')
       )
     : styleOptionsRaw;
 
@@ -87,7 +98,7 @@ export function FightingStylePanel({
   const ownedFeatIdsSet = buildOwnedFeatIdsSet(data, featsList);
   const effectiveAttributeScores = buildEffectiveAttributeScores(data);
   const featureNamesLower = new Set(
-    (data.featureDetails ?? []).map((fd) => fd.name.trim().toLowerCase()),
+    (data.featureDetails ?? []).map((fd) => fd.name.trim().toLowerCase())
   );
 
   const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -127,12 +138,14 @@ export function FightingStylePanel({
         <div className="mb-4 flex overflow-hidden rounded-lg border border-border">
           <button
             type="button"
-            onClick={() => onChange({ ...data, ...setFightingStylePick(data, feat, { mode: 'OPTION' }) })}
+            onClick={() =>
+              onChange({ ...data, ...setFightingStylePick(data, feat, { mode: 'OPTION' }) })
+            }
             className={cn(
               'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               fsMode === 'OPTION'
                 ? 'bg-primary/15 text-primary'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
+                : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={fsMode === 'OPTION'}
           >
@@ -141,12 +154,14 @@ export function FightingStylePanel({
           <div className="w-px bg-border" aria-hidden />
           <button
             type="button"
-            onClick={() => onChange({ ...data, ...setFightingStylePick(data, feat, { mode: 'FEAT' }) })}
+            onClick={() =>
+              onChange({ ...data, ...setFightingStylePick(data, feat, { mode: 'FEAT' }) })
+            }
             className={cn(
               'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               fsMode === 'FEAT'
                 ? 'bg-primary/15 text-primary'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
+                : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={fsMode === 'FEAT'}
           >
@@ -167,14 +182,12 @@ export function FightingStylePanel({
             const start = indexByKey.get(option.key);
             const nextIndex = nextIndexByKey.get(option.key) ?? desc.length;
             const blockText =
-              typeof start === 'number' && start >= 0
-                ? desc.slice(start, nextIndex).trim()
-                : null;
+              typeof start === 'number' && start >= 0 ? desc.slice(start, nextIndex).trim() : null;
             const normalizedOptLabel = option.label.trim().toLowerCase();
             const matchingFeat = fightingStyleFeatsAll.find(
               (f) =>
                 f.name.trim().toLowerCase().replace(/\.+$/, '') ===
-                normalizedOptLabel.replace(/\.+$/, ''),
+                normalizedOptLabel.replace(/\.+$/, '')
             );
             const matchedMeta = matchingFeat
               ? getFeatMeta(matchingFeat)
@@ -214,7 +227,7 @@ export function FightingStylePanel({
                           {(() => {
                             const prefixRe = new RegExp(
                               `^${escapeRegExp(option.label.trim())}\\.\\s*`,
-                              'i',
+                              'i'
                             );
                             return matchedMeta.benefitDescs
                               .map((d) => d.replace(prefixRe, '').trim())
@@ -255,7 +268,7 @@ export function FightingStylePanel({
               prerequisite,
               data,
               effectiveAttributeScores,
-              featureNamesLower,
+              featureNamesLower
             );
             // Once a feat is chosen, the others lock — deselect to switch (same rule as Expertise).
             const disabled =

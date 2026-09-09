@@ -48,8 +48,7 @@ export function assembleArmorClass(params: ArmorClassParams): number {
     defenseStyleApplies,
   } = params;
 
-  const defaultBaseNoArmor =
-    storedBaseAc != null && storedBaseAc > 0 ? storedBaseAc : 10 + dexMod;
+  const defaultBaseNoArmor = storedBaseAc != null && storedBaseAc > 0 ? storedBaseAc : 10 + dexMod;
   const unarmoredDefenseBase = 10 + dexMod + (unarmoredDefenseUsesWis ? wisMod : conMod);
 
   let total: number;

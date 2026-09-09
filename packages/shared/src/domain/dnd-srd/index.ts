@@ -50,3 +50,6 @@ export * from './derivation/feature-desc-normalization';
 export * from './derivation/feat-source-reconciliation';
 export * from './derivation/derived-character-stats';
 export * from './derivation/effective-armor-class';
+export * from './derivation/sheet-display-stats';
+export * from './combat/attack-rows';
+export * from './features/character-feats';

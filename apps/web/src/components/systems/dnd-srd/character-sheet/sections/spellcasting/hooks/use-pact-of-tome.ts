@@ -1,7 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { PACT_OF_TOME_MAX_CANTRIPS, PACT_OF_TOME_MAX_RITUALS, type CharacterFormData } from '@rpgforce-ai/shared';
+import {
+  PACT_OF_TOME_MAX_CANTRIPS,
+  PACT_OF_TOME_MAX_RITUALS,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
 
 const normalizeNames = (src: string[] | undefined): string[] => {
   const seen = new Set<string>();

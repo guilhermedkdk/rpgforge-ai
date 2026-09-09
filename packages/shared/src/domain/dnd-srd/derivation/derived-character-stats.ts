@@ -51,17 +51,23 @@ import {
   reconcileMagicInitiateChoices,
   reconcileSkilledChoices,
 } from './feat-source-reconciliation';
-import { columnKeySlug, columnSlug, extractColumnReferences } from '../features/feature-column-tables';
+import {
+  columnKeySlug,
+  columnSlug,
+  extractColumnReferences,
+} from '../features/feature-column-tables';
 import {
   DIVINE_ORDER_DISPLAY_NAME,
   PRIMAL_ORDER_DISPLAY_NAME,
   getDefaultSavingThrows,
   getFightingStyleCantripGrant,
-  
   isUnarmoredMovementFeatureName,
 } from '../features/feature-matchers';
-import { isEldritchInvocationsFeature, isMysticArcanumFeature,
-  isThievesCantFeature } from '../features/feature-mechanics';
+import {
+  isEldritchInvocationsFeature,
+  isMysticArcanumFeature,
+  isThievesCantFeature,
+} from '../features/feature-mechanics';
 import {
   canApplyAbilityScoreImprovementASI,
   DND_ATTRIBUTES,
@@ -89,10 +95,7 @@ import {
   subclassFeatureHasTraitOptionChoice,
 } from '../features/subclass-features';
 import { getEldritchInvocationsKnown } from '../spells/spellcasting-limits';
-import {
-  getWeaponMasteryMaxForFeature,
-  weaponMasteryClassKey,
-} from '../features/weapon-mastery';
+import { getWeaponMasteryMaxForFeature, weaponMasteryClassKey } from '../features/weapon-mastery';
 import { fightingStyleClassKey } from '../features/fighting-style';
 import {
   expertiseClassKey,
@@ -162,19 +165,15 @@ function mergeProficiencyLines(parts: string[]): string[] {
 }
 
 /**
- * Proficiencies granted by feature-option choices (not class defaults), merged on top of the
- * class/race/background proficiencies. Cleric Divine Order → Protector grants Martial weapons +
- * Heavy armor; Druid Primal Order → Warden grants Martial weapons + Medium armor.
+ * Proficiencies granted by feature-option choices, merged on top of the class/race/background ones.
  *
- * Applied at read time (see `getEffectiveProficiencies`) rather than baked into `data.proficiencies`:
- * the full derivation does not re-run when a `raceTraitSelections` option is toggled, so the only
- * way for the change to be reactive is to keep `data.proficiencies` as the pure class base and layer
- * the option grants on top wherever the string is consumed. Idempotent because the base never
- * contains the option-granted entries (Divine Order is Cleric-only; Cleric lacks Martial/Heavy).
+ * Applied at read time rather than baked into `data.proficiencies`: the full derivation does not
+ * re-run when an option is toggled, so layering is the only way for the change to be reactive.
+ * Idempotent because the base never contains the option-granted entries.
  */
 function applyOptionGrantedProficiencies(
   proficiencies: string,
-  raceTraitSelections: Record<string, string> | undefined,
+  raceTraitSelections: Record<string, string> | undefined
 ): string {
   const extra: string[] = [];
   if (raceTraitSelections?.[DIVINE_ORDER_DISPLAY_NAME] === 'protector') {
@@ -273,7 +272,6 @@ function parseKeenSensesSkillOptions(desc: string): Array<{ key: string; label: 
   }));
 }
 
-
 function getFeatDescription(feat: RuleItemResponse): string {
   if (feat.contentMd?.trim()) return feat.contentMd.trim();
   const raw = (feat.raw ?? {}) as Record<string, unknown>;
@@ -299,7 +297,7 @@ function isSelectableTrait(name: string): boolean {
  */
 function multiclassSkillChoiceText(
   skillChoice: MulticlassGrants['skillChoice'],
-  classSkillRow: string | undefined,
+  classSkillRow: string | undefined
 ): string | undefined {
   if (!skillChoice) return undefined;
   if (skillChoice.from === 'any') return `Choose any ${skillChoice.count} skills`;
@@ -310,7 +308,6 @@ function multiclassSkillChoiceText(
     : classSkillRow;
   return `Choose ${skillChoice.count}: ${afterColon}`;
 }
-
 
 /** One class the character has levels in, with its own subclass and level. */
 export interface DeriveClassInput {
@@ -354,574 +351,586 @@ export function getDerivedFromRuleItems(input: DeriveCharacterInput): DerivedCha
   let backgroundAbilityScoreOption: DerivedCharacterStats['backgroundAbilityScoreOption'] = null;
   const totalLevel = Math.max(
     1,
-    Math.min(
-      20,
-      classEntries.reduce((sum, c) => sum + Math.max(1, c.level || 1), 0) || 1,
-    ),
+    Math.min(20, classEntries.reduce((sum, c) => sum + Math.max(1, c.level || 1), 0) || 1)
   );
 
   // Runs once per class. Everything class-scoped (features by gain level, the hit die, the skill
   // menu) uses THAT class's level; only the initial class contributes saves, the full starting
   // proficiencies and the starting equipment, per the SRD multiclassing rules.
   const deriveClass = (entry: DeriveClassInput, isInitialClass: boolean): void => {
-  const classItem = entry.classItem;
-  const subclassItem = entry.subclassItem ?? null;
-  const currentLevel = Math.max(1, Math.min(20, entry.level || 1));
-  const multiclassGrants = isInitialClass
-    ? null
-    : (readClassMulticlassing(classItem?.normalized)?.grants ?? {});
-  const classTag = {
-    ...(classItem ? { sourceClassId: classItem.id, sourceClassName: classItem.name } : {}),
-    sourceClassLevel: currentLevel,
-  };
-
-  if (classItem?.normalized && typeof classItem.normalized === 'object') {
-    const norm = classItem.normalized as Record<string, unknown>;
-
-    const hitPoints = (norm.hitPoints ?? norm.hit_points) as
-      | { hitDiceName?: string; hit_dice_name?: string }
-      | undefined;
-    const hitDiceName = hitPoints?.hitDiceName ?? hitPoints?.hit_dice_name;
-    if (hitDiceName) {
-      const notation = normalizeHitDice(hitDiceName as string);
-      if (isInitialClass) hitDice = notation;
-      const dieMax = hitDieMaxFromNotation(notation);
-      if (dieMax > 0) hitDicePool.push({ dieMax, levels: currentLevel });
-    }
-
-    // Multiclassing grants NO saving throw proficiencies: only the initial class does.
-    const savingThrowsList = (norm.savingThrows ?? norm.saving_throws) as
-      | Array<{ name?: string }>
-      | undefined;
-    if (isInitialClass && Array.isArray(savingThrowsList)) {
-      for (const s of savingThrowsList) {
-        const name = s.name as string | undefined;
-        if (name && DND_ATTRIBUTES.includes(name)) savingThrows[name] = true;
-      }
-    }
-
-    type FeatureWithTable = {
-      name?: string;
-      featureType?: string;
-      feature_type?: string;
-      gainedAt?: unknown;
-      gained_at?: unknown;
-      desc?: string;
-      key?: string;
-      mechanics?: { featureKey?: string };
-      dataForClassTable?: Array<{ level?: number; columnValue?: string }>;
-      data_for_class_table?: Array<{ level?: number; column_value?: string }>;
+    const classItem = entry.classItem;
+    const subclassItem = entry.subclassItem ?? null;
+    const currentLevel = Math.max(1, Math.min(20, entry.level || 1));
+    const multiclassGrants = isInitialClass
+      ? null
+      : (readClassMulticlassing(classItem?.normalized)?.grants ?? {});
+    const classTag = {
+      ...(classItem ? { sourceClassId: classItem.id, sourceClassName: classItem.name } : {}),
+      sourceClassLevel: currentLevel,
     };
 
-    const compactTableRows = (
-      rawTable: Array<{ level?: number; columnValue?: string; column_value?: string }>
-    ): Array<{ level: number; value: string }> => {
-      const rawRows = rawTable.map((row) => {
-        const level = Number(row.level ?? 0);
-        const value =
-          'columnValue' in row && row.columnValue !== undefined
-            ? String(row.columnValue).trim()
-            : 'column_value' in row && row.column_value !== undefined
-              ? String(row.column_value).trim()
-              : '';
-        return { level, value };
-      });
-      const sorted = rawRows
-        .filter((row) => row.level > 0 && row.value !== '')
-        .sort((a, b) => a.level - b.level);
-      const compact: Array<{ level: number; value: string }> = [];
-      for (const row of sorted) {
-        const last = compact[compact.length - 1];
-        if (!last || last.value !== row.value) {
-          compact.push(row);
+    if (classItem?.normalized && typeof classItem.normalized === 'object') {
+      const norm = classItem.normalized as Record<string, unknown>;
+
+      const hitPoints = (norm.hitPoints ?? norm.hit_points) as
+        | { hitDiceName?: string; hit_dice_name?: string }
+        | undefined;
+      const hitDiceName = hitPoints?.hitDiceName ?? hitPoints?.hit_dice_name;
+      if (hitDiceName) {
+        const notation = normalizeHitDice(hitDiceName as string);
+        if (isInitialClass) hitDice = notation;
+        const dieMax = hitDieMaxFromNotation(notation);
+        if (dieMax > 0) hitDicePool.push({ dieMax, levels: currentLevel });
+      }
+
+      // Multiclassing grants NO saving throw proficiencies: only the initial class does.
+      const savingThrowsList = (norm.savingThrows ?? norm.saving_throws) as
+        | Array<{ name?: string }>
+        | undefined;
+      if (isInitialClass && Array.isArray(savingThrowsList)) {
+        for (const s of savingThrowsList) {
+          const name = s.name as string | undefined;
+          if (name && DND_ATTRIBUTES.includes(name)) savingThrows[name] = true;
         }
       }
-      return compact;
-    };
 
-    const pushTableData = (
-      f: FeatureWithTable,
-      tableDataByName: Map<string, Array<{ level: number; value: string }>>,
-      tableDataByKey: Map<string, Array<{ level: number; value: string }>>
-    ) => {
-      const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
-      const hasTable =
-        Array.isArray(f.dataForClassTable ?? f.data_for_class_table) &&
-        (f.dataForClassTable ?? f.data_for_class_table)!.length > 0;
-      const allowedType =
-        type === 'CLASS_TABLE_DATA' ||
-        type === 'SPELL_SLOTS' ||
-        (type === 'CLASS_LEVEL_FEATURE' && hasTable);
-      if (!allowedType) return;
-      const name = (f.name as string | undefined)?.trim();
-      const key = (f.key as string | undefined)?.trim();
-      if (!name && !key) return;
-      const rawTable =
-        f.dataForClassTable ??
-        f.data_for_class_table ??
-        (null as unknown as Array<{ level?: number; columnValue?: string; column_value?: string }>);
-      if (!Array.isArray(rawTable)) return;
-      const compact = compactTableRows(rawTable);
-      if (compact.length > 0) {
-        if (name) tableDataByName.set(name, compact);
-        if (key) tableDataByKey.set(key, compact);
-      }
-    };
+      type FeatureWithTable = {
+        name?: string;
+        featureType?: string;
+        feature_type?: string;
+        gainedAt?: unknown;
+        gained_at?: unknown;
+        desc?: string;
+        key?: string;
+        mechanics?: { featureKey?: string };
+        dataForClassTable?: Array<{ level?: number; columnValue?: string }>;
+        data_for_class_table?: Array<{ level?: number; column_value?: string }>;
+      };
 
-    const features = norm.features as FeatureWithTable[] | undefined;
-    const rawFeatures = (classItem as { raw?: { features?: unknown[] } }).raw?.features as
-      | FeatureWithTable[]
-      | undefined;
-    const allFeaturesForTables = Array.isArray(features)
-      ? Array.isArray(rawFeatures)
-        ? [
-            ...features,
-            ...rawFeatures.filter(
-              (rf) => !features.some((f) => (f.key ?? f.name) === (rf.key ?? rf.name))
-            ),
-          ]
-        : features
-      : Array.isArray(rawFeatures)
-        ? rawFeatures
-        : [];
+      const compactTableRows = (
+        rawTable: Array<{ level?: number; columnValue?: string; column_value?: string }>
+      ): Array<{ level: number; value: string }> => {
+        const rawRows = rawTable.map((row) => {
+          const level = Number(row.level ?? 0);
+          const value =
+            'columnValue' in row && row.columnValue !== undefined
+              ? String(row.columnValue).trim()
+              : 'column_value' in row && row.column_value !== undefined
+                ? String(row.column_value).trim()
+                : '';
+          return { level, value };
+        });
+        const sorted = rawRows
+          .filter((row) => row.level > 0 && row.value !== '')
+          .sort((a, b) => a.level - b.level);
+        const compact: Array<{ level: number; value: string }> = [];
+        for (const row of sorted) {
+          const last = compact[compact.length - 1];
+          if (!last || last.value !== row.value) {
+            compact.push(row);
+          }
+        }
+        return compact;
+      };
 
-    if (Array.isArray(features) || Array.isArray(rawFeatures)) {
-      const tableDataByName = new Map<string, Array<{ level: number; value: string }>>();
-      const tableDataByKey = new Map<string, Array<{ level: number; value: string }>>();
-      for (const f of allFeaturesForTables) {
-        pushTableData(f, tableDataByName, tableDataByKey);
-      }
-
-      // Slug index so a column resolves even when its upstream display name is wrong.
-      const sourceKey = (classItem.sourceKey ?? '').trim();
-      const tableDataBySlug = new Map<string, Array<{ level: number; value: string }>>();
-      for (const [key, rows] of tableDataByKey.entries()) {
-        const slug = columnKeySlug(key, sourceKey);
-        if (slug && !tableDataBySlug.has(slug)) tableDataBySlug.set(slug, rows);
-      }
-
-      /** Per-class spellcasting table keys (base = class sourceKey, e.g. srd-2024_bard). */
-      const SPELLCASTING_TABLE_KEYS = [
-        { keySuffix: 'cantrips', label: 'Cantrips' },
-        { keySuffix: 'prepared-spells', label: 'Prepared Spells' },
-        { keySuffix: 'slots-1st', label: '1st-level Slots' },
-        { keySuffix: 'slots-2nd', label: '2nd-level Slots' },
-        { keySuffix: 'slots-3rd', label: '3rd-level Slots' },
-        { keySuffix: 'slots-4th', label: '4th-level Slots' },
-        { keySuffix: 'slots-5th', label: '5th-level Slots' },
-        { keySuffix: 'slots-6th', label: '6th-level Slots' },
-        { keySuffix: 'slots-7th', label: '7th-level Slots' },
-        { keySuffix: 'slots-8th', label: '8th-level Slots' },
-        { keySuffix: 'slots-9th', label: '9th-level Slots' },
-      ];
-
-      const allClassFeatures = features ?? [];
-      const metamagicOptionsFeature = allClassFeatures.find((f) => {
+      const pushTableData = (
+        f: FeatureWithTable,
+        tableDataByName: Map<string, Array<{ level: number; value: string }>>,
+        tableDataByKey: Map<string, Array<{ level: number; value: string }>>
+      ) => {
         const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
-        const name = (f.name ?? '').trim().toLowerCase();
-        const key = (f.key ?? '').trim().toLowerCase();
-        return (
-          type === 'CLASS_FEATURE_OPTION_LIST' &&
-          (name === 'metamagic options' || key.includes('metamagic-options'))
+        const hasTable =
+          Array.isArray(f.dataForClassTable ?? f.data_for_class_table) &&
+          (f.dataForClassTable ?? f.data_for_class_table)!.length > 0;
+        const allowedType =
+          type === 'CLASS_TABLE_DATA' ||
+          type === 'SPELL_SLOTS' ||
+          (type === 'CLASS_LEVEL_FEATURE' && hasTable);
+        if (!allowedType) return;
+        const name = (f.name as string | undefined)?.trim();
+        const key = (f.key as string | undefined)?.trim();
+        if (!name && !key) return;
+        const rawTable =
+          f.dataForClassTable ??
+          f.data_for_class_table ??
+          (null as unknown as Array<{
+            level?: number;
+            columnValue?: string;
+            column_value?: string;
+          }>);
+        if (!Array.isArray(rawTable)) return;
+        const compact = compactTableRows(rawTable);
+        if (compact.length > 0) {
+          if (name) tableDataByName.set(name, compact);
+          if (key) tableDataByKey.set(key, compact);
+        }
+      };
+
+      const features = norm.features as FeatureWithTable[] | undefined;
+      const rawFeatures = (classItem as { raw?: { features?: unknown[] } }).raw?.features as
+        | FeatureWithTable[]
+        | undefined;
+      const allFeaturesForTables = Array.isArray(features)
+        ? Array.isArray(rawFeatures)
+          ? [
+              ...features,
+              ...rawFeatures.filter(
+                (rf) => !features.some((f) => (f.key ?? f.name) === (rf.key ?? rf.name))
+              ),
+            ]
+          : features
+        : Array.isArray(rawFeatures)
+          ? rawFeatures
+          : [];
+
+      if (Array.isArray(features) || Array.isArray(rawFeatures)) {
+        const tableDataByName = new Map<string, Array<{ level: number; value: string }>>();
+        const tableDataByKey = new Map<string, Array<{ level: number; value: string }>>();
+        for (const f of allFeaturesForTables) {
+          pushTableData(f, tableDataByName, tableDataByKey);
+        }
+
+        // Slug index so a column resolves even when its upstream display name is wrong.
+        const sourceKey = (classItem.sourceKey ?? '').trim();
+        const tableDataBySlug = new Map<string, Array<{ level: number; value: string }>>();
+        for (const [key, rows] of tableDataByKey.entries()) {
+          const slug = columnKeySlug(key, sourceKey);
+          if (slug && !tableDataBySlug.has(slug)) tableDataBySlug.set(slug, rows);
+        }
+
+        /** Per-class spellcasting table keys (base = class sourceKey, e.g. srd-2024_bard). */
+        const SPELLCASTING_TABLE_KEYS = [
+          { keySuffix: 'cantrips', label: 'Cantrips' },
+          { keySuffix: 'prepared-spells', label: 'Prepared Spells' },
+          { keySuffix: 'slots-1st', label: '1st-level Slots' },
+          { keySuffix: 'slots-2nd', label: '2nd-level Slots' },
+          { keySuffix: 'slots-3rd', label: '3rd-level Slots' },
+          { keySuffix: 'slots-4th', label: '4th-level Slots' },
+          { keySuffix: 'slots-5th', label: '5th-level Slots' },
+          { keySuffix: 'slots-6th', label: '6th-level Slots' },
+          { keySuffix: 'slots-7th', label: '7th-level Slots' },
+          { keySuffix: 'slots-8th', label: '8th-level Slots' },
+          { keySuffix: 'slots-9th', label: '9th-level Slots' },
+        ];
+
+        const allClassFeatures = features ?? [];
+        const metamagicOptionsFeature = allClassFeatures.find((f) => {
+          const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
+          const name = (f.name ?? '').trim().toLowerCase();
+          const key = (f.key ?? '').trim().toLowerCase();
+          return (
+            type === 'CLASS_FEATURE_OPTION_LIST' &&
+            (name === 'metamagic options' || key.includes('metamagic-options'))
+          );
+        });
+        const metamagicOptions = parseMetamagicOptions(
+          typeof metamagicOptionsFeature?.desc === 'string' ? metamagicOptionsFeature.desc : ''
         );
-      });
-      const metamagicOptions = parseMetamagicOptions(
-        typeof metamagicOptionsFeature?.desc === 'string' ? metamagicOptionsFeature.desc : ''
-      );
 
-      const eldritchInvocationOptionsFeature = allClassFeatures.find((f) => {
-        const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
-        const name = (f.name ?? '').trim().toLowerCase();
-        const key = (f.key ?? '').trim().toLowerCase();
-        return (
-          type === 'CLASS_FEATURE_OPTION_LIST' &&
-          (name === 'eldritch invocation options' ||
-            name === 'eldritch invocations options' ||
-            key.includes('eldritch-invocation-options') ||
-            key.includes('eldritch_invocation_options'))
+        const eldritchInvocationOptionsFeature = allClassFeatures.find((f) => {
+          const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
+          const name = (f.name ?? '').trim().toLowerCase();
+          const key = (f.key ?? '').trim().toLowerCase();
+          return (
+            type === 'CLASS_FEATURE_OPTION_LIST' &&
+            (name === 'eldritch invocation options' ||
+              name === 'eldritch invocations options' ||
+              key.includes('eldritch-invocation-options') ||
+              key.includes('eldritch_invocation_options'))
+          );
+        });
+        const eldritchInvocationOptions = parseEldritchInvocationOptions(
+          typeof eldritchInvocationOptionsFeature?.desc === 'string'
+            ? eldritchInvocationOptionsFeature.desc
+            : ''
         );
-      });
-      const eldritchInvocationOptions = parseEldritchInvocationOptions(
-        typeof eldritchInvocationOptionsFeature?.desc === 'string'
-          ? eldritchInvocationOptionsFeature.desc
-          : ''
-      );
 
-      // `[Column data]` is a pure class-table column mistyped upstream as a feature
-      // (Druid "Cantrips Known" = the Wild Shape column); don't render it as a feature.
-      const levelFeatures = allClassFeatures.filter(
-        (f) =>
-          (f.featureType ?? f.feature_type ?? '').toUpperCase() === 'CLASS_LEVEL_FEATURE' &&
-          (typeof f.desc === 'string' ? f.desc.trim() : '') !== '[Column data]'
-      );
-      for (const f of levelFeatures) {
-        const gainedAt = f.gainedAt ?? f.gained_at;
-        const structuredLevels = getGainedAtLevels({ gained_at: gainedAt } as { gained_at?: unknown });
-        // Merge any "gained again at level N" levels the structured data missed (see helper).
-        const repeatLevels = parseRepeatGainLevelsFromDesc(
-          typeof f.desc === 'string' ? f.desc : '',
-          typeof f.name === 'string' ? f.name : ''
+        // `[Column data]` is a pure class-table column mistyped upstream as a feature
+        // (Druid "Cantrips Known" = the Wild Shape column); don't render it as a feature.
+        const levelFeatures = allClassFeatures.filter(
+          (f) =>
+            (f.featureType ?? f.feature_type ?? '').toUpperCase() === 'CLASS_LEVEL_FEATURE' &&
+            (typeof f.desc === 'string' ? f.desc.trim() : '') !== '[Column data]'
         );
-        const levels = Array.from(new Set([...structuredLevels, ...repeatLevels])).sort(
-          (a, b) => a - b
-        );
-        const entriesAtOrBefore = getGainedAtEntriesAtOrBefore(gainedAt, currentLevel);
-        const levelsAtOrBefore =
-          levels.length === 0
-            ? []
-            : [...levels].filter((lvl) => lvl <= currentLevel).sort((a, b) => a - b);
-        const gainCount = levels.length === 0 ? 1 : levelsAtOrBefore.length;
-        const hasAtOrBeforeLevel = gainCount > 0;
-        if (hasAtOrBeforeLevel && f.name) {
-          const name = f.name as string;
-          const rawDesc = typeof f.desc === 'string' ? f.desc : '';
-          const desc = name.trim().toLowerCase().includes('spell list')
-            ? normalizeFeatureDesc(normalizeSpellListLevelHeadings(rawDesc))
-            : normalizeFeatureDesc(rawDesc);
-          const baseDetail: FeatureDetail = {
-            name,
-            desc,
-            source: 'class',
-            gainCount,
-            ...(f.mechanics?.featureKey ? { featureKey: f.mechanics.featureKey } : {}),
-          };
-          if (levelsAtOrBefore.length > 0) {
-            baseDetail.gainedAtLevels = levelsAtOrBefore;
-            if (entriesAtOrBefore.length > 0) {
-              const detailByLevel = new Map(
-                entriesAtOrBefore.map((e) => [e.level, e.detail as string | undefined])
-              );
-              const aligned = levelsAtOrBefore.map((lvl) => detailByLevel.get(lvl));
-              if (aligned.some((d) => d != null && String(d).trim() !== '')) {
-                baseDetail.gainedAtDetails = aligned.map((d) => (d != null ? d : ''));
-              }
-            }
-          }
-          /** Only fills options for known "single-choice" features (e.g. Blessed Strikes, Divine Order, Elemental Fury, Primal Order). */
-          const SINGLE_CHOICE_CLASS_FEATURES = [
-            'blessed strikes',
-            'divine order',
-            'improved blessed strikes',
-            'elemental fury',
-            'improved elemental fury',
-            'primal order',
-            'fighting style',
-          ];
-          const nameLower = name.trim().toLowerCase();
-          if (SINGLE_CHOICE_CLASS_FEATURES.some((n) => nameLower === n)) {
-            const traitOpts = parseTraitOptions(rawDesc);
-            // Some features have only 1 textual option (e.g. Paladin Fighting Style -> Blessed Warrior).
-            const minOpts = nameLower === 'fighting style' ? 1 : 2;
-            if (traitOpts.length >= minOpts) {
-              baseDetail.options = traitOpts;
-            }
-          }
-          if (nameLower === 'metamagic') {
-            const traitOpts =
-              metamagicOptions.length >= 2 ? metamagicOptions : parseTraitOptions(rawDesc);
-            if (traitOpts.length >= 2) {
-              baseDetail.options = traitOpts;
-            }
-          }
-          if (isEldritchInvocationsFeature(baseDetail)) {
-            const traitOpts =
-              eldritchInvocationOptions.length >= 1
-                ? eldritchInvocationOptions
-                : parseTraitOptions(rawDesc);
-            if (traitOpts.length >= 1) {
-              baseDetail.options = traitOpts;
-            }
-          }
-          if (nameLower === 'skillful' && allSkillOptions && allSkillOptions.length > 0) {
-            baseDetail.options = allSkillOptions;
-          }
-          const tables: Array<{ label: string; rows: Array<{ level: number; value: string }> }> =
-            [];
-          // Spellcasting / Pact Magic keep bespoke logic (multi-column slot grids);
-          // every other column table is resolved generically in the `else` branch.
-          if (name.trim().toLowerCase().includes('spellcasting')) {
-            const baseKey = (classItem.sourceKey ?? '').trim();
-            if (baseKey) {
-              for (const { keySuffix, label } of SPELLCASTING_TABLE_KEYS) {
-                const keyWithDash = `${baseKey}_${keySuffix}`;
-                const keyWithUnderscore = `${baseKey}_${keySuffix.replace(/-/g, '_')}`;
-                const rows =
-                  tableDataByKey.get(keyWithDash) ?? tableDataByKey.get(keyWithUnderscore);
-                if (rows && rows.length > 0) {
-                  tables.push({ label, rows });
+        for (const f of levelFeatures) {
+          const gainedAt = f.gainedAt ?? f.gained_at;
+          const structuredLevels = getGainedAtLevels({ gained_at: gainedAt } as {
+            gained_at?: unknown;
+          });
+          // Merge any "gained again at level N" levels the structured data missed (see helper).
+          const repeatLevels = parseRepeatGainLevelsFromDesc(
+            typeof f.desc === 'string' ? f.desc : '',
+            typeof f.name === 'string' ? f.name : ''
+          );
+          const levels = Array.from(new Set([...structuredLevels, ...repeatLevels])).sort(
+            (a, b) => a - b
+          );
+          const entriesAtOrBefore = getGainedAtEntriesAtOrBefore(gainedAt, currentLevel);
+          const levelsAtOrBefore =
+            levels.length === 0
+              ? []
+              : [...levels].filter((lvl) => lvl <= currentLevel).sort((a, b) => a - b);
+          const gainCount = levels.length === 0 ? 1 : levelsAtOrBefore.length;
+          const hasAtOrBeforeLevel = gainCount > 0;
+          if (hasAtOrBeforeLevel && f.name) {
+            const name = f.name as string;
+            const rawDesc = typeof f.desc === 'string' ? f.desc : '';
+            const desc = name.trim().toLowerCase().includes('spell list')
+              ? normalizeFeatureDesc(normalizeSpellListLevelHeadings(rawDesc))
+              : normalizeFeatureDesc(rawDesc);
+            const baseDetail: FeatureDetail = {
+              name,
+              desc,
+              source: 'class',
+              gainCount,
+              ...(f.mechanics?.featureKey ? { featureKey: f.mechanics.featureKey } : {}),
+            };
+            if (levelsAtOrBefore.length > 0) {
+              baseDetail.gainedAtLevels = levelsAtOrBefore;
+              if (entriesAtOrBefore.length > 0) {
+                const detailByLevel = new Map(
+                  entriesAtOrBefore.map((e) => [e.level, e.detail as string | undefined])
+                );
+                const aligned = levelsAtOrBefore.map((lvl) => detailByLevel.get(lvl));
+                if (aligned.some((d) => d != null && String(d).trim() !== '')) {
+                  baseDetail.gainedAtDetails = aligned.map((d) => (d != null ? d : ''));
                 }
               }
             }
-            if (tables.length === 0) {
-              const tableRows = tableDataByName.get(name);
-              if (tableRows && tableRows.length > 0) {
-                tables.push({ label: name, rows: tableRows });
+            /** Only fills options for known "single-choice" features (e.g. Blessed Strikes, Divine Order, Elemental Fury, Primal Order). */
+            const SINGLE_CHOICE_CLASS_FEATURES = [
+              'blessed strikes',
+              'divine order',
+              'improved blessed strikes',
+              'elemental fury',
+              'improved elemental fury',
+              'primal order',
+              'fighting style',
+            ];
+            const nameLower = name.trim().toLowerCase();
+            if (SINGLE_CHOICE_CLASS_FEATURES.some((n) => nameLower === n)) {
+              const traitOpts = parseTraitOptions(rawDesc);
+              // Some features have only 1 textual option (e.g. Paladin Fighting Style -> Blessed Warrior).
+              const minOpts = nameLower === 'fighting style' ? 1 : 2;
+              if (traitOpts.length >= minOpts) {
+                baseDetail.options = traitOpts;
               }
             }
-            if (tables.length > 0) {
-              baseDetail.desc = injectSpellcastingTablePlaceholders(
-                baseDetail.desc,
-                tables.map((t) => t.label)
-              );
-            }
-          } else if (
-            name.trim().toLowerCase().includes('pact') &&
-            name.trim().toLowerCase().includes('magic')
-          ) {
-            // Warlock: Pact Magic may have tables with labels different from spellcasting.
-            // Here we do a tolerant match by label.
-            for (const [tableLabel, rows] of tableDataByName.entries()) {
-              const tl = tableLabel.trim().toLowerCase();
-              if (tl.includes('pact') && tl.includes('magic')) {
-                tables.push({ label: tableLabel, rows });
+            if (nameLower === 'metamagic') {
+              const traitOpts =
+                metamagicOptions.length >= 2 ? metamagicOptions : parseTraitOptions(rawDesc);
+              if (traitOpts.length >= 2) {
+                baseDetail.options = traitOpts;
               }
             }
-            // Fallback: "pact" + "slot"
-            if (tables.length === 0) {
-              for (const [tableLabel, rows] of tableDataByName.entries()) {
-                const tl = tableLabel.trim().toLowerCase();
-                if (tl.includes('pact') && tl.includes('slot')) {
-                  tables.push({ label: tableLabel, rows });
-                }
+            if (isEldritchInvocationsFeature(baseDetail)) {
+              const traitOpts =
+                eldritchInvocationOptions.length >= 1
+                  ? eldritchInvocationOptions
+                  : parseTraitOptions(rawDesc);
+              if (traitOpts.length >= 1) {
+                baseDetail.options = traitOpts;
               }
             }
-            // Final fallback: any table with "slot" (so it isn't left without UI)
-            if (tables.length === 0) {
-              for (const [tableLabel, rows] of tableDataByName.entries()) {
-                const tl = tableLabel.trim().toLowerCase();
-                if (tl.includes('slot')) {
-                  tables.push({ label: tableLabel, rows });
-                }
-              }
+            if (nameLower === 'skillful' && allSkillOptions && allSkillOptions.length > 0) {
+              baseDetail.options = allSkillOptions;
             }
-
-            // Warlock also has Cantrips (e.g. Eldritch Blast). The modal only renders
-            // the table when the label is exactly "Cantrips".
-            const cantripsRow = (() => {
-              for (const [tableLabel, rows] of tableDataByName.entries()) {
-                const tl = tableLabel.trim().toLowerCase();
-                if (tl.includes('cantrips')) {
-                  return { rows };
-                }
-              }
-              return null;
-            })();
-            if (cantripsRow && !tables.some((t) => t.label.trim().toLowerCase() === 'cantrips')) {
-              tables.push({ label: 'Cantrips', rows: cantripsRow.rows });
-            }
-
-            // If the backend brings any "Prepared Spells" section for Pact Magic,
-            // the modal looks for the label exactly "Prepared Spells".
-            const preparedRow = (() => {
-              for (const [tableLabel, rows] of tableDataByName.entries()) {
-                const tl = tableLabel.trim().toLowerCase();
-                if (tl.includes('prepared spells')) {
-                  return { rows };
-                }
-              }
-              return null;
-            })();
-            if (
-              preparedRow &&
-              !tables.some((t) => t.label.trim().toLowerCase() === 'prepared spells')
-            ) {
-              tables.push({ label: 'Prepared Spells', rows: preparedRow.rows });
-            }
-
-            if (tables.length > 1) {
-              const seen = new Set<string>();
-              const dedup: Array<{ label: string; rows: Array<{ level: number; value: string }> }> =
-                [];
-              for (const t of tables) {
-                const key = t.label.trim().toLowerCase();
-                if (seen.has(key)) continue;
-                seen.add(key);
-                dedup.push(t);
-              }
-              tables.splice(0, tables.length, ...dedup);
-            }
-
-            // Insert placeholders similar to the Spellcasting flow to position tables in the markdown,
-            // when the text contains the expected markers.
-            if (tables.length > 0) {
-              baseDetail.desc = injectSpellcastingTablePlaceholders(
-                baseDetail.desc,
-                tables.map((t) => t.label)
-              );
-            }
-          } else {
-            // Attach each column the description references; label is the referenced
-            // name so the renderer can stitch it in at that paragraph.
-            for (const columnName of extractColumnReferences(baseDetail.desc)) {
-              const rows =
-                tableDataByName.get(columnName) ?? tableDataBySlug.get(columnSlug(columnName));
-              if (rows && rows.length > 0 && !tables.some((t) => t.label === columnName)) {
-                tables.push({ label: columnName, rows });
-              }
-            }
-
-            // No prose reference (e.g. Unarmored Movement): append its own same-named table.
-            if (tables.length === 0) {
-              let tableRows = tableDataByName.get(name);
-              if ((!tableRows || tableRows.length === 0) && isUnarmoredMovementFeatureName(name)) {
-                for (const [tableName, rows] of tableDataByName.entries()) {
-                  if (isUnarmoredMovementFeatureName(tableName)) {
-                    tableRows = rows;
-                    break;
+            const tables: Array<{ label: string; rows: Array<{ level: number; value: string }> }> =
+              [];
+            // Spellcasting / Pact Magic keep bespoke logic (multi-column slot grids);
+            // every other column table is resolved generically in the `else` branch.
+            if (name.trim().toLowerCase().includes('spellcasting')) {
+              const baseKey = (classItem.sourceKey ?? '').trim();
+              if (baseKey) {
+                for (const { keySuffix, label } of SPELLCASTING_TABLE_KEYS) {
+                  const keyWithDash = `${baseKey}_${keySuffix}`;
+                  const keyWithUnderscore = `${baseKey}_${keySuffix.replace(/-/g, '_')}`;
+                  const rows =
+                    tableDataByKey.get(keyWithDash) ?? tableDataByKey.get(keyWithUnderscore);
+                  if (rows && rows.length > 0) {
+                    tables.push({ label, rows });
                   }
                 }
               }
-              if (tableRows && tableRows.length > 0) {
-                tables.push({ label: name, rows: tableRows });
+              if (tables.length === 0) {
+                const tableRows = tableDataByName.get(name);
+                if (tableRows && tableRows.length > 0) {
+                  tables.push({ label: name, rows: tableRows });
+                }
+              }
+              if (tables.length > 0) {
+                baseDetail.desc = injectSpellcastingTablePlaceholders(
+                  baseDetail.desc,
+                  tables.map((t) => t.label)
+                );
+              }
+            } else if (
+              name.trim().toLowerCase().includes('pact') &&
+              name.trim().toLowerCase().includes('magic')
+            ) {
+              // Warlock: Pact Magic may have tables with labels different from spellcasting.
+              // Here we do a tolerant match by label.
+              for (const [tableLabel, rows] of tableDataByName.entries()) {
+                const tl = tableLabel.trim().toLowerCase();
+                if (tl.includes('pact') && tl.includes('magic')) {
+                  tables.push({ label: tableLabel, rows });
+                }
+              }
+              // Fallback: "pact" + "slot"
+              if (tables.length === 0) {
+                for (const [tableLabel, rows] of tableDataByName.entries()) {
+                  const tl = tableLabel.trim().toLowerCase();
+                  if (tl.includes('pact') && tl.includes('slot')) {
+                    tables.push({ label: tableLabel, rows });
+                  }
+                }
+              }
+              // Final fallback: any table with "slot" (so it isn't left without UI)
+              if (tables.length === 0) {
+                for (const [tableLabel, rows] of tableDataByName.entries()) {
+                  const tl = tableLabel.trim().toLowerCase();
+                  if (tl.includes('slot')) {
+                    tables.push({ label: tableLabel, rows });
+                  }
+                }
+              }
+
+              // Warlock also has Cantrips (e.g. Eldritch Blast). The modal only renders
+              // the table when the label is exactly "Cantrips".
+              const cantripsRow = (() => {
+                for (const [tableLabel, rows] of tableDataByName.entries()) {
+                  const tl = tableLabel.trim().toLowerCase();
+                  if (tl.includes('cantrips')) {
+                    return { rows };
+                  }
+                }
+                return null;
+              })();
+              if (cantripsRow && !tables.some((t) => t.label.trim().toLowerCase() === 'cantrips')) {
+                tables.push({ label: 'Cantrips', rows: cantripsRow.rows });
+              }
+
+              // If the backend brings any "Prepared Spells" section for Pact Magic,
+              // the modal looks for the label exactly "Prepared Spells".
+              const preparedRow = (() => {
+                for (const [tableLabel, rows] of tableDataByName.entries()) {
+                  const tl = tableLabel.trim().toLowerCase();
+                  if (tl.includes('prepared spells')) {
+                    return { rows };
+                  }
+                }
+                return null;
+              })();
+              if (
+                preparedRow &&
+                !tables.some((t) => t.label.trim().toLowerCase() === 'prepared spells')
+              ) {
+                tables.push({ label: 'Prepared Spells', rows: preparedRow.rows });
+              }
+
+              if (tables.length > 1) {
+                const seen = new Set<string>();
+                const dedup: Array<{
+                  label: string;
+                  rows: Array<{ level: number; value: string }>;
+                }> = [];
+                for (const t of tables) {
+                  const key = t.label.trim().toLowerCase();
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  dedup.push(t);
+                }
+                tables.splice(0, tables.length, ...dedup);
+              }
+
+              // Insert placeholders similar to the Spellcasting flow to position tables in the markdown,
+              // when the text contains the expected markers.
+              if (tables.length > 0) {
+                baseDetail.desc = injectSpellcastingTablePlaceholders(
+                  baseDetail.desc,
+                  tables.map((t) => t.label)
+                );
+              }
+            } else {
+              // Attach each column the description references; label is the referenced
+              // name so the renderer can stitch it in at that paragraph.
+              for (const columnName of extractColumnReferences(baseDetail.desc)) {
+                const rows =
+                  tableDataByName.get(columnName) ?? tableDataBySlug.get(columnSlug(columnName));
+                if (rows && rows.length > 0 && !tables.some((t) => t.label === columnName)) {
+                  tables.push({ label: columnName, rows });
+                }
+              }
+
+              // No prose reference (e.g. Unarmored Movement): append its own same-named table.
+              if (tables.length === 0) {
+                let tableRows = tableDataByName.get(name);
+                if (
+                  (!tableRows || tableRows.length === 0) &&
+                  isUnarmoredMovementFeatureName(name)
+                ) {
+                  for (const [tableName, rows] of tableDataByName.entries()) {
+                    if (isUnarmoredMovementFeatureName(tableName)) {
+                      tableRows = rows;
+                      break;
+                    }
+                  }
+                }
+                if (tableRows && tableRows.length > 0) {
+                  tables.push({ label: name, rows: tableRows });
+                }
               }
             }
+            featureParts.push(name);
+            featureDetails.push(
+              tables.length > 0
+                ? { ...baseDetail, tableData: tables, ...classTag }
+                : { ...baseDetail, ...classTag }
+            );
           }
-          featureParts.push(name);
-          featureDetails.push(
-            tables.length > 0
-              ? { ...baseDetail, tableData: tables, ...classTag }
-              : { ...baseDetail, ...classTag }
-          );
+        }
+      }
+
+      const coreTraitsKey = `${classItem.sourceKey ?? ''}_core-traits`;
+      const featuresList = features ?? [];
+      const core =
+        Array.isArray(featuresList) &&
+        (featuresList.find((f: { key?: string }) => f.key === coreTraitsKey) ??
+          featuresList.find((f: { key?: string }) => (f.key ?? '').endsWith('_core-traits')));
+      const coreDesc =
+        core && typeof (core as { desc?: string }).desc === 'string'
+          ? (core as { desc: string }).desc
+          : undefined;
+      const coreMap = parseTableLikeToMap(coreDesc);
+
+      // A class joined by multiclassing grants only the subset in `normalized.multiclassing.grants`.
+      // Both paths emit the same "Label: value" lines, so downstream parsing is identical.
+      const classSkillText = multiclassGrants
+        ? multiclassSkillChoiceText(multiclassGrants.skillChoice, coreMap['Skill Proficiencies'])
+        : coreMap['Skill Proficiencies'];
+      if (classSkillText) {
+        proficiencyParts.push(`Skills: ${classSkillText}`);
+        const parsed = parseSkillProficienciesText(classSkillText);
+        if (classItem) classSkillOptionsByClass[classItem.id] = parsed;
+        if (isInitialClass) classSkillOptions = parsed;
+      }
+      const weaponProf = multiclassGrants
+        ? multiclassGrants.weaponProficiencies
+        : coreMap['Weapon Proficiencies'];
+      if (weaponProf) {
+        proficiencyParts.push(`Weapon Proficiencies: ${weaponProf}`);
+      }
+      const armorProf = multiclassGrants
+        ? multiclassGrants.armorTraining
+        : coreMap['Armor Training'];
+      if (armorProf) {
+        proficiencyParts.push(`Armor Training: ${armorProf}`);
+      }
+      const toolProf = multiclassGrants
+        ? multiclassGrants.toolProficiencies
+        : (coreMap['Tool Proficiencies'] ?? coreMap['Tool Proficiency']);
+      if (toolProf) {
+        proficiencyParts.push(`Tool Proficiencies: ${toolProf}`);
+      }
+
+      // Starting equipment comes from the initial class only; multiclassing grants none.
+      if (isInitialClass) {
+        const startingEquipmentKey =
+          coreMap['Starting Equipment'] !== undefined
+            ? 'Starting Equipment'
+            : coreMap['Starting equipment'] !== undefined
+              ? 'Starting equipment'
+              : null;
+        if (startingEquipmentKey) startingEquipmentLabel = startingEquipmentKey;
+        const startingEquipmentRaw =
+          coreMap['Starting Equipment'] ??
+          coreMap['Starting equipment'] ??
+          norm.startingEquipment ??
+          (norm as Record<string, unknown>).starting_equipment;
+        const startingEquipmentStr =
+          typeof startingEquipmentRaw === 'string'
+            ? startingEquipmentRaw
+            : typeof startingEquipmentRaw === 'object' &&
+                startingEquipmentRaw !== null &&
+                'desc' in startingEquipmentRaw
+              ? String((startingEquipmentRaw as { desc?: string }).desc ?? '')
+              : '';
+        startingEquipmentParsed = parseStartingEquipmentOptions(startingEquipmentStr);
+      }
+
+      if (isInitialClass && proficiencyParts.length === 0) {
+        const sp = (norm.skillProficiencies ?? norm.skill_proficiencies) as string | undefined;
+        const wp = (norm.weaponProficiencies ?? norm.weapon_proficiencies) as string | undefined;
+        const ap = (norm.armorProficiencies ?? norm.armor_proficiencies ?? norm.armor_training) as
+          | string
+          | undefined;
+        const tp = (norm.toolProficiencies ?? norm.tool_proficiencies) as string | undefined;
+        if (sp) {
+          proficiencyParts.push(`Skills: ${sp}`);
+          classSkillOptions = parseSkillProficienciesText(sp);
+        }
+        if (wp) proficiencyParts.push(`Weapon Proficiencies: ${wp}`);
+        if (ap) proficiencyParts.push(`Armor Training: ${ap}`);
+        if (tp) proficiencyParts.push(`Tool Proficiencies: ${tp}`);
+      }
+    }
+
+    if (subclassItem?.normalized && typeof subclassItem.normalized === 'object') {
+      const norm = subclassItem.normalized as Record<string, unknown>;
+      const features = norm.features as
+        | Array<{
+            name?: string;
+            desc?: string;
+            featureType?: string;
+            feature_type?: string;
+            gainedAt?: unknown;
+            gained_at?: unknown;
+            mechanics?: { featureKey?: string };
+          }>
+        | undefined;
+      if (Array.isArray(features)) {
+        // Data comes in alphabetical order; display by gain level like class features.
+        const gained: Array<{ detail: FeatureDetail; firstLevel: number }> = [];
+        for (const f of features) {
+          const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
+          if (type !== 'CLASS_LEVEL_FEATURE' || !f.name) continue;
+          const rawDesc = typeof f.desc === 'string' ? f.desc : '';
+          if (rawDesc.trim() === '[Column data]') continue;
+          const gainedAt = f.gainedAt ?? f.gained_at;
+          const levels = getGainedAtLevels({ gained_at: gainedAt } as { gained_at?: unknown });
+          const levelsAtOrBefore = levels
+            .filter((lvl) => lvl <= currentLevel)
+            .sort((a, b) => a - b);
+          // Without structured gainedAt, treat as gained at the subclass unlock level (3).
+          if (levels.length > 0 ? levelsAtOrBefore.length === 0 : currentLevel < 3) continue;
+          // Choice options: "**Name.** ..." blocks (Hunter's Prey, Defensive Tactics) only when the
+          // text announces the choice, otherwise features with bold paragraphs would become fake options;
+          // Elemental Affinity / Fiendish Resilience / Circle of the Land have name-only options.
+          const traitOpts = subclassFeatureHasTraitOptionChoice(rawDesc)
+            ? parseTraitOptions(rawDesc)
+            : [];
+          const simpleOpts = getSubclassSimpleOptions(f.name, rawDesc);
+          const opts = traitOpts.length >= 2 ? traitOpts : simpleOpts;
+          gained.push({
+            firstLevel: levelsAtOrBefore[0] ?? 3,
+            detail: {
+              name: f.name,
+              desc: normalizeFeatureDesc(rawDesc),
+              source: 'subclass',
+              gainCount: levels.length === 0 ? 1 : levelsAtOrBefore.length,
+              ...(levelsAtOrBefore.length > 0 ? { gainedAtLevels: levelsAtOrBefore } : {}),
+              ...(f.mechanics?.featureKey ? { featureKey: f.mechanics.featureKey } : {}),
+              ...(opts.length >= 2 ? { options: opts } : {}),
+            },
+          });
+        }
+        gained.sort((a, b) => a.firstLevel - b.firstLevel);
+        for (const { detail } of gained) {
+          featureParts.push(detail.name);
+          featureDetails.push({ ...detail, ...classTag });
         }
       }
     }
-
-    const coreTraitsKey = `${classItem.sourceKey ?? ''}_core-traits`;
-    const featuresList = features ?? [];
-    const core =
-      Array.isArray(featuresList) &&
-      (featuresList.find((f: { key?: string }) => f.key === coreTraitsKey) ??
-        featuresList.find((f: { key?: string }) => (f.key ?? '').endsWith('_core-traits')));
-    const coreDesc =
-      core && typeof (core as { desc?: string }).desc === 'string'
-        ? (core as { desc: string }).desc
-        : undefined;
-    const coreMap = parseTableLikeToMap(coreDesc);
-
-    // A class joined by multiclassing grants only the subset in `normalized.multiclassing.grants`.
-    // Both paths emit the same "Label: value" lines, so downstream parsing is identical.
-    const classSkillText = multiclassGrants
-      ? multiclassSkillChoiceText(multiclassGrants.skillChoice, coreMap['Skill Proficiencies'])
-      : coreMap['Skill Proficiencies'];
-    if (classSkillText) {
-      proficiencyParts.push(`Skills: ${classSkillText}`);
-      const parsed = parseSkillProficienciesText(classSkillText);
-      if (classItem) classSkillOptionsByClass[classItem.id] = parsed;
-      if (isInitialClass) classSkillOptions = parsed;
-    }
-    const weaponProf = multiclassGrants
-      ? multiclassGrants.weaponProficiencies
-      : coreMap['Weapon Proficiencies'];
-    if (weaponProf) {
-      proficiencyParts.push(`Weapon Proficiencies: ${weaponProf}`);
-    }
-    const armorProf = multiclassGrants ? multiclassGrants.armorTraining : coreMap['Armor Training'];
-    if (armorProf) {
-      proficiencyParts.push(`Armor Training: ${armorProf}`);
-    }
-    const toolProf = multiclassGrants
-      ? multiclassGrants.toolProficiencies
-      : (coreMap['Tool Proficiencies'] ?? coreMap['Tool Proficiency']);
-    if (toolProf) {
-      proficiencyParts.push(`Tool Proficiencies: ${toolProf}`);
-    }
-
-    // Starting equipment comes from the initial class only; multiclassing grants none.
-    if (isInitialClass) {
-      const startingEquipmentKey =
-        coreMap['Starting Equipment'] !== undefined
-          ? 'Starting Equipment'
-          : coreMap['Starting equipment'] !== undefined
-            ? 'Starting equipment'
-            : null;
-      if (startingEquipmentKey) startingEquipmentLabel = startingEquipmentKey;
-      const startingEquipmentRaw =
-        coreMap['Starting Equipment'] ??
-        coreMap['Starting equipment'] ??
-        norm.startingEquipment ??
-        (norm as Record<string, unknown>).starting_equipment;
-      const startingEquipmentStr =
-        typeof startingEquipmentRaw === 'string'
-          ? startingEquipmentRaw
-          : typeof startingEquipmentRaw === 'object' &&
-              startingEquipmentRaw !== null &&
-              'desc' in startingEquipmentRaw
-            ? String((startingEquipmentRaw as { desc?: string }).desc ?? '')
-            : '';
-      startingEquipmentParsed = parseStartingEquipmentOptions(startingEquipmentStr);
-    }
-
-    if (isInitialClass && proficiencyParts.length === 0) {
-      const sp = (norm.skillProficiencies ?? norm.skill_proficiencies) as string | undefined;
-      const wp = (norm.weaponProficiencies ?? norm.weapon_proficiencies) as string | undefined;
-      const ap = (norm.armorProficiencies ?? norm.armor_proficiencies ?? norm.armor_training) as
-        | string
-        | undefined;
-      const tp = (norm.toolProficiencies ?? norm.tool_proficiencies) as string | undefined;
-      if (sp) {
-        proficiencyParts.push(`Skills: ${sp}`);
-        classSkillOptions = parseSkillProficienciesText(sp);
-      }
-      if (wp) proficiencyParts.push(`Weapon Proficiencies: ${wp}`);
-      if (ap) proficiencyParts.push(`Armor Training: ${ap}`);
-      if (tp) proficiencyParts.push(`Tool Proficiencies: ${tp}`);
-    }
-  }
-
-  if (subclassItem?.normalized && typeof subclassItem.normalized === 'object') {
-    const norm = subclassItem.normalized as Record<string, unknown>;
-    const features = norm.features as
-      | Array<{
-          name?: string;
-          desc?: string;
-          featureType?: string;
-          feature_type?: string;
-          gainedAt?: unknown;
-          gained_at?: unknown;
-          mechanics?: { featureKey?: string };
-        }>
-      | undefined;
-    if (Array.isArray(features)) {
-      // Data comes in alphabetical order; display by gain level like class features.
-      const gained: Array<{ detail: FeatureDetail; firstLevel: number }> = [];
-      for (const f of features) {
-        const type = (f.featureType ?? f.feature_type ?? '').toUpperCase();
-        if (type !== 'CLASS_LEVEL_FEATURE' || !f.name) continue;
-        const rawDesc = typeof f.desc === 'string' ? f.desc : '';
-        if (rawDesc.trim() === '[Column data]') continue;
-        const gainedAt = f.gainedAt ?? f.gained_at;
-        const levels = getGainedAtLevels({ gained_at: gainedAt } as { gained_at?: unknown });
-        const levelsAtOrBefore = levels.filter((lvl) => lvl <= currentLevel).sort((a, b) => a - b);
-        // Without structured gainedAt, treat as gained at the subclass unlock level (3).
-        if (levels.length > 0 ? levelsAtOrBefore.length === 0 : currentLevel < 3) continue;
-        // Choice options: "**Name.** ..." blocks (Hunter's Prey, Defensive Tactics) only when the
-        // text announces the choice, otherwise features with bold paragraphs would become fake options;
-        // Elemental Affinity / Fiendish Resilience / Circle of the Land have name-only options.
-        const traitOpts = subclassFeatureHasTraitOptionChoice(rawDesc)
-          ? parseTraitOptions(rawDesc)
-          : [];
-        const simpleOpts = getSubclassSimpleOptions(f.name, rawDesc);
-        const opts = traitOpts.length >= 2 ? traitOpts : simpleOpts;
-        gained.push({
-          firstLevel: levelsAtOrBefore[0] ?? 3,
-          detail: {
-            name: f.name,
-            desc: normalizeFeatureDesc(rawDesc),
-            source: 'subclass',
-            gainCount: levels.length === 0 ? 1 : levelsAtOrBefore.length,
-            ...(levelsAtOrBefore.length > 0 ? { gainedAtLevels: levelsAtOrBefore } : {}),
-            ...(f.mechanics?.featureKey ? { featureKey: f.mechanics.featureKey } : {}),
-            ...(opts.length >= 2 ? { options: opts } : {}),
-          },
-        });
-      }
-      gained.sort((a, b) => a.firstLevel - b.firstLevel);
-      for (const { detail } of gained) {
-        featureParts.push(detail.name);
-        featureDetails.push({ ...detail, ...classTag });
-      }
-    }
-  }
   };
 
   classEntries.forEach((entry, index) => deriveClass(entry, index === 0));
@@ -962,7 +971,10 @@ export function getDerivedFromRuleItems(input: DeriveCharacterInput): DerivedCha
               (skillful && opts.length >= 1));
           featureParts.push(traitTitle);
           const descForTrait = isSelectableTrait(traitTitle)
-            ? rawDesc.replace(/^\*{0,2}Table:\s*[^\n]*\*{0,2}$/gm, '').replace(/\n{3,}/g, '\n\n').trim()
+            ? rawDesc
+                .replace(/^\*{0,2}Table:\s*[^\n]*\*{0,2}$/gm, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim()
             : rawDesc;
           featureDetails.push({
             name: traitTitle,
@@ -1127,7 +1139,12 @@ export function getDerivedFromRuleItems(input: DeriveCharacterInput): DerivedCha
 }
 
 function normalizeAlertName(name: string): string {
-  return (name ?? '').trim().toLowerCase().replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  return (name ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function hasAlertFeatInFeatures(data: CharacterFormData, featsList?: RuleItemResponse[]): boolean {
@@ -1141,7 +1158,7 @@ function hasAlertFeatInFeatures(data: CharacterFormData, featsList?: RuleItemRes
   if (isAlertId(data.versatileFeatId)) return true;
   if (isAlertId(data.epicBoonFeatId)) return true;
   return (data.abilityScoreImprovementByGain ?? []).some(
-    (g) => g?.kind === 'feat' && isAlertId(g.featId),
+    (g) => g?.kind === 'feat' && isAlertId(g.featId)
   );
 }
 
@@ -1157,7 +1174,7 @@ function hasAlertFeatInFeatures(data: CharacterFormData, featsList?: RuleItemRes
 export function applyCombatFromAttributes(
   data: CharacterFormData,
   featsList?: RuleItemResponse[],
-  options?: { fillCurrentHpToMax?: boolean },
+  options?: { fillCurrentHpToMax?: boolean }
 ): CharacterFormData {
   let working: CharacterFormData = data;
   if (!canApplyAbilityScoreImprovementASI(working)) {
@@ -1334,7 +1351,6 @@ function clampAbilityScoreImprovementByGain(
   return arr;
 }
 
-
 export function applyDerivedToCharacterData(
   data: CharacterFormData,
   derived: DerivedCharacterStats,
@@ -1344,7 +1360,7 @@ export function applyDerivedToCharacterData(
    * the new class happens to share the feature (e.g. Weapon Mastery on Barbarian → Fighter) — the
    * code identifies them by `source: 'class'`, so no per-field list is hardcoded.
    */
-  classChanged = false,
+  classChanged = false
 ): CharacterFormData {
   // Merge: derived initializes all skills to false (complete map), data overrides with saved selections.
   // Background skills from derived are always enforced as true.
@@ -1699,10 +1715,14 @@ export function applyDerivedToCharacterData(
     const sliced =
       known.length > maxEldritchSelections ? known.slice(0, maxEldritchSelections) : known;
     // Drop selections orphaned by a level drop or a removed prerequisite invocation/pact.
-    eldritchInvocationSelections = pruneEldritchInvocationSelections(sliced, eldritchFeat.options ?? [], {
-      characterLevel: data.level,
-      featureNamesLower: derived.featureDetails.map((f) => f.name.trim().toLowerCase()),
-    });
+    eldritchInvocationSelections = pruneEldritchInvocationSelections(
+      sliced,
+      eldritchFeat.options ?? [],
+      {
+        characterLevel: data.level,
+        featureNamesLower: derived.featureDetails.map((f) => f.name.trim().toLowerCase()),
+      }
+    );
   }
 
   const mysticArcanumFeat = derived.featureDetails.find(
@@ -1747,10 +1767,7 @@ export function applyDerivedToCharacterData(
   // Summed across classes, not `.find().gainCount`: each class grants ASIs on its own schedule, so a
   // Rogue 4 / Wizard 4 owes TWO. Reading the first feature alone truncated the array to one and the
   // second gain was silently dropped on every load, manual sheets included.
-  const maxAsiGains = sumClassFeatureGainCount(
-    derived.featureDetails,
-    'ability score improvement'
-  );
+  const maxAsiGains = sumClassFeatureGainCount(derived.featureDetails, 'ability score improvement');
 
   let abilityScoreImprovementByGainResolved: AbilityScoreImprovementGainChoice[];
 
@@ -1889,7 +1906,10 @@ export function reconcileDependentSelections(data: CharacterFormData): Character
       const key = fightingStyleClassKey(feature);
       const pick = stored[key] ?? (index === 0 && legacy ? legacy : null);
       if (!pick) return;
-      const grant = getFightingStyleCantripGrant({ fightingStyleByClass: { [key]: pick } }, feature);
+      const grant = getFightingStyleCantripGrant(
+        { fightingStyleByClass: { [key]: pick } },
+        feature
+      );
       rebuilt[key] = {
         ...pick,
         cantrips: grant ? (pick.cantrips ?? []).slice(0, grant.max) : [],

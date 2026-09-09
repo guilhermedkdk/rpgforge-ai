@@ -1,6 +1,10 @@
 'use client';
 
-import { getExpertiseSelectionPrerequisiteMessage, retainSkillProficiencyFromClassOrBackground, type CharacterFormData } from '@rpgforce-ai/shared';
+import {
+  getExpertiseSelectionPrerequisiteMessage,
+  retainSkillProficiencyFromClassOrBackground,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
 import { SkillChoiceFromListBlock } from '../shared/skill-choice-list';
 import { RequirementAlert, SelectionSection } from '../shared/selection';
 import { getSkillNameFromList } from '../shared/skill-name';

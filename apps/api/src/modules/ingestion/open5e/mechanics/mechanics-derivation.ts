@@ -15,7 +15,7 @@ export function applyMechanics(
   kind: RuleItemKind,
   sourceKey: string,
   name: string,
-  normalized: Record<string, unknown> | null,
+  normalized: Record<string, unknown> | null
 ): Record<string, unknown> | null {
   if (!normalized) return normalized;
 
@@ -55,7 +55,7 @@ function annotateEntries(entries: unknown): unknown {
     const f = entry as FeatureEntry;
     const rule = findMechanicsRule(
       typeof f.key === 'string' ? f.key : null,
-      typeof f.name === 'string' ? f.name : null,
+      typeof f.name === 'string' ? f.name : null
     );
     if (!rule) return entry;
     return { ...f, mechanics: rule.mechanics };

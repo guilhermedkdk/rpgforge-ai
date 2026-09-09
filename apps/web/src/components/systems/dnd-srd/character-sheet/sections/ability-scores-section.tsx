@@ -349,7 +349,12 @@ export function AbilityScoresSection({
             </div>
           )}
 
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-between pt-2 pb-4">
+          {/* A grid until `lg`, a column after it.
+              The column exists for the desktop sheet, where this sits in a narrow tall track and
+              `justify-between` spreads six boxes down it. Below that breakpoint the track becomes
+              full width, and the same rule stretched six numbers over 510px of scrolling inside a
+              20px-wide strip with the whole screen empty either side. */}
+          <div className="grid min-h-0 flex-1 grid-cols-3 justify-items-center gap-3 pt-2 pb-4 lg:flex lg:flex-col lg:items-center lg:justify-between lg:gap-0">
             {ATTRIBUTES.map((attr) => {
               const baseScore =
                 data.attributes[attr] ?? (method === 'point-buy' ? POINT_BUY_MIN : 0);

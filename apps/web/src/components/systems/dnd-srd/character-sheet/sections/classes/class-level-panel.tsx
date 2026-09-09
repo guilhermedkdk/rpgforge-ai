@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { DndClassEmblem } from '../../../art/class-emblems';
 
 // A stepper is a real DropdownMenuItem, not a button inside the menu: Radix swallows Tab inside menu
-// content, so a plain button here is reachable by mouse only (measured). As an item it joins the
+// content, so a plain button here is reachable by mouse only. As an item it joins the
 // arrow-key ring and gets the menu's own focus treatment; `p-0` drops the item padding that would
 // otherwise stretch the row.
 const stepItemClass =

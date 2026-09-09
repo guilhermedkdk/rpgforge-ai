@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Minus, Plus, Repeat2, Trash2, TriangleAlert } from 'lucide-react';
+import { Minus, Plus, Repeat2, Split, Trash2, TriangleAlert } from 'lucide-react';
 import {
   addClassEntry,
   getClassHitDie,
@@ -12,6 +12,7 @@ import {
   getMulticlassPrerequisites,
   isSubclassOfClass,
   MAX_CHARACTER_LEVEL,
+  MULTICLASS_PREREQUISITE_SCORE,
   realClassEntries,
   removeClassEntry,
   setClassEntryLevel,
@@ -30,7 +31,13 @@ import { cn } from '@/lib/utils';
 import { RuleItemSelect } from '../../ui/rule-item-select';
 import { DndClassEmblem } from '../../../art/class-emblems';
 import type { SheetLocks } from '../../locks';
-import { requirementText, unmetRequirementSentence } from './class-requirement';
+import {
+  abilityListText,
+  requirementSentence,
+  requirementText,
+  unmetRequirementSentence,
+} from './class-requirement';
+import { RequirementBadge } from './requirement-badge';
 
 const stepButtonClass =
   'flex w-7 shrink-0 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent';
@@ -128,6 +135,29 @@ export function ClassesManagerDialog({
     [classes, entries, currentClassItems, abilityScores]
   );
 
+  // What the classes already on the sheet demand of ANY new one. A card only names a requirement
+  // once it is UNMET, so for a player who meets it the rule is invisible: this states it up front.
+  const currentRequirements = useMemo(
+    () =>
+      currentClassItems
+        .map((classItem) => {
+          const primary = getClassPrimaryAbilities(classItem);
+          const abilities = primary?.abilities ?? [];
+          const meets = (ability: string) =>
+            (abilityScores[ability] ?? 0) >= MULTICLASS_PREREQUISITE_SCORE;
+          return {
+            className: classItem.name,
+            abilityText: abilityListText(abilities, primary?.mode === 'any'),
+            met: primary?.mode === 'any' ? abilities.some(meets) : abilities.every(meets),
+          };
+        })
+        .filter((requirement) => requirement.abilityText.length > 0),
+    [currentClassItems, abilityScores]
+  );
+
+  const initialClassName =
+    (entries[0] && (classById.get(entries[0].classRuleItemId)?.name ?? entries[0].className)) ?? '';
+
   const handleAdd = (classItem: RuleItemResponse) =>
     onChange(
       addClassEntry(data, {
@@ -146,8 +176,9 @@ export function ClassesManagerDialog({
         <DialogTitle className="pr-8">Classes</DialogTitle>
         <DialogDescription asChild>
           <p className="text-sm text-muted-foreground">
-            Each class has its own level and subclass. Only the first one grants saving throws, the
-            full starting proficiencies and the starting equipment.
+            {entries.length === 0
+              ? 'Pick the class you start with. It becomes your initial class: the only one that grants saving throws, the full starting proficiencies and the starting equipment. You can add others later to multiclass.'
+              : 'Each class has its own level and subclass. Only the initial one grants saving throws, the full starting proficiencies and the starting equipment.'}
           </p>
         </DialogDescription>
 
@@ -156,7 +187,9 @@ export function ClassesManagerDialog({
             <div className="flex flex-col gap-2">
               {/* The rule itself is in the dialog description; each row's badge says which side of
                   it that class is on, so the section only needs its label. */}
-              <p className={fieldLabelClass}>Your classes</p>
+              <p className={fieldLabelClass}>
+                {entries.length === 1 ? 'Your class' : 'Your classes'}
+              </p>
               {entries.map((entry, index) => {
                 const classItem = classById.get(entry.classRuleItemId) ?? null;
                 const subclassOptions = classItem
@@ -383,15 +416,14 @@ export function ClassesManagerDialog({
                     </div>
 
                     {prerequisiteMiss && (
-                      <div className="mt-2.5 flex items-start gap-2 border-t border-destructive/25 pt-2.5 text-xs leading-relaxed">
-                        <TriangleAlert
-                          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive"
-                          aria-hidden
-                        />
-                        <p className="min-w-0 text-muted-foreground">
-                          <span className="font-medium text-destructive">
-                            {unmetRequirementSentence(prerequisiteMiss)}
-                          </span>{' '}
+                      <div className="mt-2.5 flex flex-col items-start gap-1.5 border-t border-destructive/25 pt-2.5">
+                        {/* The same pill the picker states this rule in, then what to do about it:
+                            as a plain red sentence, a broken requirement on the sheet read as a
+                            different rule from the one the class cards enforce. */}
+                        <RequirementBadge tone="unmet">
+                          {unmetRequirementSentence(prerequisiteMiss)}
+                        </RequirementBadge>
+                        <p className="min-w-0 text-xs leading-relaxed text-muted-foreground">
                           A multiclass keeps its requirement for as long as you have it. Raise the
                           ability again (an Ability Score Improvement you lost by lowering a level
                           has to be chosen again) or remove the class. The sheet will not save
@@ -406,14 +438,50 @@ export function ClassesManagerDialog({
           )}
 
           <div ref={setGridEl} className="flex flex-col gap-2">
-            <p className={fieldLabelClass}>
-              {entries.length === 0 ? 'Choose your class' : 'Add a class'}
-            </p>
-            {/* Only the add case needs a line: the prerequisite is not visible anywhere else. */}
-            {entries.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Needs 13 in its primary ability and in your current classes.
-              </p>
+            {entries.length === 0 ? (
+              <p className={fieldLabelClass}>Choose your class</p>
+            ) : (
+              // Named, framed and tinted. The grid used to sit under a bare "Add a class" label
+              // with a lone sentence about 13, and nothing on screen said that taking one of those
+              // cards IS multiclassing, nor what it costs.
+              <div className="rounded-md border border-dashed border-primary/35 bg-primary/5 p-3">
+                <div className="flex items-center gap-2">
+                  <Split className="h-4 w-4 shrink-0 rotate-90 text-primary" aria-hidden />
+                  <p className="text-sm font-semibold">Add another class (multiclass)</p>
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  Taking one of the classes below is multiclassing:{' '}
+                  <span className="font-medium text-foreground">{initialClassName}</span> stays your
+                  initial class and the new one starts at level 1, with its own features and
+                  subclass. Your character level becomes the sum of them, and a class taken this way
+                  grants reduced proficiencies and no starting equipment.
+                </p>
+
+                <div className="mt-2.5 border-t border-primary/20 pt-2.5">
+                  <p className={fieldLabelClass}>What it requires</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    A score of {MULTICLASS_PREREQUISITE_SCORE} in the primary ability of the new
+                    class, which every card states, and in the primary ability of the classes you
+                    already have:
+                  </p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {currentRequirements.map((requirement) => (
+                      <li key={requirement.className}>
+                        <RequirementBadge tone={requirement.met ? 'met' : 'unmet'}>
+                          {requirementSentence(requirement.className, requirement.abilityText)}
+                        </RequirementBadge>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* Otherwise every card greys out at level 20 with no reason given. */}
+                  {remaining <= 0 && (
+                    <p className="mt-2 text-xs leading-relaxed text-destructive/90">
+                      You are at level {MAX_CHARACTER_LEVEL}, the cap: lower a class before taking
+                      another.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
 
             {classesLoading ? (
@@ -440,27 +508,12 @@ export function ClassesManagerDialog({
                           : 'cursor-not-allowed opacity-70'
                       )}
                     >
-                      {/* State sits on the name's line and never wraps: as a block underneath it
-                          read as a button inside a button, and its wrapping made neighbouring
-                          cards different heights. */}
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <DndClassEmblem
-                            classSlug={classItem.slug ?? null}
-                            className="h-5 w-5 shrink-0 text-muted-foreground"
-                          />
-                          <span className="truncate text-sm font-semibold">{classItem.name}</span>
-                        </span>
-                        {(onSheet || miss) && (
-                          <span
-                            className={cn(
-                              'shrink-0 whitespace-nowrap text-[11px]',
-                              onSheet ? 'text-muted-foreground' : 'text-destructive/90'
-                            )}
-                          >
-                            {onSheet ? 'On your sheet' : requirementText(miss!, classItem.name)}
-                          </span>
-                        )}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <DndClassEmblem
+                          classSlug={classItem.slug ?? null}
+                          className="h-5 w-5 shrink-0 text-muted-foreground"
+                        />
+                        <span className="truncate text-sm font-semibold">{classItem.name}</span>
                       </span>
 
                       {flavor && (
@@ -487,6 +540,16 @@ export function ClassesManagerDialog({
                           </span>
                         </span>
                       </span>
+
+                      {/* Same pill as the requirements above, on its own line: the state used to
+                          share the name's line, which forced STR/DEX abbreviations to fit and made
+                          the same rule look like two. `mt-auto` pins it to the bottom, so a card
+                          with a shorter flavour text does not float its badge mid-air. */}
+                      {(onSheet || miss) && (
+                        <RequirementBadge tone={onSheet ? 'neutral' : 'unmet'} className="mt-auto">
+                          {onSheet ? 'On your sheet' : requirementText(miss!, classItem.name)}
+                        </RequirementBadge>
+                      )}
                     </button>
                   );
                 })}

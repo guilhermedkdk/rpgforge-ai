@@ -1,12 +1,10 @@
 /**
- * Auto-granted spells: every spell a character's features place on the sheet (race lineages, fixed
- * class/race grants, Magic Initiate, subclass tables, Magical Discoveries, Mystic Arcanum, Signature
- * Spells, Spell Mastery, Eldritch Invocations, Pact of the Tome, Fighting Style cantrips).
+ * Every spell a character's features place on the sheet: lineages, fixed grants, Magic Initiate,
+ * subclass tables, invocations and the rest.
  *
- * Granted rows are NOT persisted (only the player's own picks are), so the server MUST re-derive
- * them before validating a save — otherwise it sees a different `spellsByLevel` than the editor and
- * rejects a sheet the editor considers complete. This is why the computation lives here and not in
- * the web hook that used to own it.
+ * Granted rows are NOT persisted, only the player's own picks, so the server must re-derive them
+ * before validating a save or it rejects a sheet the editor considers complete. Hence shared code,
+ * not the web hook that used to own it.
  */
 import type { RuleItemResponse } from '../../../types/ruleitem';
 import type { CharacterFormData } from '../character/character-form-data';

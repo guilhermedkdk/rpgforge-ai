@@ -1,4 +1,3 @@
-/** Max value of a hit die from notation, e.g. "1d8" -> 8, "1d12" -> 12; 0 if unparseable. */
 /**
  * Fixed hit points a class grants per level AFTER the first: `ceil((die + 1) / 2)`, the SRD's
  * "average" that every sheet uses instead of rolling. Exported because the class picker shows it
@@ -8,6 +7,7 @@ export function averageHpPerLevel(dieMax: number): number {
   return Math.ceil((dieMax + 1) / 2);
 }
 
+/** Max value of a hit die from notation, e.g. "1d8" -> 8, "1d12" -> 12; 0 if unparseable. */
 export function hitDieMaxFromNotation(hitDice: string | null | undefined): number {
   const match = (hitDice ?? '').trim().match(/(\d+)\s*[dD]\s*(\d+)/);
   if (!match) return 0;
@@ -93,12 +93,20 @@ export function maxHpForClasses({
  * Single-class max HP. Delegates to `maxHpForClasses` so there is exactly one HP formula.
  * With no hit die (hitDieMax <= 0) the base is 0; per-level HP bonuses still apply.
  */
-export function maxHpForLevel({ hitDieMax, conMod, level, bonusHpPerLevel = 0 }: MaxHpParams): number {
+export function maxHpForLevel({
+  hitDieMax,
+  conMod,
+  level,
+  bonusHpPerLevel = 0,
+}: MaxHpParams): number {
   const lvl = Math.max(1, Math.min(20, Math.floor(level)));
-  return maxHpForClasses({
-    pool: hitDieMax > 0 ? [{ dieMax: hitDieMax, levels: lvl }] : [],
-    conMod,
-    // Keeps the bonus applying even with no hit die, which is what the single-class path promised.
-    bonusHpPerLevel: 0,
-  }) + Math.max(0, bonusHpPerLevel) * lvl;
+  return (
+    maxHpForClasses({
+      pool: hitDieMax > 0 ? [{ dieMax: hitDieMax, levels: lvl }] : [],
+      conMod,
+      // Keeps the bonus applying even with no hit die, which is what the single-class path promised.
+      bonusHpPerLevel: 0,
+    }) +
+    Math.max(0, bonusHpPerLevel) * lvl
+  );
 }

@@ -1,19 +1,12 @@
 'use client';
 
 /**
- * Canonical UI for **choosing options inside the feature detail modal** (left square
- * checkbox + check or “E”, same metrics as the class-skills dropdown in
- * `abilities/saves-skills-column.tsx`).
+ * Canonical row for choosing options inside the feature detail modal, with the same metrics as the
+ * class-skills dropdown.
  *
- * For new work:
- * - **Simple list** (single or multi pick, optional locked rows): prefer
- *   `SkillChoiceFromListBlock` in `skill-choice-from-list-block.tsx` — it wraps this row.
- * - **Custom body** (feat-style stack, markdown, trailing column): render
- *   `FeatureOptionRow` directly; use `alignTop` when the body is multi-line.
- * - **Data-driven options only** (no new panel): features that hit `GenericOptionsView`
- *   already use this pattern for segmented blocks and markdown `p` / `tr` pickers.
- *
- * Re-exported from `feature-detail-primitives.tsx` for a single import surface.
+ * For a simple list prefer `SkillChoiceFromListBlock`, which wraps this; render this directly for a
+ * custom body, with `alignTop` when the body is multi-line. Re-exported from
+ * `feature-detail-primitives.tsx` for a single import surface.
  */
 
 import * as React from 'react';
@@ -27,7 +20,7 @@ export function featureSelectionRowClass(disabled: boolean, opts?: { alignTop?: 
     opts?.alignTop ? 'items-start' : 'items-center',
     disabled
       ? 'cursor-not-allowed opacity-60'
-      : 'cursor-pointer hover:border-primary/50 hover:bg-muted/40',
+      : 'cursor-pointer hover:border-primary/50 hover:bg-muted/40'
   );
 }
 
@@ -35,7 +28,7 @@ export function featureSelectionRowClass(disabled: boolean, opts?: { alignTop?: 
 export function featureSelectionCheckboxClass(selected: boolean) {
   return cn(
     'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px] leading-none',
-    selected ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground/50',
+    selected ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground/50'
   );
 }
 
@@ -85,7 +78,7 @@ export function FeatureOptionRow({
           'min-w-0 flex-1 text-left',
           alignTop
             ? '[&_p:first-child]:mt-0'
-            : 'flex items-center leading-4 text-xs font-medium text-foreground',
+            : 'flex items-center leading-4 text-xs font-medium text-foreground'
         )}
       >
         {children}

@@ -54,7 +54,12 @@ export function parseWeaponProficiencyRules(proficiencies: string): WeaponProfic
       conditionalCategories.add(category);
       const anyOfProperties = match[2]
         .split(/\s+or\s+|\s+and\s+/i)
-        .map((p) => p.trim().replace(/^the\s+/i, '').toLowerCase())
+        .map((p) =>
+          p
+            .trim()
+            .replace(/^the\s+/i, '')
+            .toLowerCase()
+        )
         .filter(Boolean);
       rules.push({ category, anyOfProperties });
     }

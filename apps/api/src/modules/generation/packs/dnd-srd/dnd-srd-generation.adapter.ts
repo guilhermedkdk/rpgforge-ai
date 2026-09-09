@@ -118,15 +118,11 @@ function resolveBundleIndex(index: number, bundles: EquipmentBundleOption[]): nu
   return index >= 0 && index < bundles.length ? index : 0;
 }
 
-/** Resolves the armor + shield to equip from the character's equipment item names (by exact match). */
 /**
- * Replaces the CATEGORY placeholders a starting-equipment bundle leaves behind ("Holy Symbol",
- * "Musical Instrument of your choice") with a concrete catalog item.
- *
- * Without this the draft ships the generic line and the editor flags a pending equipment pick the
- * player never made: measured on every Cleric, Paladin, Bard and Acolyte draft. Which items qualify
- * is the SHARED rule the editor's own pickers use; only the policy is local, and it is deliberately
- * deterministic (first by name) since every option is equally legal.
+ * Replaces the category placeholders a starting-equipment bundle leaves behind ("Holy Symbol") with
+ * a concrete catalog item, or the editor flags a pending pick the player never made. Which items
+ * qualify is the shared rule the editor's pickers use; the choice is deterministic because every
+ * option is equally legal.
  */
 function resolveEquipmentPlaceholders<T extends { name: string; quantity: number }>(
   items: T[],
@@ -163,9 +159,8 @@ function resolvePurchases(
   /** False when the class bundle was the "take the gold" option: the purse IS the equipment. */
   hasStartingGear: boolean
 ): { items: Array<{ name: string; quantity: number; source: 'manual' }>; spentGP: number } {
-  // The model shops to the last copper when left unbounded (measured: a Cleric bought 10 lines and
-  // ended on 8 SP). A starting character keeping some coin is the normal state, so the spend is
-  // capped here rather than argued for in the prompt.
+  // The model shops to the last copper when left unbounded, and a starting character keeping some
+  // coin is the normal state, so the spend is capped here rather than argued for in the prompt.
   const maxLines = hasStartingGear ? MAX_PURCHASE_LINES_WITH_GEAR : MAX_PURCHASE_LINES_GOLD_ONLY;
   const budget =
     goldAvailable * (hasStartingGear ? MAX_PURCHASE_SHARE_WITH_GEAR : MAX_PURCHASE_SHARE_GOLD_ONLY);
@@ -192,21 +187,8 @@ function resolvePurchases(
 }
 
 /**
- * Guarantees the "take the gold" build is actually armed.
- *
- * The prompt asks for a weapon and armor, and the model still shipped a Cleric 20 with 113 GP, two
- * daggers and no armor at all. Same policy as every other pick in this pipeline: ask the model, then
- * top up deterministically instead of trusting it. Armor is limited to the categories the class
- * itself grants (`normalized.multiclassing.grants.armorTraining`, the conservative subset), so a
- * Wizard is never handed Chain Mail.
- */
-/**
- * States what the leftover gold actually bought, as an equipment note.
- *
- * Written from the RESULT, not asked of the model, for two reasons: the model narrates the bundles it
- * picked and forgets the shopping (measured on a Ranger 20 that bought 2 Hunting Traps and 1 Rations
- * and mentioned neither), and `topUpStartingGear` buys things the model never asked for, so it could
- * not describe them even if it wanted to. Generated from the final list, it can never be wrong.
+ * States what the leftover gold bought. Written from the RESULT, never asked of the model: it
+ * forgets its own shopping, and the top-up buys things it never asked for.
  */
 function withPurchaseNote(
   decisions: AiDecision[],
@@ -228,6 +210,11 @@ function withPurchaseNote(
   return [...decisions, { area: 'equipment', points: [note] }];
 }
 
+/**
+ * Guarantees the "take the gold" build is actually armed: asked for a weapon and armor, the model
+ * still ships characters with neither. Armor is limited to what the class itself grants, so a Wizard
+ * is never handed Chain Mail.
+ */
 function topUpStartingGear(params: {
   bought: Array<{ name: string; quantity: number; source: 'manual' }>;
   spentGP: number;
@@ -285,6 +272,7 @@ function topUpStartingGear(params: {
   return { items, spentGP };
 }
 
+/** Resolves the armor + shield to equip from the character's equipment item names (by exact match). */
 function resolveEquippedArmor(
   equipmentItems: { name: string; quantity: number }[],
   armors: RuleItemResponse[]
@@ -450,17 +438,8 @@ interface GenerationCastingClass {
 }
 
 /**
- * Spends EACH class's allowance: the model's own picks for that class first, then its own list until
- * the count its table demands is exact. One flat pool left the second class at 0/n and the draft
- * unsaveable. `excludeNames` drops the spells the character gets for free, which do not count.
- */
-/**
- * Most one spell level may hold, as a share of the prepared allowance.
- *
- * Left to itself the model prepares almost everything low: measured on the real level-20 drafts, a
- * Wizard 20 with 20 of its 25 spells at level 1 and nothing above 3, so its level 4-9 slots had
- * nothing to cast. A third of the allowance still gave 9+9 on levels 1-2; a fifth is what produced a
- * list that reads like a real build.
+ * Most one spell level may hold, as a share of the prepared allowance. Left alone the model prepares
+ * almost everything at the lowest levels, leaving the high slots with nothing to cast.
  */
 const MAX_SHARE_PER_SPELL_LEVEL = 1 / 5;
 
@@ -477,6 +456,10 @@ function requiredSpellLevels(maxSpellLevel: number): number[] {
   return out;
 }
 
+/**
+ * Spends EACH class's allowance separately: one flat pool left the second class short and the draft
+ * unsaveable. `excludeNames` drops the spells the character gets for free, which do not count.
+ */
 function fillSpellsPerClass(params: {
   castingClasses: GenerationCastingClass[];
   pickedSpells: RuleItemResponse[];
@@ -606,13 +589,9 @@ function flattenChosenSpells(
 /**
  * Stamps the canonical standard array onto the model's assignment, primary abilities first.
  *
- * Two jobs, one place, both deterministic top-ups like the rest of the pipeline:
- *  - the sheet claims `standard-array`, so the VALUES must be exactly 15/14/13/12/10/8. The model
- *    does not always comply (measured: 16/14/14/13/12/10), and the save then rejects the draft.
- *  - every class's primary ability must reach 13 to multiclass. Sorting the required abilities to
- *    the top satisfies that for free, instead of throwing away the class the user asked for.
- *
- * The model's own ranking survives everywhere it does not conflict with those two rules.
+ * The values must be exactly 15/14/13/12/10/8 or the save rejects the draft, and every class's
+ * primary ability must reach 13 to multiclass. The model's own ranking survives wherever it does not
+ * conflict with those two.
  */
 function normalizeAbilityArray(
   attributes: LlmCore['attributes'],
@@ -644,17 +623,8 @@ function normalizeAbilityArray(
 }
 
 /**
- * The D&D SRD 5.2 implementation of the AI wizard.
- *
- * Owns everything shaped by this system: the LLM schemas, the prompts, the choice menus, the
- * derivation gap-filling and the persisted draft. The module around it stays pack-agnostic.
- */
-/**
- * Collects what the server changed relative to what was asked, in the user's own terms.
- *
- * Every repair in this pipeline (clamped level, collapsed multiclass, normalised ability array) is
- * deliberate, but a silent repair reads as the app ignoring the request: someone asks for level 30,
- * gets 20, and has no way to tell whether they were understood.
+ * Collects what the server changed relative to what was asked. Every repair here is deliberate, but
+ * a silent one reads as the app ignoring the request.
  */
 class AdjustmentLog {
   private readonly entries: string[] = [];
@@ -672,6 +642,10 @@ class AdjustmentLog {
   }
 }
 
+/**
+ * The D&D SRD 5.2 implementation of the AI wizard: LLM schemas, prompts, choice menus, derivation
+ * gap-filling and the persisted draft. The module around it stays pack-agnostic.
+ */
 @Injectable()
 export class DndSrdGenerationAdapter implements PackGenerationAdapter {
   readonly packSlug = DND_SRD_PACK_SLUG;
@@ -686,8 +660,9 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
   async generateQuestions(input: {
     packId: string;
     prompt: string;
+    userId?: string | null;
   }): Promise<{ note: string; questions: GenerationQuestion[] }> {
-    const { packId, prompt } = input;
+    const { packId, prompt, userId } = input;
     // Ground the questions in what actually exists in the pack: without this the model offers
     // options from its D&D training data (e.g. cleric domains this system does not have).
     const inventoryBlock = await this.buildPackInventoryBlock(packId);
@@ -696,6 +671,8 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
       schemaName: 'clarifying_questions',
       system: QUESTIONS_SYSTEM,
       user: buildQuestionsUser(prompt, inventoryBlock),
+      operation: 'generation.questions',
+      userId,
     });
     // The note is rendered as Markdown; questions/options are plain labels, so strip any Markdown the
     // model added despite the instruction (keeps stray asterisks out of the buttons). No fixed question
@@ -713,8 +690,8 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
           `Question "${q.question}" offered a type-it-yourself option; dropped it (free text is always available)`
         );
       }
-      // The model repeats itself now and then (measured: "Acolyte" twice in one background question),
-      // and a duplicate option is both useless to answer and a duplicate React key in the list.
+      // The model repeats itself now and then, and a duplicate option is both useless to answer and
+      // a duplicate React key in the list.
       const byText = new Map<string, string>();
       for (const option of usable) {
         const key = option.trim().toLowerCase();
@@ -758,7 +735,7 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
   }
 
   async generateCharacter(
-    req: GenerateCharacterRequest
+    req: GenerateCharacterRequest & { userId?: string | null }
   ): Promise<{ draft: PersistedCharacterData; meta: GenerateCharacterMeta }> {
     const conceptText = buildConceptText(req.prompt, req.answers);
 
@@ -786,6 +763,8 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
 
     // 2. LLM picks race/class/background + abilities + personality from the candidates.
     const core = await this.llm.structured({
+      operation: 'generation.character',
+      userId: req.userId,
       schema: llmCoreSchema,
       schemaName: 'character_core',
       system: CORE_SYSTEM,
@@ -814,9 +793,8 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
     );
     const adjustments = new AdjustmentLog();
     // Answers are free text, so one can be off-topic or impossible here. The model reports what it
-    // could not use, but it over-reports: measured, it listed answers it had plainly obeyed (a
-    // background it then selected, a level split it then applied), and each of those reads as the app
-    // ignoring the user. So a report only survives two checks — the answer was TYPED (an option the
+    // could not use, but it over-reports: it lists answers it plainly obeyed, and each of those
+    // reads as the app ignoring the user. So a report only survives two checks — the answer was TYPED (an option the
     // model wrote itself is by construction usable) and nothing in the draft reflects it — plus the
     // dedupe and cap, since the same typed line answers every question.
     const typedAnswers = new Set(
@@ -1091,6 +1069,8 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
 
     // 4. LLM picks spells + every remaining build choice from those menus.
     const loadout = await this.llm.structured({
+      operation: 'generation.character',
+      userId: req.userId,
       schema: llmLoadoutSchema,
       schemaName: 'character_loadout',
       system: LOADOUT_SYSTEM,
@@ -1579,26 +1559,9 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
   }
 
   /**
-   * Runs the assembled draft through the SAME shared read-path the backend save runs, and reports
-   * the two things only a derivation can know:
-   *
-   *  - **which spells arrive AUTO-GRANTED** (subclass always-prepared tables, Magic Initiate,
-   *    lineages). Granted rows never count toward a class allowance, so a pick that duplicates one
-   *    leaves the sheet short: measured on a real Cleric 9 draft, 4 cantrips written came back as
-   *    "2/4" because the Magic Initiate pair collided with the class picks.
-   *  - **which tool slots are open** ("Choose 1 Gaming Set"), filled with a real tool from the pack.
-   *
-   * Best effort: any failure here returns empty gaps, so a derivation problem degrades the draft
-   * instead of failing the request.
-   */
-  /**
-   * Fills the draft's deterministic combat block by running the SAME shared read-path the editor runs
-   * on load and the backend runs on save (`mergeCharacterFormDataFromApi` → `getDerivedFromRuleItems`
-   * → `applyDerivedToCharacterData` → `applyCombatFromAttributes`).
-   *
-   * Without it the endpoint answered `maxHp: 0` / `armorClass: ''` for a draft whose class, level and
-   * armor were already decided. Nothing user-facing broke (the editor derives on mount, the save
-   * recomputes authoritatively), but the payload did not describe the character it carried.
+   * Fills the draft's deterministic combat block through the same shared read-path the editor and
+   * the save use. Without it the endpoint answered `maxHp: 0` for a character whose class, level and
+   * armor were already decided.
    */
   private withDerivedCombat(
     draft: PersistedCharacterData,
@@ -1648,6 +1611,13 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
     }
   }
 
+  /**
+   * Runs the draft through the same shared read-path the save runs, to report what only a derivation
+   * knows: which spells arrive auto-granted (they never count toward a class allowance, so a
+   * duplicate pick leaves the sheet short) and which tool slots are still open.
+   *
+   * Best effort: a failure returns empty gaps rather than failing the request.
+   */
   private async resolveDerivedGaps(params: {
     packId: string;
     classEntries: Array<{
@@ -1731,8 +1701,7 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
 
       // Magical Discoveries (Lore Bard): 2 spells from the Cleric/Druid/Wizard lists, castable now.
       // Skips anything already on the sheet, and its picks JOIN the granted set below: these are
-      // always-prepared rows, so a class pick that duplicates one stops counting toward its budget
-      // (measured: Acid Splash landed here and on the Sorcerer's list, leaving it at 4/5).
+      // always-prepared rows, so a class pick that duplicates one stops counting toward its budget.
       const magicalDiscoveriesSpellNames: string[] = [];
       if (
         (withDerived.featureDetails ?? []).some(
@@ -1856,14 +1825,11 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
   }
 
   /**
-   * Validates the AI's multiclass pick and returns the final class list, plus the attributes to use.
+   * Validates the AI's multiclass pick and returns the final class list plus the attributes to use.
    *
-   * Prerequisites are REPAIRED, not punished: the standard array is a fixed multiset, so when the
-   * model assigns it in an order that misses a 13, the values are permuted to give every required
-   * primary ability the highest ones. Dropping the class instead threw away what the user answered
-   * (measured: "Paladino 6 / Feiticeiro 3" came back as a single class because Strength landed on 8).
-   * What still degrades to the single initial class is a pick that cannot be repaired: an unknown id,
-   * a level split that does not add up, or a combination the array simply cannot satisfy.
+   * Prerequisites are REPAIRED, not punished: the standard array is a fixed multiset, so its values
+   * are permuted to give every required primary ability the highest ones. Only a pick that cannot be
+   * repaired (unknown id, levels that do not add up) degrades to the single initial class.
    */
   private async resolveMulticlass(params: {
     packId: string;
@@ -2113,14 +2079,13 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
     return res.items;
   }
 
-  /** Tool items, for filling a "Choose N <category>" proficiency slot with a real tool. */
   /**
    * Everything the starting gold can buy: gear, weapons AND armor.
    *
    * Weapons and armor were excluded at first, on the assumption that the bundles already outfit the
    * character. They do not: every class also offers a "take the gold instead" bundle, and a draft
-   * that took it (measured on a Cleric 20 that answered "daggers and a spear") ended with 118 GP and
-   * no weapon, no armor and no pack, because the shop had nothing to arm it with.
+   * that took it ended with gold but no weapon, no armor and no pack, because the shop had nothing
+   * to arm it with.
    */
   private async packShopItems(packId: string): Promise<RuleItemResponse[]> {
     const [gear, weapons, armor] = await Promise.all(
@@ -2152,6 +2117,7 @@ export class DndSrdGenerationAdapter implements PackGenerationAdapter {
     );
   }
 
+  /** Tool items, for filling a "Choose N <category>" proficiency slot with a real tool. */
   private async packToolItems(packId: string): Promise<RuleItemResponse[]> {
     const res = await this.ruleitems.findMany({
       packId,

@@ -3,13 +3,25 @@
 import * as React from 'react';
 import { Plus, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { reconcileMagicInitiateChoices, reconcileSkilledChoices, canApplyAbilityScoreImprovementASI, getAbilityScoreImprovementASIBlockedReasons, maxIncreaseScoresOnAttributeForGain, REPEATABLE_FEAT_NAMES, buildEffectiveAttributeScores, buildOwnedFeatIdsSet, evaluateFeatPrerequisite, getFeatMeta, isEpicBoonFeat, isFightingStyleFeat, type RuleItemResponse, type AbilityScoreImprovementGainChoice, type CharacterFormData } from '@rpgforce-ai/shared';
-import { ATTRIBUTES } from '../../../constants';
 import {
-  FeatOptionRowBody,
-  RequirementAlert,
-  SelectionSection,
-} from '../shared/selection';
+  reconcileMagicInitiateChoices,
+  reconcileSkilledChoices,
+  canApplyAbilityScoreImprovementASI,
+  getAbilityScoreImprovementASIBlockedReasons,
+  maxIncreaseScoresOnAttributeForGain,
+  REPEATABLE_FEAT_NAMES,
+  buildEffectiveAttributeScores,
+  buildOwnedFeatIdsSet,
+  evaluateFeatPrerequisite,
+  getFeatMeta,
+  isEpicBoonFeat,
+  isFightingStyleFeat,
+  type RuleItemResponse,
+  type AbilityScoreImprovementGainChoice,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
+import { ATTRIBUTES } from '../../../constants';
+import { FeatOptionRowBody, RequirementAlert, SelectionSection } from '../shared/selection';
 import { FeatureOptionRow } from '../shared/feature-option-row';
 
 interface AbilityScoreImprovementPanelProps {
@@ -86,14 +98,14 @@ export function AbilityScoreImprovementPanel({
     (f) =>
       !isEpicBoonFeat(f) &&
       !isFightingStyleFeat(f) &&
-      (f.name ?? '').trim().toLowerCase() !== 'ability score improvement',
+      (f.name ?? '').trim().toLowerCase() !== 'ability score improvement'
   );
 
   const slotMap: Record<string, number> = isScores && choice ? { ...choice.byAbility } : {};
   const slotTotal = ATTRIBUTES.reduce((s, a) => s + (slotMap[a] ?? 0), 0);
   // The 20-cap counts EVERY gain on the sheet, so this projection stays character-wide.
   const byGainForCap: AbilityScoreImprovementGainChoice[] = byGain.map((g, i) =>
-    i === absoluteIndex ? { kind: 'increase_scores', byAbility: { ...slotMap } } : g,
+    i === absoluteIndex ? { kind: 'increase_scores', byAbility: { ...slotMap } } : g
   );
 
   return (
@@ -107,7 +119,7 @@ export function AbilityScoreImprovementPanel({
             onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
             className={cn(
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
-              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60',
+              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -126,7 +138,7 @@ export function AbilityScoreImprovementPanel({
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
               slotIndex >= safeGainCount - 1
                 ? 'cursor-not-allowed opacity-40'
-                : 'cursor-pointer hover:bg-muted/60',
+                : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
@@ -149,7 +161,7 @@ export function AbilityScoreImprovementPanel({
                 ? 'bg-primary/15 text-primary'
                 : isScores && !asiPrerequisitesMet
                   ? 'bg-destructive/10 text-destructive'
-                  : 'bg-background text-muted-foreground hover:bg-muted/50',
+                  : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={isScores}
           >
@@ -163,7 +175,7 @@ export function AbilityScoreImprovementPanel({
               'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               isFeat
                 ? 'bg-primary/15 text-primary'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
+                : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={isFeat}
           >
@@ -192,7 +204,7 @@ export function AbilityScoreImprovementPanel({
                   data,
                   attr,
                   byGainForCap,
-                  absoluteIndex,
+                  absoluteIndex
                 );
                 const canIncrease =
                   asiPrerequisitesMet && slotTotal < 2 && current < 2 && current < maxFromCap;
@@ -231,7 +243,7 @@ export function AbilityScoreImprovementPanel({
                           'flex h-7 min-w-10 items-center justify-center rounded-full border-2 px-2 text-xs font-bold tabular-nums',
                           current > 0
                             ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-card text-foreground',
+                            : 'border-border bg-card text-foreground'
                         )}
                       >
                         {effectiveScore}
@@ -275,7 +287,7 @@ export function AbilityScoreImprovementPanel({
                 const unmetPrerequisites = evaluateFeatPrerequisite(
                   prerequisite,
                   data,
-                  effectiveAttributeScores,
+                  effectiveAttributeScores
                 );
                 const isMissingPrerequisites = unmetPrerequisites.length > 0;
                 const selectedId = isFeat && choice ? choice.featId : '';

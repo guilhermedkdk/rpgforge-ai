@@ -86,7 +86,10 @@ describe('computeSpellSlots', () => {
     const result = computeSpellSlots({
       castingClasses: [
         withTable(caster({ className: 'Ranger', level: 4, casterType: 'HALF' }), FULL_CASTER_TABLE),
-        withTable(caster({ className: 'Sorcerer', level: 3, casterType: 'FULL' }), FULL_CASTER_TABLE),
+        withTable(
+          caster({ className: 'Sorcerer', level: 3, casterType: 'FULL' }),
+          FULL_CASTER_TABLE
+        ),
       ],
     });
 
@@ -125,8 +128,14 @@ describe('computeSpellSlots', () => {
   it('adds Pact Magic on top without triggering the multiclass table', () => {
     const result = computeSpellSlots({
       castingClasses: [
-        { ...caster({ className: 'Warlock', level: 3, casterType: 'PACT' }), feature: PACT_FEATURE },
-        withTable(caster({ className: 'Sorcerer', level: 3, casterType: 'FULL' }), FULL_CASTER_TABLE),
+        {
+          ...caster({ className: 'Warlock', level: 3, casterType: 'PACT' }),
+          feature: PACT_FEATURE,
+        },
+        withTable(
+          caster({ className: 'Sorcerer', level: 3, casterType: 'FULL' }),
+          FULL_CASTER_TABLE
+        ),
       ],
     });
 
@@ -139,7 +148,10 @@ describe('computeSpellSlots', () => {
   it('gives a lone Warlock only its pact pool', () => {
     const result = computeSpellSlots({
       castingClasses: [
-        { ...caster({ className: 'Warlock', level: 3, casterType: 'PACT' }), feature: PACT_FEATURE },
+        {
+          ...caster({ className: 'Warlock', level: 3, casterType: 'PACT' }),
+          feature: PACT_FEATURE,
+        },
       ],
     });
 
@@ -152,7 +164,12 @@ describe('computeSpellSlots', () => {
   it('falls back to the sheet-wide feature when no class resolved one', () => {
     const result = computeSpellSlots({
       castingClasses: [],
-      fallbackFeature: { name: 'Spellcasting', desc: '', source: 'class', tableData: FULL_CASTER_TABLE } as FeatureDetail,
+      fallbackFeature: {
+        name: 'Spellcasting',
+        desc: '',
+        source: 'class',
+        tableData: FULL_CASTER_TABLE,
+      } as FeatureDetail,
       fallbackLevel: 6,
     });
 

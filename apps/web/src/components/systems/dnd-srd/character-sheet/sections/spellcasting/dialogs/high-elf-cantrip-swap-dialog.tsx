@@ -35,10 +35,10 @@ export function HighElfCantripSwapDialog({
     () =>
       spellsForClass(allSpells, 'Wizard')
         .filter(
-          (s) => Number((s.normalized as Record<string, unknown> | undefined)?.level ?? 0) === 0,
+          (s) => Number((s.normalized as Record<string, unknown> | undefined)?.level ?? 0) === 0
         )
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [allSpells],
+    [allSpells]
   );
 
   React.useEffect(() => {
@@ -73,9 +73,7 @@ export function HighElfCantripSwapDialog({
               />
             </div>
 
-            {loading && (
-              <LoadingState inline className="justify-center py-8" />
-            )}
+            {loading && <LoadingState inline className="justify-center py-8" />}
 
             {!loading && visibleCantrips.length === 0 && (
               <div className="py-6 text-center text-muted-foreground">No cantrips found.</div>
@@ -110,9 +108,7 @@ export function HighElfCantripSwapDialog({
                               {spell.name}
                             </span>
                             {school && <span className={spellChipClass}>{school}</span>}
-                            {concentration && (
-                              <span className={spellChipClass}>Concentration</span>
-                            )}
+                            {concentration && <span className={spellChipClass}>Concentration</span>}
                             {ritual && <span className={spellChipClass}>Ritual</span>}
                           </div>
                         </div>

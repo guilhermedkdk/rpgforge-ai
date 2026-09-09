@@ -15,7 +15,13 @@ interface DeferredTextareaProps extends Omit<TextareaProps, 'value' | 'onChange'
  * Keeps keystrokes in local state and commits to the parent only on blur, so typing doesn't
  * re-render the whole sheet. Use only for fields no derived stat depends on (personality/name/notes).
  */
-export function DeferredTextarea({ value, onCommit, onFocus, onBlur, ...props }: DeferredTextareaProps) {
+export function DeferredTextarea({
+  value,
+  onCommit,
+  onFocus,
+  onBlur,
+  ...props
+}: DeferredTextareaProps) {
   const [local, setLocal] = React.useState(value);
   const focusedRef = React.useRef(false);
 

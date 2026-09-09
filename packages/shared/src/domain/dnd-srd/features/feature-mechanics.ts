@@ -1,13 +1,9 @@
 /**
  * Mechanics-aware feature matching.
  *
- * Reads the stable `featureKey` written by ingestion onto each FeatureDetail
- * (from `normalized.features[].mechanics.featureKey`) and falls back to the
- * legacy display-name matchers when it is absent — so rule items ingested
- * before mechanics existed keep working unchanged.
- *
- * This is the single place the UI decides "what is this feature"; when the SRD
- * changes a feature name, only the ingestion `mechanics-config.ts` needs editing.
+ * Reads the stable `featureKey` written by ingestion and falls back to the legacy display-name
+ * matchers when it is absent, so items ingested before mechanics existed keep working. Single place
+ * the UI decides "what is this feature": a renamed SRD feature only touches `mechanics-config.ts`.
  */
 import {
   isContactPatronFeatureName,
@@ -46,7 +42,7 @@ export interface MechanicsFeatureLike {
 const matchFeature = (
   feature: MechanicsFeatureLike,
   key: string,
-  nameFallback: (name: string) => boolean,
+  nameFallback: (name: string) => boolean
 ): boolean => {
   if (feature.featureKey) return feature.featureKey === key;
   return nameFallback(feature.name);

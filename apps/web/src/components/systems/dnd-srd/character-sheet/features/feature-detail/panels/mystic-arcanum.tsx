@@ -4,7 +4,14 @@ import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { LoadingState } from '@/components/ui/loading-state';
 import { cn } from '@/lib/utils';
-import { getSpellListLevelLabel, resolveMysticArcanumSpellLevel, ruleItemSpellLevel, spellsForClass, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  getSpellListLevelLabel,
+  resolveMysticArcanumSpellLevel,
+  ruleItemSpellLevel,
+  spellsForClass,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { useAllSpells } from '../../../sections/spellcasting/hooks/use-all-spells';
 import { SpellAccordionRow } from '../shared/spell-accordion-row';
 import { SelectionSection } from '../shared/selection';
@@ -51,7 +58,7 @@ export function MysticArcanumSpellPickerPanel({
   const { allSpells, allSpellsLoading } = useAllSpells(classItem?.packId ?? null);
   const warlockSpells = React.useMemo(
     () => (isWarlock && classItem ? spellsForClass(allSpells, classItem.name) : []),
-    [isWarlock, classItem, allSpells],
+    [isWarlock, classItem, allSpells]
   );
   const loading = allSpellsLoading && isWarlock;
 
@@ -71,7 +78,7 @@ export function MysticArcanumSpellPickerPanel({
       warlockSpells
         .filter((s) => ruleItemSpellLevel(s) === requiredSpellLevel)
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [warlockSpells, requiredSpellLevel],
+    [warlockSpells, requiredSpellLevel]
   );
 
   const ensureByGain = (d: CharacterFormData, n: number): (string | null)[] =>
@@ -108,7 +115,7 @@ export function MysticArcanumSpellPickerPanel({
             onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
             className={cn(
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
-              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60',
+              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -127,7 +134,7 @@ export function MysticArcanumSpellPickerPanel({
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
               slotIndex >= safeGainCount - 1
                 ? 'cursor-not-allowed opacity-40'
-                : 'cursor-pointer hover:bg-muted/60',
+                : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronRight className="h-4 w-4" aria-hidden />

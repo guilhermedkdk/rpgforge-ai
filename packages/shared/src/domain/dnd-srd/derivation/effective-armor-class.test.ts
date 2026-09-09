@@ -13,7 +13,7 @@ function armorItem(
   id: string,
   name: string,
   armor: Record<string, unknown>,
-  tagKeys: string[] = [],
+  tagKeys: string[] = []
 ): RuleItemResponse {
   return {
     id,
@@ -94,9 +94,7 @@ describe('computeEffectiveArmorClass', () => {
   });
 
   it('adds a proficient shield on top of armor', () => {
-    expect(
-      ac(character({ equippedArmorId: 'chain-mail', equippedShieldId: 'shield' })),
-    ).toBe(18);
+    expect(ac(character({ equippedArmorId: 'chain-mail', equippedShieldId: 'shield' }))).toBe(18);
   });
 
   it('caps the Dex bonus of medium armor and accepts a negative Dex mod (Cleric: 13 - 1 + 2)', () => {
@@ -106,20 +104,20 @@ describe('computeEffectiveArmorClass', () => {
           attributes: { Strength: 12, Dexterity: 8, Constitution: 14 },
           equippedArmorId: 'chain-shirt',
           equippedShieldId: 'shield',
-        }),
-      ),
+        })
+      )
     ).toBe(14);
   });
 
   it('ignores armor the character is not trained in', () => {
     expect(
-      ac(character({ proficiencies: 'Armor Training: Light armor', equippedArmorId: 'chain-mail' })),
+      ac(character({ proficiencies: 'Armor Training: Light armor', equippedArmorId: 'chain-mail' }))
     ).toBe(10);
   });
 
   it('ignores armor whose Strength requirement is not met', () => {
     expect(
-      ac(character({ attributes: { Strength: 8, Dexterity: 10 }, equippedArmorId: 'chain-mail' })),
+      ac(character({ attributes: { Strength: 8, Dexterity: 10 }, equippedArmorId: 'chain-mail' }))
     ).toBe(10);
   });
 
@@ -129,8 +127,8 @@ describe('computeEffectiveArmorClass', () => {
         character({
           attributes: { Dexterity: 12, Charisma: 20 },
           featureDetails: [{ name: 'Draconic Resilience', desc: '', source: 'subclass' }],
-        }),
-      ),
+        })
+      )
     ).toBe(16);
   });
 
@@ -141,8 +139,8 @@ describe('computeEffectiveArmorClass', () => {
           attributes: { Strength: 16, Dexterity: 12, Charisma: 20 },
           equippedArmorId: 'chain-mail',
           featureDetails: [{ name: 'Draconic Resilience', desc: '', source: 'subclass' }],
-        }),
-      ),
+        })
+      )
     ).toBe(16);
   });
 
@@ -154,8 +152,8 @@ describe('computeEffectiveArmorClass', () => {
           featureDetails: [
             { name: 'Unarmored Defense', desc: 'While you are not wearing armor', source: 'class' },
           ],
-        }),
-      ),
+        })
+      )
     ).toBe(15);
   });
 
@@ -172,8 +170,8 @@ describe('computeEffectiveArmorClass', () => {
               source: 'class',
             },
           ],
-        }),
-      ),
+        })
+      )
     ).toBe(14); // 10 + Dex(+2) + shield(+2), no Constitution
   });
 
@@ -189,8 +187,8 @@ describe('computeEffectiveArmorClass', () => {
               source: 'class',
             },
           ],
-        }),
-      ),
+        })
+      )
     ).toBe(16);
   });
 });

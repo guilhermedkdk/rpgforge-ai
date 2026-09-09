@@ -8,8 +8,9 @@ import { normalizeName } from '../util/text-utils';
 import type { RuleItemResponse } from '../../../types/ruleitem';
 import type { CharacterFormData } from '../character/character-form-data';
 
-export const isWizardClassItem = (item: Pick<RuleItemResponse, 'name'> | null | undefined): boolean =>
-  normalizeName(item?.name) === 'wizard';
+export const isWizardClassItem = (
+  item: Pick<RuleItemResponse, 'name'> | null | undefined
+): boolean => normalizeName(item?.name) === 'wizard';
 
 export const isBardClassItem = (item: Pick<RuleItemResponse, 'name'> | null | undefined): boolean =>
   normalizeName(item?.name) === 'bard';
@@ -35,7 +36,7 @@ export const isOtherworldlyPresenceFeatureName = (name: string): boolean =>
 /** True when the SUBCLASS item belongs to the class (via `normalized.subclassOf.key`). */
 export const isSubclassOfClass = (
   subclassItem: Pick<RuleItemResponse, 'normalized'>,
-  classItem: Pick<RuleItemResponse, 'sourceKey'> | null | undefined,
+  classItem: Pick<RuleItemResponse, 'sourceKey'> | null | undefined
 ): boolean => {
   if (!classItem?.sourceKey) return false;
   return extractSubclassOfKey(subclassItem.normalized) === classItem.sourceKey;
@@ -45,12 +46,11 @@ const HIGH_ELF_LINEAGE_KEY = 'high-elf';
 
 /** True when the sheet has the Elven Lineage race trait with the High Elf option selected. */
 export const isHighElfLineageSelected = (
-  data: Pick<CharacterFormData, 'featureDetails' | 'raceTraitSelections'>,
+  data: Pick<CharacterFormData, 'featureDetails' | 'raceTraitSelections'>
 ): boolean => {
   const feat = (data.featureDetails ?? []).find(
     (f) =>
-      f.source === 'race' &&
-      (f.featureKey === 'elven-lineage' || isElvenLineageFeatureName(f.name)),
+      f.source === 'race' && (f.featureKey === 'elven-lineage' || isElvenLineageFeatureName(f.name))
   );
   if (!feat) return false;
   return (data.raceTraitSelections?.[feat.name] ?? null) === HIGH_ELF_LINEAGE_KEY;

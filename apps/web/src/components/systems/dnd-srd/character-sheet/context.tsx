@@ -14,7 +14,6 @@ import {
   getExpertiseSelectionPrerequisiteMessage,
   getPrimalChampionBodyAndMindBonusFlags,
   getSkillsFromAbilities,
-  getTotalAbilityScoreImprovementFromGains,
   isArmorItemProficient as isArmorItemProficientShared,
   isFastMovementFeature,
   isRovingFeature,
@@ -24,6 +23,9 @@ import {
   MAX_STANDARD_LANGUAGES_TOTAL,
   normalizeStandardLanguageNames,
   proficiencyBonusForLevel,
+  computeDisplaySpeed,
+  getCombinedAbilityBonuses,
+  getDisplayFeatureDetails,
   retainSkillProficiencyFromClassOrBackground,
   type CharacterFormData,
   type RuleItemResponse,
@@ -193,29 +195,7 @@ export function CharacterSheetProvider({
   const skillsList = useMemo(() => getSkillsFromAbilities(abilities), [abilities]);
   const featureDetails = data.featureDetails ?? [];
 
-  const elvenLineageFeat = featureDetails.find(
-    (f) => f.source === 'race' && f.name.trim().toLowerCase() === 'elven lineage'
-  );
-  const selectedElvenLineage = elvenLineageFeat
-    ? (data.raceTraitSelections?.[elvenLineageFeat.name] ?? null)
-    : null;
-
-  const effectiveFeatureDetails = useMemo(() => {
-    if (selectedElvenLineage !== 'drow' && selectedElvenLineage !== 'wood-elf') {
-      return featureDetails;
-    }
-    return featureDetails.map((f) => {
-      if (f.source !== 'race') return f;
-      const nameLower = f.name.trim().toLowerCase();
-      if (selectedElvenLineage === 'drow' && nameLower === 'darkvision') {
-        return { ...f, desc: f.desc.replace(/\b60\b/g, '120') };
-      }
-      if (selectedElvenLineage === 'wood-elf' && nameLower === 'speed') {
-        return { ...f, desc: f.desc.replace(/\b30\b/g, '35') };
-      }
-      return f;
-    });
-  }, [featureDetails, selectedElvenLineage]);
+  const effectiveFeatureDetails = useMemo(() => getDisplayFeatureDetails(data), [data]);
 
   const { hasPrimalChampion, hasBodyAndMind } = useMemo(
     () => getPrimalChampionBodyAndMindBonusFlags(data),
@@ -241,16 +221,10 @@ export function CharacterSheetProvider({
     [featureDetails]
   );
 
-  const combinedAbilityBonuses = useMemo((): Record<string, number> => {
-    const bg = data.backgroundAbilityScoreIncrease ?? {};
-    const asi = getTotalAbilityScoreImprovementFromGains(data.abilityScoreImprovementByGain);
-    const all = new Set([...Object.keys(bg), ...Object.keys(asi)]);
-    const out: Record<string, number> = {};
-    for (const k of all) {
-      out[k] = (bg[k] ?? 0) + (asi[k] ?? 0);
-    }
-    return out;
-  }, [data.backgroundAbilityScoreIncrease, data.abilityScoreImprovementByGain]);
+  const combinedAbilityBonuses = useMemo(
+    () => getCombinedAbilityBonuses(data),
+    [data.backgroundAbilityScoreIncrease, data.abilityScoreImprovementByGain]
+  );
 
   const effectiveEpicBoonAbilityScore = useMemo(
     () => getEffectiveEpicBoonAbilityScore(data),
@@ -461,20 +435,10 @@ export function CharacterSheetProvider({
     hasUnarmoredMovement,
   ]);
 
-  const displaySpeed = useMemo((): string => {
-    const base = Number(data.speed) || 0;
-    const woodElfBonus = selectedElvenLineage === 'wood-elf' ? 5 : 0;
-    const fastMovementBonus = hasFastMovement && !isEquippedArmorHeavy ? 10 : 0;
-    const rovingBonus = hasRoving && !isEquippedArmorHeavy ? 10 : 0;
-    return String(base + woodElfBonus + fastMovementBonus + rovingBonus + unarmoredMovementBonus);
-  }, [
-    data.speed,
-    selectedElvenLineage,
-    hasFastMovement,
-    hasRoving,
-    isEquippedArmorHeavy,
-    unarmoredMovementBonus,
-  ]);
+  const displaySpeed = useMemo(
+    () => String(computeDisplaySpeed({ data, featureDetails: effectiveFeatureDetails, armors })),
+    [data, effectiveFeatureDetails, armors]
+  );
 
   // Only the CATALOG lives here: how many a class may pick, and which it picked, are per class and
   // come from the shared helpers with that class's own feature row.

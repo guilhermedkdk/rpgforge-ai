@@ -46,59 +46,57 @@ export function SkillChoiceFromListBlock(props: SkillChoiceFromListBlockProps) {
       role="list"
       aria-label={listAriaLabel}
     >
-        {entries.map(({ key, label }) => {
-          if (isMulti) {
-            const lockedSet = new Set(props.lockedIds ?? []);
-            const isLocked = lockedSet.has(key);
-            const isChosen = props.selectedIds.includes(key);
-            const atCap =
-              props.maxSelections > 0 && props.selectedIds.length >= props.maxSelections;
-            const disabled = isLocked || (!isChosen && atCap);
-            return (
-              <FeatureOptionRow
-                key={key}
-                selected={isChosen || isLocked}
-                disabled={disabled}
-                mark="check"
-                onClick={() => {
-                  if (disabled) return;
-                  if (isChosen) {
-                    props.onChangeIds(props.selectedIds.filter((id) => id !== key));
-                    return;
-                  }
-                  props.onChangeIds([...props.selectedIds, key]);
-                }}
-              >
-                <span className="truncate text-xs font-medium text-foreground">{label}</span>
-              </FeatureOptionRow>
-            );
-          }
-
-          const { selectedKey, proficientMap, backgroundSkillKeys, onPick, mark = 'check' } = props;
-          const alreadyProficient =
-            proficientMap[key] === true || backgroundSkillKeys.includes(key);
-          const isSelected = selectedKey === key;
-          const atCap = selectedKey !== null;
-          const disabled = !isSelected && (alreadyProficient || atCap);
+      {entries.map(({ key, label }) => {
+        if (isMulti) {
+          const lockedSet = new Set(props.lockedIds ?? []);
+          const isLocked = lockedSet.has(key);
+          const isChosen = props.selectedIds.includes(key);
+          const atCap = props.maxSelections > 0 && props.selectedIds.length >= props.maxSelections;
+          const disabled = isLocked || (!isChosen && atCap);
           return (
             <FeatureOptionRow
               key={key}
-              selected={isSelected || alreadyProficient}
+              selected={isChosen || isLocked}
               disabled={disabled}
-              mark={mark}
+              mark="check"
               onClick={() => {
                 if (disabled) return;
-                if (isSelected) {
-                  onPick(null);
+                if (isChosen) {
+                  props.onChangeIds(props.selectedIds.filter((id) => id !== key));
                   return;
                 }
-                onPick(key);
+                props.onChangeIds([...props.selectedIds, key]);
               }}
             >
               <span className="truncate text-xs font-medium text-foreground">{label}</span>
             </FeatureOptionRow>
           );
-        })}
+        }
+
+        const { selectedKey, proficientMap, backgroundSkillKeys, onPick, mark = 'check' } = props;
+        const alreadyProficient = proficientMap[key] === true || backgroundSkillKeys.includes(key);
+        const isSelected = selectedKey === key;
+        const atCap = selectedKey !== null;
+        const disabled = !isSelected && (alreadyProficient || atCap);
+        return (
+          <FeatureOptionRow
+            key={key}
+            selected={isSelected || alreadyProficient}
+            disabled={disabled}
+            mark={mark}
+            onClick={() => {
+              if (disabled) return;
+              if (isSelected) {
+                onPick(null);
+                return;
+              }
+              onPick(key);
+            }}
+          >
+            <span className="truncate text-xs font-medium text-foreground">{label}</span>
+          </FeatureOptionRow>
+        );
+      })}
     </div>
   );
 

@@ -63,10 +63,7 @@ export type DescSegment =
 
 /** Ordered prose/table segments: each table after the paragraph that references its
  * column; unreferenced tables appended at the end. */
-export function splitDescByColumnTables(
-  desc: string,
-  tables: FeatureColumnTable[],
-): DescSegment[] {
+export function splitDescByColumnTables(desc: string, tables: FeatureColumnTable[]): DescSegment[] {
   const text = desc ?? '';
   const anchored: Array<{ table: FeatureColumnTable; at: number }> = [];
   const leftover: FeatureColumnTable[] = [];
@@ -74,7 +71,7 @@ export function splitDescByColumnTables(
   for (const table of tables) {
     const m = new RegExp(
       `\\bthe\\s+${escapeRegExp(table.label)}\\s+column\\s+of\\s+the\\b`,
-      'i',
+      'i'
     ).exec(text);
     if (!m) {
       leftover.push(table);

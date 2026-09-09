@@ -46,7 +46,7 @@ export function RequirementAlert({
     <div
       className={cn(
         'rounded-md border border-destructive/40 bg-destructive/10 px-2 py-2 text-xs text-destructive',
-        className,
+        className
       )}
       role="status"
     >
@@ -89,7 +89,7 @@ export function FeatOptionRowBody({ feat }: { feat: RuleItemResponse }) {
     ((feat.normalized ?? {}) as Record<string, unknown>).desc ??
       ((feat.raw ?? {}) as Record<string, unknown>).desc ??
       feat.contentMd ??
-      '',
+      ''
   );
   return (
     <div className="flex flex-col gap-1">
@@ -111,7 +111,7 @@ export function FeatOptionRowBody({ feat }: { feat: RuleItemResponse }) {
         <span
           className={cn(
             FEATURE_DETAIL_OPTION_BODY_RULE_SINGLE,
-            'whitespace-pre-line text-xs text-muted-foreground',
+            'whitespace-pre-line text-xs text-muted-foreground'
           )}
         >
           {descFallback}

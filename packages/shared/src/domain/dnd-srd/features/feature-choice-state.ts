@@ -1,17 +1,11 @@
 /**
- * A feature's choice state (has a choice? already resolved? which label to show?).
- * Single source consumed by both the Features & Traits chips AND save validation.
+ * A feature's choice state, consumed by both the Features & Traits chips and save validation.
  *
- * Data-driven: one entry per feature in FEATURE_CHOICE_RESOLVERS — to cover a new feature,
- * add an entry (matcher + resolve). The generic default (2+ options with the selection in
- * `raceTraitSelections`) covers the common option cards; a resolver refines or replaces that
- * state. Kept out of components: the React Compiler OOMs analyzing this branch volume inside
- * a component body.
+ * Data-driven: one entry per feature in FEATURE_CHOICE_RESOLVERS. Kept out of components because the
+ * React Compiler OOMs analyzing this branch volume inside a component body.
  *
- * Invariant for any resolver over a FINITE pool (spells, skills): the requirement is capped at what
- * is still selectable, because every picker disables what other sources already granted. A feature
- * whose pool ran dry has nothing left to choose, and demanding a pick there makes the sheet
- * impossible to save.
+ * Invariant for any resolver over a finite pool: the requirement is capped at what is still
+ * selectable, or a feature whose pool ran dry makes the sheet impossible to save.
  */
 import type { CharacterFormData } from '../character/character-form-data';
 import type { RuleItemResponse } from '../../../types/ruleitem';
@@ -37,7 +31,10 @@ import {
   getFiendishLegacySpellsForCharacter,
   getGnomishLineageSpellNamesForCharacter,
 } from '../spells/race-lineage-table-spells';
-import { countWizardSpellbookSpells, getEldritchInvocationsKnown } from '../spells/spellcasting-limits';
+import {
+  countWizardSpellbookSpells,
+  getEldritchInvocationsKnown,
+} from '../spells/spellcasting-limits';
 import {
   BONUS_PROFICIENCIES_SKILL_PICKS,
   MAGICAL_DISCOVERIES_SPELL_LISTS,
@@ -143,7 +140,12 @@ const skillTraitState = (ctx: ResolverCtx, autoLabelSingleOption: boolean): Feat
     selectedOptionLabel = opts.find((o) => o.key === sel)?.label ?? 'chosen';
   } else if (autoLabelSingleOption && opts.length === 1) {
     selectedOptionLabel = opts[0].label;
-  } else if (countPickableSkills(data, opts.map((o) => o.key)) === 0) {
+  } else if (
+    countPickableSkills(
+      data,
+      opts.map((o) => o.key)
+    ) === 0
+  ) {
     // Reachable: an Elf Ranger whose 3 class skills are Insight + Perception + Survival owns every
     // Keen Senses option, so the trait has nothing left to grant.
     selectedOptionLabel = 'chosen';
@@ -180,7 +182,8 @@ const FEATURE_CHOICE_RESOLVERS: FeatureChoiceResolver[] = [
   },
   {
     matches: nameIs('gnomish lineage'),
-    resolve: (ctx) => lineageState(ctx, (_desc, opts, sel) => getGnomishLineageSpellNamesForCharacter(sel, opts)),
+    resolve: (ctx) =>
+      lineageState(ctx, (_desc, opts, sel) => getGnomishLineageSpellNamesForCharacter(sel, opts)),
   },
   {
     matches: nameIs('expertise'),
@@ -205,7 +208,8 @@ const FEATURE_CHOICE_RESOLVERS: FeatureChoiceResolver[] = [
   },
   {
     matches: (f) => isThievesCantFeature(f),
-    resolve: ({ data }) => chosenWhen(Boolean(String(data.thievesCantExtraLanguageName ?? '').trim())),
+    resolve: ({ data }) =>
+      chosenWhen(Boolean(String(data.thievesCantExtraLanguageName ?? '').trim())),
   },
   {
     matches: nameIs('metamagic'),
@@ -315,7 +319,11 @@ const FEATURE_CHOICE_RESOLVERS: FeatureChoiceResolver[] = [
       const required = skillsList
         ? Math.min(
             BONUS_PROFICIENCIES_SKILL_PICKS,
-            picked + countPickableSkills(data, skillsList.map((s) => s.key))
+            picked +
+              countPickableSkills(
+                data,
+                skillsList.map((s) => s.key)
+              )
           )
         : BONUS_PROFICIENCIES_SKILL_PICKS;
       return chosenWhen(picked >= required);
@@ -332,12 +340,7 @@ const FEATURE_CHOICE_RESOLVERS: FeatureChoiceResolver[] = [
         (n) => n != null && String(n).trim().length > 0
       ).length;
       const available = allSpells
-        ? countAvailableSpells(
-            allSpells,
-            MAGICAL_DISCOVERIES_SPELL_LISTS.map(spellClassTag),
-            0,
-            9
-          )
+        ? countAvailableSpells(allSpells, MAGICAL_DISCOVERIES_SPELL_LISTS.map(spellClassTag), 0, 9)
         : null;
       return chosenWhen(spellCountMet(picked, MAGICAL_DISCOVERIES_SPELL_PICKS, available));
     },
@@ -356,7 +359,8 @@ const FEATURE_CHOICE_RESOLVERS: FeatureChoiceResolver[] = [
       const available = allSpells
         ? allSpells.filter(
             (s) =>
-              s.tagKeys.includes(spellClassTag('Wizard')) && s.tagKeys.includes(EVOCATION_SCHOOL_TAG)
+              s.tagKeys.includes(spellClassTag('Wizard')) &&
+              s.tagKeys.includes(EVOCATION_SCHOOL_TAG)
           ).length
         : null;
       return chosenWhen(spellCountMet(picked, required, available));

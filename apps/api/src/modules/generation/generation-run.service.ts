@@ -16,7 +16,7 @@ export class GenerationRunService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly store: GenerationRunStore,
+    private readonly store: GenerationRunStore
   ) {}
 
   async linkToSheet(params: {
@@ -31,7 +31,7 @@ export class GenerationRunService {
     // Questions and answers are stored paired: the answer is meaningless without the question that
     // produced it, and the wizard matches them by question text, not by index.
     const answerByQuestion = new Map(
-      run.answers.map((a) => [a.question.trim().toLowerCase(), a.answer]),
+      run.answers.map((a) => [a.question.trim().toLowerCase(), a.answer])
     );
     const questions = run.questions.map((q) => ({
       id: q.id,
@@ -56,7 +56,7 @@ export class GenerationRunService {
     } catch (err) {
       this.logger.error(
         `Failed to persist generation run for sheet ${params.characterSheetId}`,
-        err instanceof Error ? err.stack : String(err),
+        err instanceof Error ? err.stack : String(err)
       );
     }
   }

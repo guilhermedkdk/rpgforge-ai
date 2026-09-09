@@ -24,23 +24,11 @@ interface MulticlassBreachDialogProps {
 
 /**
  * Pairs with `useMulticlassPrerequisiteGuard`: the edit that broke a requirement asks before it
- * stands. Confirming keeps the edit and drops the classes it invalidated; cancelling undoes it.
+ * stands. Confirming keeps the edit and drops the classes it invalidated.
  *
- * Two blocks: the rule that was broken, then what leaves and what that costs. The score that
- * stopped qualifying is deliberately NOT restated here: the player just made the edit that moved it,
- * and the Classes row still spells it out for a sheet that arrived broken. The
- * class leaving is a CARD with its emblem, the same way a class is shown everywhere else on the
- * sheet, because "Warlock 1 goes away" is the consequence and should not be a noun inside a
- * paragraph.
- *
- * It borrows its vocabulary from the in-place removal confirmation in the Classes dialog, which asks
- * the same question and must not read as a different mechanism: bare `TriangleAlert` (the app spends
- * circled icons on neutral states like `EmptyState` and the landing hero, and leaves destructive
- * surfaces on a bare icon), `border-destructive/35 bg-card` surface, the class in bold, one muted
- * line for the way back, and a ghost/destructive pair of small buttons.
- *
- * The wording comes from the RESULT, never from the action: the guard reacts to the derived sheet,
- * so it knows which class stopped qualifying but not which control was clicked.
+ * Vocabulary and surface are borrowed from the removal confirmation in the Classes dialog, which
+ * asks the same question and must not read as a different mechanism. The wording comes from the
+ * RESULT: the guard knows which class stopped qualifying, never which control was clicked.
  */
 export function MulticlassBreachDialog({
   breach,
@@ -59,19 +47,18 @@ export function MulticlassBreachDialog({
     <Dialog open={breach != null} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          {/* Icon grouped WITH the text, aligned to the first line: as a sibling of the block it
-              floats free of the sentence it belongs to. Same arrangement as the Classes row. */}
-          <div className="flex items-start gap-2.5 pr-4">
-            <TriangleAlert className="mt-1 h-4 w-4 shrink-0 text-destructive" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <DialogTitle>{title}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {breach?.failingClassIsInitial
-                  ? 'The initial class cannot leave the sheet, and with a single class the multiclass requirement stops applying.'
-                  : 'A multiclass only stays on the sheet while its requirement holds.'}
-              </DialogDescription>
-            </div>
-          </div>
+          {/* Icon INSIDE the title, like every other dialog: it stays attached to the first line, and
+              title/description remain direct children, so `DialogHeader`'s own gap is the single
+              source for the spacing between them (a hand-written margin here diverged from it). */}
+          <DialogTitle className="flex items-center gap-2 pr-4">
+            <TriangleAlert className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+            {title}
+          </DialogTitle>
+          <DialogDescription>
+            {breach?.failingClassIsInitial
+              ? 'The initial class cannot leave the sheet, and with a single class the multiclass requirement stops applying.'
+              : 'A multiclass only stays on the sheet while its requirement holds.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-1.5">

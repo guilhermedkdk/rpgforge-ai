@@ -3,7 +3,15 @@
 import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { computeActiveSkilledSources, reconcileSkilledChoices, SKILLED_PICKS_PER_SOURCE, skilledToolChoiceKey, stripToolItemPriceSuffix, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  computeActiveSkilledSources,
+  reconcileSkilledChoices,
+  SKILLED_PICKS_PER_SOURCE,
+  skilledToolChoiceKey,
+  stripToolItemPriceSuffix,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { SelectionSection } from '../shared/selection';
 import { SkillChoiceFromListBlock } from '../shared/skill-choice-list';
 
@@ -36,7 +44,7 @@ export function SkilledFeatPanel({
         data.abilityScoreImprovementByGain,
         featsList,
         data.versatileFeatId,
-        data.eldritchInvocationSelections,
+        data.eldritchInvocationSelections
       ),
     [
       data.featureDetails,
@@ -44,7 +52,7 @@ export function SkilledFeatPanel({
       featsList,
       data.versatileFeatId,
       data.eldritchInvocationSelections,
-    ],
+    ]
   );
 
   const [pageIndex, setPageIndex] = React.useState(0);
@@ -79,7 +87,7 @@ export function SkilledFeatPanel({
 
   const bySource = data.skilledChoicesBySource ?? {};
   const currentPicks = (bySource[currentKey] ?? []).filter((id) =>
-    skilledEntries.some((e) => e.key === id),
+    skilledEntries.some((e) => e.key === id)
   );
 
   const otherSourcePicks = new Set<string>();
@@ -92,7 +100,7 @@ export function SkilledFeatPanel({
   const chosenToolLabelKeys = new Set(
     Object.values(data.toolProficiencyChoices ?? {})
       .flat()
-      .map((name) => name.trim().toLowerCase()),
+      .map((name) => name.trim().toLowerCase())
   );
 
   // Locked here = taken by another Skilled source, or already proficient from a non-Skilled source.
@@ -100,7 +108,8 @@ export function SkilledFeatPanel({
     .filter(({ key, label }) => {
       if (currentPicks.includes(key)) return false;
       if (otherSourcePicks.has(key)) return true;
-      if (key.startsWith(SKILL_PREFIX)) return proficientMap[key.slice(SKILL_PREFIX.length)] === true;
+      if (key.startsWith(SKILL_PREFIX))
+        return proficientMap[key.slice(SKILL_PREFIX.length)] === true;
       if (key.startsWith('tool:')) return chosenToolLabelKeys.has(label.toLowerCase());
       return false;
     })
@@ -128,7 +137,7 @@ export function SkilledFeatPanel({
             onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
             className={cn(
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
-              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60',
+              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -145,7 +154,7 @@ export function SkilledFeatPanel({
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
               slotIndex >= safeCount - 1
                 ? 'cursor-not-allowed opacity-40'
-                : 'cursor-pointer hover:bg-muted/60',
+                : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronRight className="h-4 w-4" aria-hidden />

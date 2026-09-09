@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AiUsageModule } from '../ai-usage/ai-usage.module';
 import { GenerationController } from './generation.controller';
 import { GenerationService } from './generation.service';
 import { LlmService } from './llm.service';
@@ -9,7 +10,7 @@ import { DndSrdGenerationAdapter } from './packs/dnd-srd/dnd-srd-generation.adap
 import { RuleitemsModule } from '../ruleitems/ruleitems.module';
 
 @Module({
-  imports: [RuleitemsModule],
+  imports: [RuleitemsModule, AiUsageModule],
   controllers: [GenerationController],
   providers: [
     GenerationService,

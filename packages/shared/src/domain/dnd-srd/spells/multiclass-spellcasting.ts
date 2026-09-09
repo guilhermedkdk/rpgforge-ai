@@ -43,7 +43,7 @@ export const MULTICLASS_SPELL_SLOTS: ReadonlyArray<readonly number[]> = [
 
 /** Reads `normalized.casterType`, defaulting to NONE for anything unrecognized. */
 export function getClassCasterType(
-  classItem: Pick<RuleItemResponse, 'normalized'> | null | undefined,
+  classItem: Pick<RuleItemResponse, 'normalized'> | null | undefined
 ): ClassCasterType {
   const raw = (classItem?.normalized as { casterType?: unknown } | undefined)?.casterType;
   const value = typeof raw === 'string' ? raw.toUpperCase() : '';

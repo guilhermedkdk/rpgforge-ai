@@ -3,10 +3,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { type FeatureDetail, markdownOptionBodyClass } from './types';
-import {
-  FEATURE_DETAIL_OPTION_BODY_RULE_SINGLE,
-  SelectionSection,
-} from './selection';
+import { FEATURE_DETAIL_OPTION_BODY_RULE_SINGLE, SelectionSection } from './selection';
 import { FeatureOptionRow } from './feature-option-row';
 
 type FeatureDetailOption = NonNullable<FeatureDetail['options']>[number];

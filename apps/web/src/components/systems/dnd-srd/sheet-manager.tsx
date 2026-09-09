@@ -1,10 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useTheme } from 'next-themes';
+import { FileDown, Globe, Link2, Lock, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { characterSheetsApi } from '@/lib/api/character-sheets';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +18,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DeleteSheetDialog } from '@/components/sheets/delete-sheet-dialog';
+import { PublishSheetDialog } from '@/components/sheets/publish-sheet-dialog';
+import { SheetVisibilityChip } from '@/components/sheets/sheet-chip';
+import { useAuth } from '@/contexts/auth-context';
+import { publicSheetPath } from '@/lib/public-sheet-path';
 import {
   resolveSheetSaveState,
   SheetSaveStateChip,
@@ -22,43 +31,21 @@ import {
   UnsavedChangesDialog,
   useUnsavedChangesGuard,
 } from '@/components/sheets/unsaved-changes-guard';
+import { usePrintLightTheme } from '@/components/sheets/use-print-light-theme';
 import { CharacterSheet } from '@/components/systems/dnd-srd/character-sheet';
-import {
-  buildEquipmentItemIdLookupMap,
-  buildEquipmentRestorePatch,
-  type CharacterFormData,
-  type PackResponse,
-  type RuleItemResponse,
-} from '@rpgforce-ai/shared';
-import { useRuleLibrary } from './library/use-rule-library';
-import { SAVED_SHEET_LIBRARY_KEYS } from './library/library-config';
-import { useAllSpells } from './character-sheet/sections/spellcasting/hooks/use-all-spells';
-import { useCharacterFormState } from './hooks/use-character-form-state';
-import { useSheetDerivation } from './hooks/use-sheet-derivation';
+import type { CharacterFormData, PackResponse } from '@rpgforce-ai/shared';
+import { useSavedSheetView, type SheetPreloadedRuleItems } from './hooks/use-saved-sheet-view';
 import { useSheetSaveFlow } from './hooks/use-sheet-save-flow';
-
-/** Everything sheet-specific comes preloaded with the sheet (`GET /character-sheets/:id/with-rules`). */
-export interface SheetManagerPreloadedRuleItems {
-  byId: Record<string, RuleItemResponse>;
-  abilities: RuleItemResponse[];
-  languages: RuleItemResponse[];
-  toolItems?: RuleItemResponse[];
-}
 
 interface SheetManagerProps {
   sheetId: string;
   pack: PackResponse;
   initialData: CharacterFormData;
-  preloadedRuleItems: SheetManagerPreloadedRuleItems;
+  preloadedRuleItems: SheetPreloadedRuleItems;
+  /** Whether the sheet is published; the header chip and the publish dialog read it. */
+  initialIsPublic?: boolean;
   onBack: () => void;
 }
-
-const TOOL_CATEGORY_TAG_KEYS = [
-  'item:category:gaming-set',
-  'item:category:musical-instrument',
-  'item:category:artisan',
-  'item:category:tools',
-] as const;
 
 /**
  * A saved character: playable AND editable in place. Level, spells, features, combat, equipment and
@@ -71,24 +58,32 @@ export function SheetManager({
   pack,
   initialData,
   preloadedRuleItems,
+  initialIsPublic = false,
   onBack,
 }: SheetManagerProps) {
-  // Rebuilds the equipment text synchronously so items show on first render (the derivation effect
-  // runs too late for that, and `byId` already carries every referenced item).
-  const hydrate = () => {
-    const patch = buildEquipmentRestorePatch(
-      initialData,
-      (id) => preloadedRuleItems.byId[id]?.name,
-      { gold: initialData.equipmentGold ?? 0, preserveSelectionIndexes: true }
-    );
-    return patch ? { ...initialData, ...patch } : initialData;
-  };
-
   const router = useRouter();
-  const { data, setData, featsRef, recalc, handleChange } = useCharacterFormState(hydrate, 'play');
+  const {
+    data,
+    setData,
+    handleChange,
+    requestRederive,
+    catalogsLoaded,
+    sheetCatalogProps,
+    feats,
+    classes,
+    subclasses,
+    standardLanguageOptions,
+    toolItemsByCategory,
+    allSpells,
+    itemIdByLookupKey,
+  } = useSavedSheetView({ pack, initialData, preloadedRuleItems });
   const [dirty, setDirty] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [publishing, setPublishing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Snapshot for "Descartar alterações": tracks `data` while the sheet is clean, so it holds the
   // last saved state AFTER the derivation settled (reverting to the raw persisted shape would leave
@@ -124,105 +119,6 @@ export function SheetManager({
     [handleChange]
   );
 
-  const library = useRuleLibrary(pack.id, SAVED_SHEET_LIBRARY_KEYS);
-  const { armors, allItems, classes: packClasses, subclasses: packSubclasses } = library.lists;
-  const { weapons, adventuringGear } = library;
-
-  const preloadedValues = useMemo(
-    () => Object.values(preloadedRuleItems.byId),
-    [preloadedRuleItems.byId]
-  );
-  const feats = useMemo(() => preloadedValues.filter((i) => i.kind === 'FEAT'), [preloadedValues]);
-  featsRef.current = feats;
-
-  // The preload carries every class/subclass the sheet references, so a multiclass sheet resolves
-  // all of them; the pack list is the fallback for a class added during this session.
-  const resolveRuleItem = useCallback(
-    (id: string | null | undefined) =>
-      id ? (preloadedRuleItems.byId[id] ?? packClasses.find((c) => c.id === id) ?? null) : null,
-    [preloadedRuleItems.byId, packClasses]
-  );
-
-  const identity = useMemo(
-    () => ({
-      classItem: preloadedRuleItems.byId[data.classRuleItemId ?? ''] ?? null,
-      subclassItem: preloadedRuleItems.byId[data.subclassRuleItemId ?? ''] ?? null,
-      raceItem: preloadedRuleItems.byId[data.raceRuleItemId ?? ''] ?? null,
-      bgItem: preloadedRuleItems.byId[data.backgroundRuleItemId ?? ''] ?? null,
-      resolveRuleItem,
-    }),
-    [
-      preloadedRuleItems.byId,
-      data.classRuleItemId,
-      data.subclassRuleItemId,
-      data.raceRuleItemId,
-      data.backgroundRuleItemId,
-      resolveRuleItem,
-    ]
-  );
-
-  // Species/background are locked, so the only ones the sheet can need are its own. Classes and
-  // subclasses come from the pack instead: a sheet that reaches level 3 without a subclass still has
-  // to pick it, the save validation reads the pack's list to know whether the class has one at all,
-  // and multiclassing needs the full list to add a class.
-  const classes = packClasses;
-  const subclasses = packSubclasses;
-  const races = useMemo(() => (identity.raceItem ? [identity.raceItem] : []), [identity.raceItem]);
-  const backgrounds = useMemo(() => (identity.bgItem ? [identity.bgItem] : []), [identity.bgItem]);
-
-  const toolItemsByCategory = useMemo(() => {
-    // Prefers the dedicated toolItems list; falls back to scanning preloadedValues for referenced tools.
-    const allTools =
-      preloadedRuleItems.toolItems ??
-      preloadedValues.filter((i) =>
-        i.tagKeys.some((t) => (TOOL_CATEGORY_TAG_KEYS as readonly string[]).includes(t))
-      );
-    return Object.fromEntries(
-      TOOL_CATEGORY_TAG_KEYS.map((tag) => [tag, allTools.filter((i) => i.tagKeys.includes(tag))])
-    );
-  }, [preloadedRuleItems.toolItems, preloadedValues]);
-
-  const standardLanguageOptions = useMemo(
-    () =>
-      [...preloadedRuleItems.languages].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-      ),
-    [preloadedRuleItems.languages]
-  );
-
-  // Preloaded items + the whole ITEM catalog (fetched for the gear picker anyway), so anything bought
-  // during play still resolves to an id on save.
-  const equipmentItems = useMemo(
-    () => [...preloadedValues, ...allItems, ...weapons],
-    [preloadedValues, allItems, weapons]
-  );
-  const itemById = useMemo(() => {
-    const m = new Map<string, RuleItemResponse>();
-    for (const it of equipmentItems) if (it?.id) m.set(it.id, it);
-    return m;
-  }, [equipmentItems]);
-  const itemIdByLookupKey = useMemo(
-    () => buildEquipmentItemIdLookupMap(equipmentItems),
-    [equipmentItems]
-  );
-
-  const { allSpells } = useAllSpells(
-    identity.classItem?.packId ?? identity.raceItem?.packId ?? pack.id
-  );
-
-  const { requestRederive } = useSheetDerivation({
-    data,
-    setData,
-    recalc,
-    identity,
-    abilities: preloadedRuleItems.abilities,
-    feats,
-    toolItemsByCategory,
-    standardLanguages: standardLanguageOptions,
-    itemById,
-    itemsLoading: library.loading.allItems,
-  });
-
   const { validateAndSave, saving, saved, saveError, saveErrorStatus, saveAttempted } =
     useSheetSaveFlow({
       data,
@@ -251,6 +147,77 @@ export function SheetManager({
     if (id) router.push(`/sheets/${id}`);
   };
 
+  const { resolvedTheme } = useTheme();
+
+  usePrintLightTheme();
+
+  // The PDF is this very page, printed by a headless browser on the server: the file is the sheet
+  // itself, not a reconstruction of it. What print keeps or hides lives in the print block of
+  // globals.css, which is also what Ctrl+P uses.
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      // The file matches the sheet the reader has on screen; Ctrl+P stays light, since that one
+      // ends up on paper (see usePrintLightTheme).
+      const { blob, fileName } = await characterSheetsApi.exportPdf(
+        sheetId,
+        resolvedTheme === 'dark' ? 'dark' : 'light'
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Revoked on the next frame: Safari aborts the download if the URL dies during the click.
+      requestAnimationFrame(() => URL.revokeObjectURL(url));
+      setMenuOpen(false);
+    } catch {
+      toast.error('Não foi possível gerar o PDF', {
+        description: 'Tente novamente. Você também pode usar Ctrl+P para salvar a ficha.',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const publicUrl = user
+    ? `${window.location.origin}${publicSheetPath(user.username, sheetId)}`
+    : null;
+
+  const handleCopyLink = async () => {
+    if (!publicUrl) return;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success('Link copiado.');
+    } catch {
+      toast.error('Não foi possível copiar o link');
+    }
+  };
+
+  const setVisibility = async (next: boolean) => {
+    setPublishing(true);
+    try {
+      await characterSheetsApi.setVisibility(sheetId, next);
+      setIsPublic(next);
+      setPublishOpen(false);
+      // The sheets list marks which sheets are published, and the profile lists them.
+      void queryClient.invalidateQueries({ queryKey: ['character-sheets'] });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      toast.success(next ? 'Ficha publicada.' : 'Ficha voltou a ser privada.');
+    } catch {
+      toast.error('Não foi possível alterar a visibilidade', {
+        description: 'Tente novamente em alguns instantes.',
+      });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handleDiscard = () => {
     setDirty(false);
     // The restored snapshot may sit at a different level than the last derivation ran at, so ask for a
@@ -265,11 +232,14 @@ export function SheetManager({
     <>
       {/* Everything animated lives here; the fixed bar below must stay OUT, or the transform makes
           this element its containing block and it lands at the bottom of the ~2000px sheet. */}
-      <div className="content-reveal">
-        <BackLink onClick={() => guard.guard(onBack)} className="mb-3">
+      <div
+        className="content-reveal print-sheet"
+        data-sheet-ready={catalogsLoaded ? 'true' : 'false'}
+      >
+        <BackLink onClick={() => guard.guard(onBack)} className="mb-3 print:hidden">
           Minhas Fichas
         </BackLink>
-        <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="mb-6 flex items-start justify-between gap-4 print:hidden">
           <div className="min-w-0">
             <h1 className="truncate font-serif text-2xl font-bold text-foreground">
               {data.name?.trim() || 'Ficha sem nome'}
@@ -280,6 +250,17 @@ export function SheetManager({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            {/* Same two actions the menu offers, and deliberately the same asymmetry: publishing
+                asks first, because it puts the sheet in front of strangers; unpublishing just
+                happens, because pulling something back needs no ceremony. */}
+            <SheetVisibilityChip
+              isPublic={isPublic}
+              busy={publishing}
+              onToggle={() => {
+                if (isPublic) void setVisibility(false);
+                else setPublishOpen(true);
+              }}
+            />
             <SheetSaveStateChip state={resolveSheetSaveState({ dirty, saving, saved })} />
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -288,6 +269,53 @@ export function SheetManager({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  disabled={exporting}
+                  onSelect={(e) => {
+                    // Stays open while the server renders, so the row's spinner is what reports it.
+                    e.preventDefault();
+                    void handleExportPdf();
+                  }}
+                >
+                  {exporting ? (
+                    <Spinner size="sm" className="mr-2" />
+                  ) : (
+                    <FileDown className="mr-2 h-4 w-4" aria-hidden="true" />
+                  )}
+                  Exportar PDF
+                </DropdownMenuItem>
+                {isPublic ? (
+                  <>
+                    <DropdownMenuItem onSelect={() => void handleCopyLink()}>
+                      <Link2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Copiar link público
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={publishing}
+                      onSelect={(e) => {
+                        // Stays open while the request runs, like the PDF row.
+                        e.preventDefault();
+                        void setVisibility(false).then(() => setMenuOpen(false));
+                      }}
+                    >
+                      <Lock className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Tornar privada
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      // Same reason as "Excluir ficha": Radix's focus restore would fight the dialog.
+                      e.preventDefault();
+                      setMenuOpen(false);
+                      setPublishOpen(true);
+                    }}
+                  >
+                    <Globe className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Publicar ficha
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem disabled={!dirty || saving} onSelect={handleDiscard}>
                   <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
                   Descartar alterações
@@ -313,23 +341,7 @@ export function SheetManager({
 
         <CharacterSheet
           data={data}
-          classes={classes}
-          subclasses={subclasses}
-          backgrounds={backgrounds}
-          races={races}
-          abilities={preloadedRuleItems.abilities}
-          weapons={weapons}
-          armors={armors}
-          adventuringGear={adventuringGear}
-          feats={feats}
-          toolItemsByCategory={toolItemsByCategory}
-          standardLanguageOptions={standardLanguageOptions}
-          classesLoading={false}
-          subclassesLoading={library.loading.subclasses}
-          backgroundsLoading={false}
-          racesLoading={false}
-          abilitiesLoading={false}
-          equipmentItemsLoading={library.loading.weapons || library.loading.armors}
+          {...sheetCatalogProps}
           onChange={onChange}
           mode="play"
           saveAttempted={saveAttempted}
@@ -361,6 +373,14 @@ export function SheetManager({
           }
         />
       ) : null}
+
+      <PublishSheetDialog
+        sheetName={data.name ?? ''}
+        busy={publishing}
+        onConfirm={() => void setVisibility(true)}
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+      />
 
       <DeleteSheetDialog
         sheetId={sheetId}

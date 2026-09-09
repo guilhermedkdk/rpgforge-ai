@@ -118,16 +118,12 @@ export function WizardSpellbookDialog({
                               key={`${listLvl}-${e.name.toLowerCase()}`}
                               className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
                             >
-                              <span className="text-xs font-medium text-foreground">
-                                {e.name}
-                              </span>
+                              <span className="text-xs font-medium text-foreground">{e.name}</span>
                               <span className="flex flex-wrap items-center gap-1">
                                 {e.byLevel && (
                                   <span className={spellChipClass}>Learned by level</span>
                                 )}
-                                {e.byScroll && (
-                                  <span className={spellChipClass}>By scroll</span>
-                                )}
+                                {e.byScroll && <span className={spellChipClass}>By scroll</span>}
                                 {e.bySavant && (
                                   <span className={spellChipClass}>Evocation Savant</span>
                                 )}
@@ -153,14 +149,10 @@ export function WizardSpellbookDialog({
               />
             </div>
 
-            {spellsLoading && (
-              <LoadingState inline className="shrink-0 justify-center py-8" />
-            )}
+            {spellsLoading && <LoadingState inline className="shrink-0 justify-center py-8" />}
 
             {!spellsLoading &&
-              availableWizardLevels.every(
-                (lvl) => (filteredByLevel[lvl] ?? []).length === 0
-              ) && (
+              availableWizardLevels.every((lvl) => (filteredByLevel[lvl] ?? []).length === 0) && (
                 <div className="py-6 text-center text-muted-foreground">No spells found.</div>
               )}
 
@@ -237,43 +229,48 @@ export function WizardSpellbookDialog({
                                         Free from Evocation Savant.
                                       </span>
                                     ) : (
-                                    <>
-                                      {isLearned ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => spellbook.removeByLevel(lvl, spell.name)}
-                                          className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/60"
-                                        >
-                                          Clear selection by level
-                                        </button>
-                                      ) : !isFromScroll ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => spellbook.addByLevel(lvl, spell.name)}
-                                          className={accordionSelectButtonClass(false, !spellbook.canAddMore)}
-                                          disabled={!spellbook.canAddMore}
-                                        >
-                                          Learn by level
-                                        </button>
-                                      ) : null}
-                                      {isFromScroll ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => spellbook.removeByScroll(lvl, spell.name)}
-                                          className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/60"
-                                        >
-                                          Clear selection by scroll
-                                        </button>
-                                      ) : !isLearned ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => spellbook.addByScroll(lvl, spell.name)}
-                                          className={accordionSelectButtonClass(false)}
-                                        >
-                                          Add by scroll
-                                        </button>
-                                      ) : null}
-                                    </>
+                                      <>
+                                        {isLearned ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => spellbook.removeByLevel(lvl, spell.name)}
+                                            className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/60"
+                                          >
+                                            Clear selection by level
+                                          </button>
+                                        ) : !isFromScroll ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => spellbook.addByLevel(lvl, spell.name)}
+                                            className={accordionSelectButtonClass(
+                                              false,
+                                              !spellbook.canAddMore
+                                            )}
+                                            disabled={!spellbook.canAddMore}
+                                          >
+                                            Learn by level
+                                          </button>
+                                        ) : null}
+                                        {isFromScroll ? (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              spellbook.removeByScroll(lvl, spell.name)
+                                            }
+                                            className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/60"
+                                          >
+                                            Clear selection by scroll
+                                          </button>
+                                        ) : !isLearned ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => spellbook.addByScroll(lvl, spell.name)}
+                                            className={accordionSelectButtonClass(false)}
+                                          >
+                                            Add by scroll
+                                          </button>
+                                        ) : null}
+                                      </>
                                     )
                                   }
                                 />

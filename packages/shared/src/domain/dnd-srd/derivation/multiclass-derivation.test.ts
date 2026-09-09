@@ -169,7 +169,7 @@ describe('getDerivedFromRuleItems: multiclass', () => {
       Object.entries(reversed.savingThrows)
         .filter(([, v]) => v)
         .map(([k]) => k)
-        .sort(),
+        .sort()
     ).toEqual(['Intelligence', 'Wisdom']);
   });
 
@@ -277,7 +277,7 @@ describe('getDerivedFromRuleItems: multiclass', () => {
     expect(applied.abilityScoreImprovementByGain).toHaveLength(2);
 
     const asiFeatures = derived.featureDetails.filter(
-      (f) => f.name.trim().toLowerCase() === 'ability score improvement',
+      (f) => f.name.trim().toLowerCase() === 'ability score improvement'
     );
     expect(asiFeatures).toHaveLength(2);
     expect(asiFeatures.reduce((sum, f) => sum + (f.gainCount ?? 0), 0)).toBe(2);
@@ -305,7 +305,7 @@ describe('getDerivedFromRuleItems: multiclass', () => {
       { item: WIZARD, level: 4 },
     ]);
     const [fighterAsi, wizardAsi] = derived.featureDetails.filter(
-      (f) => f.name === 'Ability Score Improvement',
+      (f) => f.name === 'Ability Score Improvement'
     );
     // Only the Wizard's slot is filled.
     const data = {
@@ -328,9 +328,11 @@ describe('getDerivedFromRuleItems: multiclass', () => {
       Object.entries(d.savingThrows)
         .filter(([, v]) => v)
         .map(([k]) => k)
-        .sort(),
+        .sort()
     ).toEqual(['Constitution', 'Strength']);
-    expect(profLines(d.proficiencies)).toContain('Weapon Proficiencies: Simple and Martial weapons');
+    expect(profLines(d.proficiencies)).toContain(
+      'Weapon Proficiencies: Simple and Martial weapons'
+    );
     expect(d.classSkillOptions.chooseN).toBe(2);
     expect(d.featureDetails.map((f) => f.name)).toContain('Extra Attack');
   });

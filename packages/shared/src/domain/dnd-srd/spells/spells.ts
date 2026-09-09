@@ -9,10 +9,8 @@ export const spellClassTag = (className: string): string =>
   `spell:class:${className.trim().toLowerCase().replace(/\s+/g, '-')}`;
 
 /** Spells castable by `className`, sliced from a full catalog by class tag. */
-export const spellsForClass = (
-  spells: RuleItemResponse[],
-  className: string
-): RuleItemResponse[] => spells.filter((s) => s.tagKeys.includes(spellClassTag(className)));
+export const spellsForClass = (spells: RuleItemResponse[], className: string): RuleItemResponse[] =>
+  spells.filter((s) => s.tagKeys.includes(spellClassTag(className)));
 
 /**
  * How many distinct spells are still selectable for a "pick N" requirement: spells carrying any of
@@ -112,7 +110,9 @@ export function mergeGrantedSpellPlacements(
     userByLevel[lvl] = (baseSafe[lvl] ?? []).filter((s) => !s.granted);
   }
 
-  const grantKeys = new Set(placements.map((p) => `${p.spellLevel}:${p.name.trim().toLowerCase()}`));
+  const grantKeys = new Set(
+    placements.map((p) => `${p.spellLevel}:${p.name.trim().toLowerCase()}`)
+  );
 
   for (let lvl = 0; lvl <= 9; lvl++) {
     userByLevel[lvl] = userByLevel[lvl].filter((u) => {

@@ -151,7 +151,10 @@ export function buildFeatureChoices(data: CharacterFormData): FeatureChoices {
   ) {
     set(ABILITY_SCORE_IMPROVEMENT, 'byGain', [...data.abilityScoreImprovementByGain]);
   }
-  if (data.magicInitiateChoicesBySource && Object.keys(data.magicInitiateChoicesBySource).length > 0) {
+  if (
+    data.magicInitiateChoicesBySource &&
+    Object.keys(data.magicInitiateChoicesBySource).length > 0
+  ) {
     set(MAGIC_INITIATE, 'bySource', { ...data.magicInitiateChoicesBySource });
   }
   if (isNonEmptyArray(data.bonusProficienciesSkillKeys)) {
@@ -188,13 +191,14 @@ export const FEATURE_CHOICE_CLASS_SEPARATOR = '::';
  * writing bare keys and stays byte-identical to pre-multiclass saves. Readers accept both forms.
  */
 export function featureChoiceKey(featureName: string, classKey?: string | null): string {
-  return classKey
-    ? `${classKey}${FEATURE_CHOICE_CLASS_SEPARATOR}${featureName}`
-    : featureName;
+  return classKey ? `${classKey}${FEATURE_CHOICE_CLASS_SEPARATOR}${featureName}` : featureName;
 }
 
 /** Splits a stored key back into its class key (null when bare) and feature name. */
-export function parseFeatureChoiceKey(key: string): { classKey: string | null; featureName: string } {
+export function parseFeatureChoiceKey(key: string): {
+  classKey: string | null;
+  featureName: string;
+} {
   const idx = key.indexOf(FEATURE_CHOICE_CLASS_SEPARATOR);
   if (idx === -1) return { classKey: null, featureName: key };
   return {
@@ -209,7 +213,7 @@ export function parseFeatureChoiceKey(key: string): { classKey: string | null; f
  */
 function readFeatureChoice(
   fc: Record<string, unknown>,
-  featureName: string,
+  featureName: string
 ): Record<string, unknown> | null {
   const exact = asEntry(fc[featureName]);
   if (exact) return exact;
@@ -229,7 +233,7 @@ function readFeatureChoice(
  */
 export function readFeatureChoicesByClass(
   raw: unknown,
-  featureName: string,
+  featureName: string
 ): Record<string, Record<string, unknown>> {
   const fc = asEntry(raw);
   if (!fc) return {};
@@ -291,7 +295,8 @@ export function featureChoicesToFormData(raw: unknown): Partial<CharacterFormDat
   const epicBoon = readFeatureChoice(fc, EPIC_BOON);
   if (epicBoon) {
     if ('featId' in epicBoon) out.epicBoonFeatId = epicBoon.featId as string | null;
-    if ('abilityScore' in epicBoon) out.epicBoonAbilityScore = epicBoon.abilityScore as string | null;
+    if ('abilityScore' in epicBoon)
+      out.epicBoonAbilityScore = epicBoon.abilityScore as string | null;
   }
 
   const versatile = readFeatureChoice(fc, VERSATILE);

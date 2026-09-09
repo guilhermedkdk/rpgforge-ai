@@ -219,8 +219,11 @@ export function HeaderSection({
                   and it also forced `proportional-nums` on the whole label, since this font leaves
                   a lone `1` ~2px of trailing air and pushed the dot off centre (measured). A flex
                   gap is digit-independent, so that workaround left with the dot. */}
+              {/* No `flex-1` on the placeholder: a full-width span centres it under the button's
+                  inherited `text-align: center`, and it has to sit exactly where the Species and
+                  Background placeholders do. */}
               {classEntries.length === 0 ? (
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">Select</span>
+                <span className="min-w-0 truncate text-muted-foreground">Select</span>
               ) : (
                 <span className="flex min-w-0 flex-1 items-center gap-2.5">
                   {classEntries.map((entry) => (

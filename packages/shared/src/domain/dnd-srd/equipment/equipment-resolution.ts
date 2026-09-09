@@ -24,7 +24,7 @@ const SCOPED_TOOL_PLACEHOLDERS: Record<string, string> = {
 const resolveEquipmentLine = (
   line: string,
   isBackground: boolean,
-  toolChoices: Record<string, string[]>,
+  toolChoices: Record<string, string[]>
 ): string | null => {
   const scopedKey = SCOPED_TOOL_PLACEHOLDERS[line.trim().toLowerCase()];
   if (scopedKey) {
@@ -36,7 +36,7 @@ const resolveEquipmentLine = (
 
 const selectedOptionText = (
   options: { options: { text: string }[] } | null | undefined,
-  index: number | null | undefined,
+  index: number | null | undefined
 ): string | null => (index != null ? (options?.options?.[index]?.text ?? null) : null);
 
 /**
@@ -46,7 +46,7 @@ const selectedOptionText = (
  */
 export const resolveEquipmentPersistedItems = (
   data: CharacterFormData,
-  itemIdByLookupKey: Map<string, string>,
+  itemIdByLookupKey: Map<string, string>
 ): PersistedEquipmentEntry[] => {
   const toolChoices = data.toolProficiencyChoices ?? {};
   const holySymbolIds = data.holySymbolChoiceItemIds ?? { class: null, background: null };
@@ -57,7 +57,7 @@ export const resolveEquipmentPersistedItems = (
     // The recorded map, or a save silently re-infers the source from text and undoes the recording:
     // a bundle's resolved placeholder ("Holy Symbol, Amulet)") matches no bundle line, so it came back
     // as 'manual' and the sheet showed it under "Additional equipment" after one round-trip.
-    data.equipmentSourceByLine,
+    data.equipmentSourceByLine
   );
 
   // Keyed by item AND source: the same item granted by both bundles stays two rows, so each block
@@ -116,7 +116,7 @@ export const buildEquipmentRestorePatch = (
     preserveSelectionIndexes?: boolean;
     /** Starting gold per bundle, so each amount is rebuilt inside its own block. */
     goldBySource?: { class?: number; background?: number };
-  } = {},
+  } = {}
 ): Partial<CharacterFormData> | null => {
   const entries = prev.equipmentPersistedItems ?? [];
   const gold = options.gold ?? 0;

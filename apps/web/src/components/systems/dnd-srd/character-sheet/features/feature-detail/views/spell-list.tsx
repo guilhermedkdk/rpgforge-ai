@@ -19,16 +19,16 @@ interface SpellListViewProps {
 
 export function SpellListView({ feat, classItem }: SpellListViewProps) {
   const [expandedSpellLevels, setExpandedSpellLevels] = React.useState<Set<number>>(
-    new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
   );
   const [expandedSpellIds, setExpandedSpellIds] = React.useState<Set<string>>(new Set());
 
   const { allSpells: spellCatalog, allSpellsLoading: spellsLoading } = useAllSpells(
-    classItem?.packId ?? null,
+    classItem?.packId ?? null
   );
   const allSpells = React.useMemo(
     () => (classItem ? spellsForClass(spellCatalog, classItem.name) : []),
-    [spellCatalog, classItem],
+    [spellCatalog, classItem]
   );
 
   React.useEffect(() => {
@@ -47,9 +47,7 @@ export function SpellListView({ feat, classItem }: SpellListViewProps) {
 
   const rawDesc = feat.desc ?? '';
   const spellListStartIdx = rawDesc.search(/\*\*(?:Cantrips \(Level 0\)|Level\s+\d+)\*\*/i);
-  const introMd = (
-    spellListStartIdx >= 0 ? rawDesc.slice(0, spellListStartIdx) : rawDesc
-  ).trim();
+  const introMd = (spellListStartIdx >= 0 ? rawDesc.slice(0, spellListStartIdx) : rawDesc).trim();
 
   const getLevelLabel = (level: number) => (level === 0 ? 'Cantrips' : `Level ${level}`);
 
@@ -80,18 +78,13 @@ export function SpellListView({ feat, classItem }: SpellListViewProps) {
         <div className={markdownBodyClass}>
           {introMd ? (
             <div className="mb-3">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{ table: () => null }}
-              >
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: () => null }}>
                 {introMd}
               </ReactMarkdown>
             </div>
           ) : null}
 
-          {spellsLoading && (
-            <LoadingState inline className="justify-center py-10" />
-          )}
+          {spellsLoading && <LoadingState inline className="justify-center py-10" />}
 
           {!spellsLoading && levelGroups.length === 0 && (
             <p className="py-8 text-center text-muted-foreground">

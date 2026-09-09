@@ -16,7 +16,7 @@ export const markdownOptionBodyClass =
 /** Matches sheet modals at max-h-[85vh]; leave room for title, padding, close control. */
 export const markdownBodyClass = cn(
   markdownBodyTypographyClass,
-  'max-h-[calc(85vh-7.5rem)] overflow-y-auto',
+  'max-h-[calc(85vh-7.5rem)] overflow-y-auto'
 );
 
 export const SCHOLAR_ALLOWED_SKILL_KEYS = [

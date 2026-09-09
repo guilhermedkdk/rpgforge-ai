@@ -1,6 +1,16 @@
 'use client';
 
-import { getClassExpertiseSkillKeys, getCommonLanguageItem, getExpertiseSelectionPrerequisiteMessage, getKnownLanguageNamesExcept, MAX_STANDARD_LANGUAGES_TOTAL, normalizeStandardLanguageNames, stripToolItemPriceSuffix, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  getClassExpertiseSkillKeys,
+  getCommonLanguageItem,
+  getExpertiseSelectionPrerequisiteMessage,
+  getKnownLanguageNamesExcept,
+  MAX_STANDARD_LANGUAGES_TOTAL,
+  normalizeStandardLanguageNames,
+  stripToolItemPriceSuffix,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { RequirementAlert, SelectionSection } from '../shared/selection';
 import { FeatureOptionRow } from '../shared/feature-option-row';
 
@@ -35,7 +45,9 @@ export function DeftExplorerExpertisePickerBlock({
   return (
     <SelectionSection>
       {!deftExpertiseSheetReady ? (
-        <RequirementAlert reasons={deftExpertisePrereqMessage ? [deftExpertisePrereqMessage] : []} />
+        <RequirementAlert
+          reasons={deftExpertisePrereqMessage ? [deftExpertisePrereqMessage] : []}
+        />
       ) : trainedSkills.length === 0 ? (
         <RequirementAlert
           detail={
@@ -95,7 +107,7 @@ export function DeftExplorerLanguagesPickerBlock({
 }: PickerBlockProps) {
   const normalizedStandard = normalizeStandardLanguageNames(
     data.standardLanguageNames,
-    standardLanguageOptions,
+    standardLanguageOptions
   );
   const standardLanguagesComplete = normalizedStandard.length >= MAX_STANDARD_LANGUAGES_TOTAL;
   const knownElsewhere = getKnownLanguageNamesExcept(data, 'deftExplorer', standardLanguageOptions);
@@ -149,7 +161,7 @@ export function DeftExplorerLanguagesPickerBlock({
                     onChange({
                       ...data,
                       deftExplorerLanguageNames: selectedNames.filter(
-                        (n) => langNorm(n) !== langNorm(item.name),
+                        (n) => langNorm(n) !== langNorm(item.name)
                       ),
                     });
                   } else {

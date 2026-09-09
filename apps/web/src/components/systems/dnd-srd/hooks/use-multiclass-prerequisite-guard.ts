@@ -14,12 +14,9 @@ import {
 /**
  * How long the sheet must sit unchanged before the combination is judged.
  *
- * One click writes several times: the edit lands, then reconcilers and the derivation run as
- * effects. Judging each of those writes is wrong in BOTH directions. A `−` on a class level is still
- * legal at the instant it lands (the ASI that pays for the multiclass is only pruned once the
- * derivation runs), so promoting it to "last legal state" made cancelling restore the very edit it
- * was meant to undo. Waiting for the burst to settle is imperceptible and always looks at a state
- * the player could actually see.
+ * One click writes several times: the edit, then reconcilers and the derivation. A level decrement is
+ * still legal at the instant it lands, so judging each write made cancelling restore the very edit it
+ * was meant to undo.
  */
 const SETTLE_MS = 80;
 
@@ -49,20 +46,13 @@ export interface MulticlassPrerequisiteGuard {
 }
 
 /**
- * A multiclass requirement can only be broken on purpose.
+ * A multiclass requirement can only be broken on purpose: any edit that breaks one asks first, and
+ * confirming removes the class that can no longer be paid for.
  *
- * The add-class picker gates the moment a class is taken, but an ability can fall below 13
- * afterwards, and lowering a class level is the common way: it prunes the ASI gain that raised it.
- * Any edit that breaks a requirement therefore asks first, and confirming removes the class that can
- * no longer be paid for, so the sheet is never left in a state it refuses to save.
- *
- * It reacts to the DERIVED result instead of predicting it: the pruning lives in the shared
- * derivation, and a second copy of that rule here would be one more thing to keep in step. That also
- * makes it cover every edit (level, ASI, background bonus, a dropped feat) without knowing any of
- * them. The cost is that the edit lands before the dialog opens; cancelling restores the snapshot.
- *
- * A sheet that LOADS already illegal never opens this dialog (there is no edit to undo). That case
- * falls back to the red `identity:classes` field and the explanation on the Classes row.
+ * It reacts to the DERIVED result instead of predicting it, so it covers every edit without knowing
+ * any of them; the cost is that the edit lands before the dialog opens, and cancelling restores the
+ * snapshot. A sheet that LOADS already illegal never opens this dialog, since there is no edit to
+ * undo.
  */
 export function useMulticlassPrerequisiteGuard(input: {
   data: CharacterFormData;

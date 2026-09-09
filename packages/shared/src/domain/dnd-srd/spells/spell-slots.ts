@@ -20,7 +20,7 @@ const SLOT_ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '
 function findSlotColumn(feature: FeatureDetail, spellLevel: number) {
   const ordinal = SLOT_ORDINALS[spellLevel - 1];
   return (feature.tableData ?? []).find(
-    (t) => t.label.toLowerCase().includes(ordinal) && t.label.toLowerCase().includes('slot'),
+    (t) => t.label.toLowerCase().includes(ordinal) && t.label.toLowerCase().includes('slot')
   );
 }
 
@@ -49,14 +49,10 @@ export interface SpellSlotsResult {
 }
 
 /**
- * Slots by spell level.
- *
- * Three cases, in the order the SRD states them:
- * 1. Two or more Spellcasting classes: the combined caster level drives the Multiclass Spellcaster
- *    table, NOT either class's own (a Cleric 3 / Wizard 3 gets level 3 slots neither grants alone).
- * 2. Exactly one: that class's own table, read at ITS level. A Fighter 5 / Wizard 3 is a Wizard 3.
- * 3. Pact Magic is a separate pool that ADDS on top of whatever the above produced, because the SRD
- *    lets either pool cast the other's prepared spells.
+ * Slots by spell level. Three SRD cases:
+ * 1. two or more Spellcasting classes use the combined caster level, not either class's own;
+ * 2. exactly one uses that class's table at ITS level;
+ * 3. Pact Magic is a separate pool that ADDS on top, since either pool can cast the other's spells.
  */
 export function computeSpellSlots({
   castingClasses,

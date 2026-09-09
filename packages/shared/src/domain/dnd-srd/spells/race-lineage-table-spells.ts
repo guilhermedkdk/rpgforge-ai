@@ -315,7 +315,7 @@ function optionMatchesRockGnome(label: string, selectedKey: string): boolean {
  */
 export function getGnomishLineageExplicitGrants(
   selectedKey: string | null,
-  options: Array<{ key: string; label: string }>,
+  options: Array<{ key: string; label: string }>
 ): Array<{ name: string; spellLevel: number }> {
   if (!selectedKey || options.length === 0) return [];
   const opt = options.find((o) => o.key === selectedKey);
@@ -339,7 +339,7 @@ export function getGnomishLineageExplicitGrants(
 /** Display names for the feature summary (e.g. features list). */
 export function getGnomishLineageSpellNamesForCharacter(
   selectedKey: string | null,
-  options: Array<{ key: string; label: string }>,
+  options: Array<{ key: string; label: string }>
 ): string[] {
   return getGnomishLineageExplicitGrants(selectedKey, options).map((g) => g.name);
 }

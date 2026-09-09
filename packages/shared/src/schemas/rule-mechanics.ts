@@ -52,9 +52,7 @@ export const ruleMechanicsSchema = z
     markers: z.array(z.string()).optional(),
     choices: z.array(featureChoiceDescriptorSchema).optional(),
     /** Roles for the class tables this feature consumes (matched by table name). */
-    tables: z
-      .array(z.object({ name: z.string(), role: mechanicsTableRoleSchema }))
-      .optional(),
+    tables: z.array(z.object({ name: z.string(), role: mechanicsTableRoleSchema })).optional(),
   })
   .catchall(z.unknown());
 

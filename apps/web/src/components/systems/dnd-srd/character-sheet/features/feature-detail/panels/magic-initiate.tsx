@@ -4,7 +4,14 @@ import * as React from 'react';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MAGIC_INITIATE_SPELL_LISTS, spellsForClass, type CharacterFormData, type MagicInitiateGain, type MagicInitiateSpellList, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  MAGIC_INITIATE_SPELL_LISTS,
+  spellsForClass,
+  type CharacterFormData,
+  type MagicInitiateGain,
+  type MagicInitiateSpellList,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { useAllSpells } from '../../../sections/spellcasting/hooks/use-all-spells';
 import { SpellAccordionRow } from '../shared/spell-accordion-row';
 import { SelectionSection } from '../shared/selection';
@@ -14,7 +21,6 @@ const MAGIC_INITIATE_ABILITIES = ['Intelligence', 'Wisdom', 'Charisma'] as const
 function emptyGain(): MagicInitiateGain {
   return { spellList: null, cantripNames: [], spellName: null, spellcastingAbility: null };
 }
-
 
 interface MagicInitiatePanelProps {
   data: CharacterFormData;
@@ -52,7 +58,8 @@ export function MagicInitiatePanel({
   const slotIndex = Math.min(pageIndex, safeGainCount - 1);
   const currentKey = sourceKeys[slotIndex] ?? '';
 
-  const gain: MagicInitiateGain = (data.magicInitiateChoicesBySource ?? {})[currentKey] ?? emptyGain();
+  const gain: MagicInitiateGain =
+    (data.magicInitiateChoicesBySource ?? {})[currentKey] ?? emptyGain();
 
   const lockedList = lockedSpellLists?.[slotIndex] ?? null;
 
@@ -63,12 +70,17 @@ export function MagicInitiatePanel({
     if (gain.spellList === lockedList) return;
     const newSource = {
       ...(data.magicInitiateChoicesBySource ?? {}),
-      [currentKey]: { ...(data.magicInitiateChoicesBySource?.[currentKey] ?? emptyGain()), spellList: lockedList },
+      [currentKey]: {
+        ...(data.magicInitiateChoicesBySource?.[currentKey] ?? emptyGain()),
+        spellList: lockedList,
+      },
     };
     onChange({
       ...data,
       magicInitiateChoicesBySource: newSource,
-      magicInitiateChoicesByGain: sourceKeys.map((k) => (newSource[k] ?? null) as MagicInitiateGain | null),
+      magicInitiateChoicesByGain: sourceKeys.map(
+        (k) => (newSource[k] ?? null) as MagicInitiateGain | null
+      ),
     });
   }, [slotIndex, lockedList]);
 
@@ -86,7 +98,7 @@ export function MagicInitiatePanel({
   const { allSpells, allSpellsLoading } = useAllSpells(packId);
   const spells = React.useMemo(
     () => (selectedList ? spellsForClass(allSpells, selectedList) : []),
-    [allSpells, selectedList],
+    [allSpells, selectedList]
   );
   const isLoading = allSpellsLoading && !!selectedList;
 
@@ -95,7 +107,7 @@ export function MagicInitiatePanel({
       spells
         .filter((s) => Number(((s.normalized ?? {}) as Record<string, unknown>).level ?? 0) === 0)
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [spells],
+    [spells]
   );
 
   const level1Spells = React.useMemo(
@@ -103,21 +115,23 @@ export function MagicInitiatePanel({
       spells
         .filter((s) => Number(((s.normalized ?? {}) as Record<string, unknown>).level ?? 0) === 1)
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [spells],
+    [spells]
   );
 
   // Sets of spell names (lowercase) the character already has from non-MI sources,
   // or from other MI slots — prevents selecting duplicates.
   const { alreadyKnownCantripNamesLower, alreadyKnownSpell1NamesLower } = React.useMemo(() => {
     const allMiCantrips = new Set<string>();
-    for (const g of (data.magicInitiateChoicesByGain ?? [])) {
+    for (const g of data.magicInitiateChoicesByGain ?? []) {
       if (!g) continue;
-      for (const n of (g.cantripNames ?? [])) { if (n) allMiCantrips.add(n.toLowerCase()); }
+      for (const n of g.cantripNames ?? []) {
+        if (n) allMiCantrips.add(n.toLowerCase());
+      }
     }
 
     // Non-MI spells already on the sheet
     const cantripSet = new Set<string>();
-    for (const entry of (data.spellsByLevel?.[0] ?? [])) {
+    for (const entry of data.spellsByLevel?.[0] ?? []) {
       const nl = entry.name.toLowerCase();
       if (!allMiCantrips.has(nl)) cantripSet.add(nl);
     }
@@ -128,12 +142,12 @@ export function MagicInitiatePanel({
 
     // Other MI slots' choices (prevent cross-slot duplicates)
     const currentCantripNamesLower = new Set(
-      (gain.cantripNames ?? []).filter(Boolean).map((n) => n!.toLowerCase()),
+      (gain.cantripNames ?? []).filter(Boolean).map((n) => n!.toLowerCase())
     );
     const currentSpellNameLower = gain.spellName?.toLowerCase() ?? null;
     for (const [key, g] of Object.entries(data.magicInitiateChoicesBySource ?? {})) {
       if (key === currentKey || !g) continue;
-      for (const n of (g.cantripNames ?? [])) {
+      for (const n of g.cantripNames ?? []) {
         if (!n) continue;
         const nl = n.toLowerCase();
         if (!currentCantripNamesLower.has(nl)) cantripSet.add(nl);
@@ -145,18 +159,30 @@ export function MagicInitiatePanel({
     }
 
     return { alreadyKnownCantripNamesLower: cantripSet, alreadyKnownSpell1NamesLower: spell1Set };
-  }, [data.spellsByLevel, data.magicInitiateChoicesByGain, data.magicInitiateChoicesBySource, currentKey, gain.cantripNames, gain.spellName]);
+  }, [
+    data.spellsByLevel,
+    data.magicInitiateChoicesByGain,
+    data.magicInitiateChoicesBySource,
+    currentKey,
+    gain.cantripNames,
+    gain.spellName,
+  ]);
 
   const patchGain = (patch: Partial<MagicInitiateGain>) => {
     if (!currentKey) return;
     const newSource = {
       ...(data.magicInitiateChoicesBySource ?? {}),
-      [currentKey]: { ...(data.magicInitiateChoicesBySource?.[currentKey] ?? emptyGain()), ...patch },
+      [currentKey]: {
+        ...(data.magicInitiateChoicesBySource?.[currentKey] ?? emptyGain()),
+        ...patch,
+      },
     };
     onChange({
       ...data,
       magicInitiateChoicesBySource: newSource,
-      magicInitiateChoicesByGain: sourceKeys.map((k) => (newSource[k] ?? null) as MagicInitiateGain | null),
+      magicInitiateChoicesByGain: sourceKeys.map(
+        (k) => (newSource[k] ?? null) as MagicInitiateGain | null
+      ),
     });
   };
 
@@ -208,7 +234,7 @@ export function MagicInitiatePanel({
             onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
             className={cn(
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
-              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60',
+              slotIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -229,7 +255,7 @@ export function MagicInitiatePanel({
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors',
               slotIndex >= safeGainCount - 1
                 ? 'cursor-not-allowed opacity-40'
-                : 'cursor-pointer hover:bg-muted/60',
+                : 'cursor-pointer hover:bg-muted/60'
             )}
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
@@ -252,7 +278,7 @@ export function MagicInitiatePanel({
                 'flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-sm font-medium transition-colors',
                 gain.spellcastingAbility === ability
                   ? 'border-primary/70 bg-primary/5 text-primary'
-                  : 'border-border bg-card text-foreground hover:bg-muted/40',
+                  : 'border-border bg-card text-foreground hover:bg-muted/40'
               )}
             >
               {ability}
@@ -282,7 +308,7 @@ export function MagicInitiatePanel({
                   ? list === lockedList
                     ? 'cursor-default'
                     : 'cursor-not-allowed opacity-40'
-                  : 'cursor-pointer hover:bg-muted/40',
+                  : 'cursor-pointer hover:bg-muted/40'
               )}
             >
               {list}
@@ -306,24 +332,24 @@ export function MagicInitiatePanel({
                 {cantrips
                   .filter((spell) => !alreadyKnownCantripNamesLower.has(spell.name.toLowerCase()))
                   .map((spell) => {
-                  const nameLower = spell.name.toLowerCase();
-                  const isSelected = selectedCantrips.some((c) => c.toLowerCase() === nameLower);
-                  const atLimit = selectedCantrips.length >= 2;
-                  return (
-                    <SpellAccordionRow
-                      key={spell.id}
-                      spell={spell}
-                      isExpanded={expandedSpellIds.has(spell.id)}
-                      isSelected={isSelected}
-                      onToggleExpand={toggleExpand}
-                      selectButton={{
-                        label: isSelected ? 'Deselect' : 'Select',
-                        onClick: () => toggleCantrip(spell.name),
-                        disabled: !isSelected && atLimit,
-                      }}
-                    />
-                  );
-                })}
+                    const nameLower = spell.name.toLowerCase();
+                    const isSelected = selectedCantrips.some((c) => c.toLowerCase() === nameLower);
+                    const atLimit = selectedCantrips.length >= 2;
+                    return (
+                      <SpellAccordionRow
+                        key={spell.id}
+                        spell={spell}
+                        isExpanded={expandedSpellIds.has(spell.id)}
+                        isSelected={isSelected}
+                        onToggleExpand={toggleExpand}
+                        selectButton={{
+                          label: isSelected ? 'Deselect' : 'Select',
+                          onClick: () => toggleCantrip(spell.name),
+                          disabled: !isSelected && atLimit,
+                        }}
+                      />
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -339,24 +365,24 @@ export function MagicInitiatePanel({
                 {level1Spells
                   .filter((spell) => !alreadyKnownSpell1NamesLower.has(spell.name.toLowerCase()))
                   .map((spell) => {
-                  const nameLower = spell.name.toLowerCase();
-                  const isSelected = selectedSpell?.toLowerCase() === nameLower;
-                  const atLimit = selectedSpell != null;
-                  return (
-                    <SpellAccordionRow
-                      key={spell.id}
-                      spell={spell}
-                      isExpanded={expandedSpellIds.has(spell.id)}
-                      isSelected={isSelected}
-                      onToggleExpand={toggleExpand}
-                      selectButton={{
-                        label: isSelected ? 'Deselect' : 'Select',
-                        onClick: () => toggleSpell1(spell.name),
-                        disabled: !isSelected && atLimit,
-                      }}
-                    />
-                  );
-                })}
+                    const nameLower = spell.name.toLowerCase();
+                    const isSelected = selectedSpell?.toLowerCase() === nameLower;
+                    const atLimit = selectedSpell != null;
+                    return (
+                      <SpellAccordionRow
+                        key={spell.id}
+                        spell={spell}
+                        isExpanded={expandedSpellIds.has(spell.id)}
+                        isSelected={isSelected}
+                        onToggleExpand={toggleExpand}
+                        selectButton={{
+                          label: isSelected ? 'Deselect' : 'Select',
+                          onClick: () => toggleSpell1(spell.name),
+                          disabled: !isSelected && atLimit,
+                        }}
+                      />
+                    );
+                  })}
               </div>
             </div>
           )}

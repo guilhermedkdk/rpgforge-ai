@@ -34,7 +34,7 @@ export function getEffectiveAttribute(
   epicBoonAbilityScore?: string | null,
   hasPrimalChampion?: boolean,
   hasBodyAndMind?: boolean,
-  grapplerAbilityScore?: string | null,
+  grapplerAbilityScore?: string | null
 ): number {
   const base = attributes[attr] ?? 0;
   if (base === 0) return 0;
@@ -58,7 +58,7 @@ export function getEffectiveAttribute(
 export function abilityScoreCeilingForAsi(
   attr: string,
   hasPrimalChampion: boolean,
-  hasBodyAndMind: boolean,
+  hasBodyAndMind: boolean
 ): number {
   if (hasPrimalChampion && (attr === 'Strength' || attr === 'Constitution')) {
     return ABILITY_CAP;
@@ -80,7 +80,7 @@ export function getEffectiveModifier(
   epicBoonAbilityScore?: string | null,
   hasPrimalChampion?: boolean,
   hasBodyAndMind?: boolean,
-  grapplerAbilityScore?: string | null,
+  grapplerAbilityScore?: string | null
 ): number {
   const effective = getEffectiveAttribute(
     attributes,
@@ -89,7 +89,7 @@ export function getEffectiveModifier(
     epicBoonAbilityScore,
     hasPrimalChampion,
     hasBodyAndMind,
-    grapplerAbilityScore,
+    grapplerAbilityScore
   );
   if (effective === 0) return 0;
   return calcModifier(effective);

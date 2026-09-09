@@ -167,8 +167,8 @@ function firstUnusedSkill(candidates: string[], ctx: MenuApplyContext): string |
  * spent.
  *
  * Needed for BOTH directions: a gain the model left blank, and a gain whose pick would break the cap
- * of 20 (measured on a real Monk 12 draft: Dexterity 15 + 2 background + 2 + 2 = 21, and the clamp
- * then dropped the points, leaving the gain reading as unmade and the sheet unsaveable).
+ * of 20, where the clamp drops the points and the gain then reads as unmade on an unsaveable
+ * sheet.
  */
 function abilityPointRouter(
   byGain: unknown[],
@@ -197,19 +197,11 @@ function abilityPointRouter(
     hasRoom,
     total,
     /** The highest ability still under the cap; the primary when everything is maxed. */
-    next: () =>
-      ABILITIES.filter(hasRoom).sort((a, b) => total(b) - total(a))[0] ?? primaryAbility,
+    next: () => ABILITIES.filter(hasRoom).sort((a, b) => total(b) - total(a))[0] ?? primaryAbility,
     /**
-     * Where ONE point buys the most, in the order the table plays it:
-     * 1. a key ability still under 20 (the whole reason to take the increase);
-     * 2. an ODD score, where a single point is a whole modifier (the model spreads +1/+1 across
-     *    gains and left real sheets on 19, which is the same modifier as 18);
-     * 3. what the model asked for;
-     * 4. anything with room.
-     *
-     * `isLastPoint` flips 1 and 2: with nothing left to pair it with, a point on an even key ability
-     * buys NOTHING (a Ranger's Wisdom 16 -> 17), while the same point on any odd score is a whole
-     * modifier. Measured on a real level-13 draft that ended on Wisdom 17.
+     * Where ONE point buys the most: a key ability under 20, then an ODD score (where one point is a
+     * whole modifier), then the model's own pick, then anything with room. `isLastPoint` flips the
+     * first two, since a lone point on an even score buys no modifier at all.
      */
     bestFor: (preferred: string | undefined, isLastPoint = false) => {
       const key = keyAbilities.find(hasRoom);
@@ -249,16 +241,11 @@ function abilityTotal(
 }
 
 /**
- * Final pass over the Ability Score Improvement points, after EVERY menu has been applied.
+ * Final pass over the Ability Score Improvement points, once every menu has been applied.
  *
- * The per-gain router only sees what was decided before it, and some ability bonuses are decided
- * later: the Grappler feat (+1) can arrive through Versatile or a background feat, whose menus run
- * after the ASI ones. A point placed on an ability that ends up at 21 is dropped by the derivation's
- * clamp, and the gain then reads as unmade ("Falta 1 escolha") on a sheet the player cannot fix,
- * because the panel shows the ability already at 20. Measured on a real Fighter 12 draft with
- * Grappler: gains 2/2/2 became 2/2/1.
- *
- * So the overflow is trimmed and every short gain is refilled here, where the totals are final.
+ * Some ability bonuses are decided later (a feat arriving through a background), and a point that
+ * ends up over 20 is dropped by the derivation's clamp, leaving the gain reading as unmade on a
+ * sheet the player cannot fix. Totals are final here, so overflow is trimmed and short gains refill.
  */
 function rebalanceAbilityScoreImprovements(
   fc: Record<string, Record<string, unknown>>,
@@ -302,16 +289,9 @@ function rebalanceAbilityScoreImprovements(
 }
 
 /**
- * Picks every Magic Initiate's spellcasting ability from the character's own scores.
- *
- * The SRD chooses it when you take the feat ("Intelligence, Wisdom, or Charisma is your spellcasting
- * ability for this feat's spells"), and the right answer is arithmetic: that ability sets the DC and
- * the attack bonus of those spells. It used to be hardcoded per list, so a Charisma character with
- * the Acolyte background always cast its feat spells off Wisdom, and Charisma was never chosen for
- * anyone. Same split as the ASI router: the server does the math, the model chooses the build.
- *
- * Runs after `rebalanceAbilityScoreImprovements`, where the totals are final. Ties keep the list's
- * traditional ability.
+ * Picks every Magic Initiate's spellcasting ability from the character's own scores: that ability
+ * sets the DC and attack bonus of those spells. Hardcoding it per list meant Charisma was never
+ * chosen. Runs after `rebalanceAbilityScoreImprovements`; ties keep the list's traditional ability.
  */
 function assignMagicInitiateAbilities(
   fc: Record<string, Record<string, unknown>>,
@@ -428,13 +408,10 @@ function pushMagicInitiateMenus(
 /**
  * Menus for ONE class, read at its own level.
  *
- * `scope` namespaces the ids when the character has more than one class, so two classes offering the
- * same feature (Fighting Style in Fighter/Paladin/Ranger) don't collapse into one menu. A single
- * class passes an empty scope, keeping the ids byte-identical to before multiclassing.
- *
- * `namespaceFightingStyle` switches the persisted key to `<classId>::Fighting Style`: the Fighter's
- * feat and the Paladin's option are two different choices, and writing both under the bare name made
- * the last class overwrite the first (measured: the Paladin's Blessed Warrior vanished every time).
+ * `scope` namespaces the ids so two classes offering the same feature (Fighting Style) do not
+ * collapse into one menu; a single class passes an empty scope and keeps the pre-multiclass ids.
+ * `namespaceFightingStyle` does the same for the persisted key, which the last class used to
+ * overwrite.
  */
 function buildClassMenus(
   cls: ClassMenuInput,
@@ -453,7 +430,8 @@ function buildClassMenus(
   for (const single of classSingles) {
     if (single.options.length === 0) continue;
     const id = mid(`feature:${single.feature.toLowerCase().replace(/\s+/g, '-')}`);
-    const isFightingStyle = single.feature.trim().toLowerCase() === FIGHTING_STYLE_FEATURE.toLowerCase();
+    const isFightingStyle =
+      single.feature.trim().toLowerCase() === FIGHTING_STYLE_FEATURE.toLowerCase();
     // The Paladin and the Ranger may take their own option (Blessed/Druidic Warrior) OR any Fighting
     // Style feat; offering only the option meant the alternative was never even considered.
     const featNames = isFightingStyle ? input.featsByType.fightingStyle.map((f) => f.name) : [];
@@ -464,8 +442,9 @@ function buildClassMenus(
         ? 'Druid'
         : null;
     const grantOptionLabel = grantList
-      ? (single.options.find((o) => o.key === (grantList === 'Cleric' ? 'blessed-warrior' : 'druidic-warrior'))
-          ?.label ?? '')
+      ? (single.options.find(
+          (o) => o.key === (grantList === 'Cleric' ? 'blessed-warrior' : 'druidic-warrior')
+        )?.label ?? '')
       : '';
     menus.push({
       id,
@@ -528,7 +507,11 @@ function buildClassMenus(
   const hasInlineFightingStyle = classSingles.some(
     (s) => s.feature.trim().toLowerCase() === 'fighting style'
   );
-  if (advanced.hasFightingStyle && !hasInlineFightingStyle && input.featsByType.fightingStyle.length > 0) {
+  if (
+    advanced.hasFightingStyle &&
+    !hasInlineFightingStyle &&
+    input.featsByType.fightingStyle.length > 0
+  ) {
     menus.push({
       id: mid('fighting-style-feat'),
       prompt: 'Fighting Style: pick 1 Fighting Style feat',
@@ -558,12 +541,17 @@ function buildClassMenus(
       options: pool.length ? pool : input.allSkillKeys,
       pick: advanced.expertiseCount,
       apply: (sel, ctx) => {
-        const key = featureChoiceKey(EXPERTISE_FEATURE, namespaceExpertise ? cls.classRuleItemId : null);
+        const key = featureChoiceKey(
+          EXPERTISE_FEATURE,
+          namespaceExpertise ? cls.classRuleItemId : null
+        );
         // Doubling the same skill twice buys nothing, so a class only keeps what the others left.
         const taken = new Set(
           Object.entries(ctx.fc)
-            .filter(([k]) => k !== key && parseFeatureChoiceKey(k).featureName === EXPERTISE_FEATURE)
-            .flatMap(([, entry]) => ((entry?.skillKeys as string[] | undefined) ?? []))
+            .filter(
+              ([k]) => k !== key && parseFeatureChoiceKey(k).featureName === EXPERTISE_FEATURE
+            )
+            .flatMap(([, entry]) => (entry?.skillKeys as string[] | undefined) ?? [])
         );
         const valid = sel.filter((k) => ctx.finalSkills.includes(k) && !taken.has(k));
         const topped = dedupe([
@@ -709,10 +697,7 @@ function buildClassMenus(
           }
         },
       });
-      if (
-        eligible.some((o) => o.key === PACT_OF_TOME_KEY) &&
-        input.allCantripNames.length > 0
-      ) {
+      if (eligible.some((o) => o.key === PACT_OF_TOME_KEY) && input.allCantripNames.length > 0) {
         menus.push({
           id: mid('pact-tome-cantrips'),
           prompt: `Only used if you picked "${PACT_OF_TOME_KEY}": pick 3 cantrips from any class list`,
@@ -846,7 +831,7 @@ export function buildAiMenus(input: MenuBuildInput): AiMenu[] {
         const taken = new Set(
           Object.entries(ctx.fc)
             .filter(([k]) => parseFeatureChoiceKey(k).featureName === 'Weapon Mastery')
-            .flatMap(([, entry]) => ((entry?.weaponIds as string[] | undefined) ?? []))
+            .flatMap(([, entry]) => (entry?.weaponIds as string[] | undefined) ?? [])
         );
         const ids = dedupe(
           sel.map((n) => input.weaponIdByName.get(n.toLowerCase())).filter((v): v is string => !!v)
@@ -994,7 +979,7 @@ export function buildAiMenus(input: MenuBuildInput): AiMenu[] {
       apply: (sel, ctx) => {
         // Falls back to the OPTION LIST, not just the model's pick: a bonus skill that duplicates one
         // the character already has is exempt from the class budget, so the class silently ends a
-        // skill short (measured on an Elf Ranger whose class pick and Keen Senses both took Perception).
+        // skill short when a granted skill collides with the class pick.
         const pick = firstUnusedSkill([...sel, ...race.keenSensesSkillKeys], ctx) ?? sel[0];
         if (pick) (ctx.fc['Keen Senses'] ??= {}).option = pick;
       },
@@ -1073,7 +1058,9 @@ export function buildAiMenus(input: MenuBuildInput): AiMenu[] {
           if (sel.length === 0) return;
           const bySource =
             (ctx.fc['Skilled']?.bySource as Record<string, unknown> | undefined) ?? {};
-          bySource[buildMiFdKey('background', featName, 0)] = sel.slice(0, 3).map((k) => `skill:${k}`);
+          bySource[buildMiFdKey('background', featName, 0)] = sel
+            .slice(0, 3)
+            .map((k) => `skill:${k}`);
           (ctx.fc['Skilled'] ??= {}).bySource = bySource;
         },
       });

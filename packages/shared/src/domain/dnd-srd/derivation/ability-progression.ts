@@ -12,7 +12,10 @@ import {
   getEffectiveAttribute,
   getEffectiveModifier,
 } from '../math/attributes';
-import type { CharacterFormData, AbilityScoreImprovementGainChoice } from '../character/character-form-data';
+import type {
+  CharacterFormData,
+  AbilityScoreImprovementGainChoice,
+} from '../character/character-form-data';
 
 /** Canonical D&D ability names used across sheet state and derivation. */
 export const DND_ATTRIBUTES: readonly string[] = [

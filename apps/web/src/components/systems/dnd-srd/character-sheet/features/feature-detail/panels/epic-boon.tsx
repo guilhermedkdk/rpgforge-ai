@@ -1,12 +1,20 @@
 'use client';
 
-import { canApplyEpicBoonChoices, EPIC_BOON_CAP, getEpicBoonPrerequisiteBlockedReasons, REPEATABLE_FEAT_NAMES, buildEffectiveAttributeScores, buildOwnedFeatIdsSet, evaluateFeatPrerequisite, getFeatMeta, isEpicBoonFeat, type RuleItemResponse, type CharacterFormData } from '@rpgforce-ai/shared';
-import { ATTRIBUTES } from '../../../constants';
 import {
-  FeatOptionRowBody,
-  RequirementAlert,
-  SelectionSection,
-} from '../shared/selection';
+  canApplyEpicBoonChoices,
+  EPIC_BOON_CAP,
+  getEpicBoonPrerequisiteBlockedReasons,
+  REPEATABLE_FEAT_NAMES,
+  buildEffectiveAttributeScores,
+  buildOwnedFeatIdsSet,
+  evaluateFeatPrerequisite,
+  getFeatMeta,
+  isEpicBoonFeat,
+  type RuleItemResponse,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
+import { ATTRIBUTES } from '../../../constants';
+import { FeatOptionRowBody, RequirementAlert, SelectionSection } from '../shared/selection';
 import { FeatureOptionRow } from '../shared/feature-option-row';
 import { AbilityScoreIncreasePicker } from '../shared/ability-score-increase-picker';
 
@@ -32,7 +40,11 @@ export function EpicBoonPanel({ data, onChange, featsList }: EpicBoonPanelProps)
         <RequirementAlert className="mb-3" reasons={epicBoonBlockedReasons} />
       )}
 
-      <div className="max-h-80 space-y-2 overflow-y-auto pb-2 pr-1" role="list" aria-label="Epic Boon feats">
+      <div
+        className="max-h-80 space-y-2 overflow-y-auto pb-2 pr-1"
+        role="list"
+        aria-label="Epic Boon feats"
+      >
         {epicBoonFeats.map((feat) => {
           const { prerequisite } = getFeatMeta(feat);
           const featNameLower = (feat.name ?? '').trim().toLowerCase();
@@ -42,7 +54,7 @@ export function EpicBoonPanel({ data, onChange, featsList }: EpicBoonPanelProps)
           const unmetPrerequisites = evaluateFeatPrerequisite(
             prerequisite,
             data,
-            effectiveAttributeScores,
+            effectiveAttributeScores
           );
           const isMissingPrerequisites = unmetPrerequisites.length > 0;
           const isSelected = currentEpicBoonId === feat.id || isAlreadyOwnedNonRepeatable;

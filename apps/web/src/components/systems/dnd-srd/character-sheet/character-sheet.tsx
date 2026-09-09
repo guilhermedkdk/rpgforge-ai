@@ -150,8 +150,13 @@ function CharacterSheetContent() {
           </div>
         </div>
 
+        {/* data-sheet-page is the print stylesheet's only pagination hook: spellcasting is a page of
+            its own, or its header prints alone at the foot of page 1. */}
         {hasSpellcastingAbility && (
-          <div className="w-full flex flex-col rounded-xl border border-border/50 bg-background/50 shadow-sm p-3 sm:p-4 lg:p-5 space-y-4">
+          <div
+            data-sheet-page="2"
+            className="w-full flex flex-col rounded-xl border border-border/50 bg-background/50 shadow-sm p-3 sm:p-4 lg:p-5 space-y-4"
+          >
             <SpellcastingSection
               data={data}
               onChange={onChange}

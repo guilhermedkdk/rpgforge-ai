@@ -1,7 +1,18 @@
-import type { MulticlassPrerequisiteMiss } from '@rpgforce-ai/shared';
+import {
+  MULTICLASS_PREREQUISITE_SCORE,
+  type MulticlassPrerequisiteMiss,
+} from '@rpgforce-ai/shared';
 
-/** `Strength` → `STR`, so the requirement fits beside the class name without wrapping. */
-export const abbreviateAbility = (ability: string): string => ability.slice(0, 3).toUpperCase();
+/** `['Strength', 'Dexterity']` with an `any` requirement → `Strength or Dexterity`. */
+export const abilityListText = (abilities: string[], any: boolean): string =>
+  abilities.join(any ? ' or ' : ' and ');
+
+/**
+ * `Fighter needs Strength or Dexterity 13` — the sentence shape EVERY requirement badge uses, so the
+ * classes already on the sheet and the ones being offered state the same rule the same way.
+ */
+export const requirementSentence = (className: string, abilityText: string): string =>
+  `${className} needs ${abilityText} ${MULTICLASS_PREREQUISITE_SCORE}`;
 
 /**
  * Why a class is locked, naming the class that imposes it.
@@ -11,26 +22,24 @@ export const abbreviateAbility = (ability: string): string => ability.slice(0, 3
  * 13" and reasonably concluded Fighter wanted Charisma.
  */
 export function requirementText(miss: MulticlassPrerequisiteMiss, cardClassName: string): string {
-  // Terse on purpose: this shares one unwrappable line with the class name in a 3-column grid, so
-  // the score the player already has is left out and only the bar to clear is stated.
-  const requirement =
-    miss.alternatives.length > 0
-      ? `${miss.alternatives.map(abbreviateAbility).join('/')} ${miss.required}`
-      : `${abbreviateAbility(miss.ability)} ${miss.required}`;
+  const abilityText = abilityListText(miss.abilities, miss.mode === 'any');
   return miss.className === cardClassName
-    ? `Needs ${requirement}`
-    : `${miss.className} needs ${requirement}`;
+    ? `Needs ${abilityText} ${miss.required}`
+    : requirementSentence(miss.className, abilityText);
 }
 
 /**
- * A class ON THE SHEET that stopped meeting its requirement. Full ability names and the current
- * score, unlike {@link requirementText}: this one runs on its own line, and the score is the whole
- * point (it is what changed under the player).
+ * A class ON THE SHEET that stopped meeting its requirement. Carries the current score, unlike
+ * {@link requirementText}: this one runs inside the row's warning, and the score is the whole point
+ * (it is what changed under the player).
  */
 export function unmetRequirementSentence(miss: MulticlassPrerequisiteMiss): string {
-  const requirement =
-    miss.alternatives.length > 0
-      ? `${miss.alternatives.join(' or ')} ${miss.required}`
-      : `${miss.ability} ${miss.required}`;
-  return `${miss.className} needs ${requirement}: you have ${miss.actual}.`;
+  const abilityText = abilityListText(miss.abilities, miss.mode === 'any');
+  // Which ability the score belongs to only matters when the class names more than one: with an
+  // `all` requirement, "you have 10" alone leaves the player guessing which one is short.
+  const score =
+    miss.abilities.length > 1
+      ? `you have ${miss.actual} in ${miss.ability}`
+      : `you have ${miss.actual}`;
+  return `${requirementSentence(miss.className, abilityText)}: ${score}.`;
 }

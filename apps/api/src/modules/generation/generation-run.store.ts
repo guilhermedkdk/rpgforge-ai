@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { GenerateCharacterMeta, GenerationAnswer, GenerationQuestion } from '@rpgforce-ai/shared';
+import type {
+  GenerateCharacterMeta,
+  GenerationAnswer,
+  GenerationQuestion,
+} from '@rpgforce-ai/shared';
 
 /** The wizard interaction accumulated across the two generation calls, before the sheet exists. */
 export interface PendingGenerationRun {
@@ -20,16 +24,10 @@ const TTL_MS = 2 * 60 * 60 * 1000;
 const SWEEP_EVERY = 50;
 
 /**
- * Holds an in-flight wizard interaction, keyed by an opaque id the client echoes back on save.
+ * An in-flight wizard interaction, keyed by an opaque id the client echoes back on save.
  *
- * The interaction spans three requests (questions, character, save the sheet) and is only persisted
- * by the LAST one, so a draft the user abandons never reaches the database. Server-side on purpose:
- * the client carries the id, never the payload.
- *
- * Deliberately in-memory: this is short-lived state for a single API process, so an API restart
- * between generating and saving loses the log (the sheet still saves — see `GenerationRunService`,
- * which never blocks a save). Everything behind this class is an implementation detail, so moving it
- * to Redis or to a pending row is a change to this file alone.
+ * In memory on purpose: only the last of the three requests persists anything, so an abandoned draft
+ * never reaches the database, and a restart loses the log but never the sheet.
  */
 @Injectable()
 export class GenerationRunStore {

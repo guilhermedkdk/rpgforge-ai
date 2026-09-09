@@ -1,13 +1,9 @@
 /**
- * Pure parsers + extractors that turn a rule item's `normalized` data into the
- * *menus of choices* a character must make (class skill picks, background ability
- * increase, starting-equipment bundles, granted feats) and resolve an equipment
- * bundle's text into concrete items + gold.
+ * Turns a rule item's `normalized` data into the menus of choices a character must make, and
+ * resolves an equipment bundle's text into concrete items plus gold.
  *
- * Single source of truth consumed by BOTH the web editor derivation
- * (`derived-character-stats.ts`, `equipment-utils.ts`) and the backend AI
- * generation service — so the options the AI picks from are exactly the options
- * the editor will later show.
+ * Consumed by BOTH the web editor derivation and the backend AI generation, so the options the AI
+ * picks from are exactly the ones the editor will show.
  */
 import { escapeRegExp } from '../util/text-utils';
 
@@ -185,14 +181,11 @@ function parseStartingEquipmentSegments(optionText: string): string[] {
 }
 
 /**
- * Singularizes an item name when qty > 1, matching how plural forms appear in option texts.
- * Handles -es plural for words ending in -ch/-sh/-s/-z (Pouches→Pouch) and the regular -s plural
- * (Arrows→Arrow). GP lines, possessives and qty ≤ 1 are left unchanged.
+ * Singularizes an item name when qty > 1, matching how plurals appear in option texts.
  *
- * The "ends with s" guard is what protects compound names ("Bullets, Sling", "Clothes, Fine",
- * "Arcane Focus, Crystal"): in those the plural is in the 1st segment, and singularizing it
- * blindly would produce "Clothe"/"Arcane Focu". Keeping the compound intact is also what keeps
- * the name resolvable back to the catalog id, so do NOT add comma handling here.
+ * The "ends with s" guard protects compound names ("Bullets, Sling"), where the plural is in the
+ * first segment and blind singularizing would produce "Arcane Focu". Keeping the compound intact is
+ * what keeps the name resolvable back to the catalog id, so do NOT add comma handling here.
  */
 export function singularizeIfPlural(name: string, qty: number): string {
   if (qty <= 1 || !name.endsWith('s') || /(?:^|\s)GP$/i.test(name)) return name;
@@ -373,7 +366,14 @@ export function splitEquipmentBySource(
         manualIndices.push(i);
       }
     }
-    return { classLines, backgroundLines, manualLines, classIndices, backgroundIndices, manualIndices };
+    return {
+      classLines,
+      backgroundLines,
+      manualLines,
+      classIndices,
+      backgroundIndices,
+      manualIndices,
+    };
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -409,7 +409,10 @@ export function splitEquipmentBySource(
 }
 
 /** Returns equipment string with lines belonging to sourceOptionText removed. */
-export function getEquipmentWithoutSource(equipment: string, sourceOptionText: string | null): string {
+export function getEquipmentWithoutSource(
+  equipment: string,
+  sourceOptionText: string | null
+): string {
   if (!sourceOptionText?.trim()) return equipment ?? '';
   const budget = new Map<string, number>();
   for (const { quantity, name } of parseStartingEquipmentOptionItems(sourceOptionText)) {
@@ -455,7 +458,10 @@ export function extractClassChoiceOptions(
   normalized: unknown,
   sourceKey: string | null | undefined
 ): ClassChoiceOptions {
-  const empty: ClassChoiceOptions = { skillOptions: { keys: [], chooseN: null }, startingEquipment: [] };
+  const empty: ClassChoiceOptions = {
+    skillOptions: { keys: [], chooseN: null },
+    startingEquipment: [],
+  };
   if (!normalized || typeof normalized !== 'object') return empty;
   const norm = normalized as Record<string, unknown>;
 
@@ -503,8 +509,16 @@ function parseLeadingInt(val: unknown): number {
 
 interface ClassTableFeature {
   key?: string;
-  dataForClassTable?: Array<{ level?: number | string; columnValue?: string; column_value?: string }>;
-  data_for_class_table?: Array<{ level?: number | string; columnValue?: string; column_value?: string }>;
+  dataForClassTable?: Array<{
+    level?: number | string;
+    columnValue?: string;
+    column_value?: string;
+  }>;
+  data_for_class_table?: Array<{
+    level?: number | string;
+    columnValue?: string;
+    column_value?: string;
+  }>;
 }
 
 /** Reads a class-table column's integer value at (or just below) the character's level. */
@@ -546,7 +560,9 @@ export function extractClassSpellLimits(
     maxSpellLevel: 0,
   };
   if (!normalized || typeof normalized !== 'object') return empty;
-  const features = (normalized as Record<string, unknown>).features as ClassTableFeature[] | undefined;
+  const features = (normalized as Record<string, unknown>).features as
+    | ClassTableFeature[]
+    | undefined;
   if (!Array.isArray(features)) return empty;
 
   const base = (sourceKey ?? '').trim();
@@ -556,7 +572,10 @@ export function extractClassSpellLimits(
 
   const maxCantrips = columnValueAtLevel(byKey('cantrips'), lv);
   const maxLeveledSpells = columnValueAtLevel(
-    byKey('prepared-spells') ?? byKey('prepared_spells') ?? byKey('spells-known') ?? byKey('spells_known'),
+    byKey('prepared-spells') ??
+      byKey('prepared_spells') ??
+      byKey('spells-known') ??
+      byKey('spells_known'),
     lv
   );
 
@@ -675,7 +694,9 @@ function parseParagraphTraitOptions(desc: string): FeatureTraitOption[] {
       continue;
     }
 
-    const plainMatch = trimmed.match(/^([A-Z][A-Za-z'\-\s]{1,55}?)(?:\s*\([^)]{1,50}\))?\.\s+[A-Z]/);
+    const plainMatch = trimmed.match(
+      /^([A-Z][A-Za-z'\-\s]{1,55}?)(?:\s*\([^)]{1,50}\))?\.\s+[A-Z]/
+    );
     if (plainMatch) {
       const label = plainMatch[1].trim();
       if (label.length >= 2 && label.length <= 60 && label.split(' ').length <= 8) {
@@ -717,7 +738,8 @@ function minGainLevel(feature: NormalizedClassFeature): number {
   const levels: number[] = [];
   for (const x of raw) {
     if (typeof x === 'number') levels.push(x);
-    else if (x && typeof x === 'object' && 'level' in x) levels.push(Number((x as { level?: number }).level));
+    else if (x && typeof x === 'object' && 'level' in x)
+      levels.push(Number((x as { level?: number }).level));
   }
   const valid = levels.filter((n) => Number.isFinite(n) && n > 0);
   return valid.length ? Math.min(...valid) : 1;
@@ -1036,8 +1058,7 @@ export function extractAdvancedClassChoices(
   const out: AdvancedClassChoices = { ...empty };
 
   if (has('weapon mastery')) {
-    out.weaponMasteryCount =
-      classTableValueByMatch(features, /weapon[-_\s]?mastery/i, lv) || 2;
+    out.weaponMasteryCount = classTableValueByMatch(features, /weapon[-_\s]?mastery/i, lv) || 2;
   }
 
   const expertise = byName('expertise');
@@ -1073,10 +1094,11 @@ export function extractAdvancedClassChoices(
 
   const invocations = byName('eldritch invocations') ?? byName('eldritch invocation');
   if (invocations && minGainLevel(invocations) <= lv) {
-    const optionsFeature = features.find((f) =>
-      /eldritch[-_\s]invocation/i.test(
-        `${(f.name ?? '').trim().toLowerCase()} ${String((f as { key?: string }).key ?? '')}`
-      ) && /option/i.test(`${f.name ?? ''} ${String((f as { key?: string }).key ?? '')}`)
+    const optionsFeature = features.find(
+      (f) =>
+        /eldritch[-_\s]invocation/i.test(
+          `${(f.name ?? '').trim().toLowerCase()} ${String((f as { key?: string }).key ?? '')}`
+        ) && /option/i.test(`${f.name ?? ''} ${String((f as { key?: string }).key ?? '')}`)
     );
     const options = parseEldritchInvocationOptions(optionsFeature?.desc ?? '');
     const count = classTableValueByMatch(features, /invocation/i, lv);
@@ -1167,7 +1189,8 @@ export function extractRaceChoiceOptions(normalized: unknown): RaceChoiceOptions
     }
     if (nameLower === 'keen senses') {
       const m = desc.match(/proficiency in\s+(?:the\s+)?(.+?)\s+skills?\b/i);
-      if (m) out.keenSensesSkillKeys = parseSkillProficienciesText(`Choose one: ${m[1].trim()}`).keys;
+      if (m)
+        out.keenSensesSkillKeys = parseSkillProficienciesText(`Choose one: ${m[1].trim()}`).keys;
       continue;
     }
     if (nameLower === 'skillful') out.hasSkillful = true;
@@ -1213,7 +1236,12 @@ export function extractBackgroundChoiceOptions(normalized: unknown): BackgroundC
   const benefits = norm.benefits as NormalizedBenefit[] | undefined;
   if (!Array.isArray(benefits)) return empty;
 
-  const out: BackgroundChoiceOptions = { ...empty, fixedSkillKeys: [], equipment: [], featNames: [] };
+  const out: BackgroundChoiceOptions = {
+    ...empty,
+    fixedSkillKeys: [],
+    equipment: [],
+    featNames: [],
+  };
 
   const skillBenefit = benefits.find((b) => (b.type ?? '').toLowerCase() === 'skill_proficiency');
   if (skillBenefit) {
@@ -1244,7 +1272,7 @@ export function extractBackgroundChoiceOptions(normalized: unknown): BackgroundC
   // precedence the web derivation uses for the featureDetail name, so `fd:` keys match.
   out.featNames = benefits
     .filter((b) => (b.type ?? '').toLowerCase() === 'feat')
-    .map((b) => ((b.desc ?? b.name) ?? '').trim())
+    .map((b) => (b.desc ?? b.name ?? '').trim())
     .filter(Boolean);
 
   return out;

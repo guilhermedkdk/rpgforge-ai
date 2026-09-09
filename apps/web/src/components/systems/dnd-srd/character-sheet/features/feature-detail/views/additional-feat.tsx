@@ -5,7 +5,19 @@ import { markdownBodyClass } from '../shared/types';
 import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ABILITY_SCORE_CAP_FROM_ASI, buildEffectiveAttributeScores, canApplyAbilityScoreImprovementASI, getAbilityScoreImprovementASIBlockedReasons, getAbilityScoreImprovementFeatIdsFromGains, getAllFightingStyleFeatIds, getExpertiseSelectionPrerequisiteMessage, normalizeFeatName, parseToolProficiencyChoose, type CharacterFormData, type RuleItemResponse } from '@rpgforce-ai/shared';
+import {
+  ABILITY_SCORE_CAP_FROM_ASI,
+  buildEffectiveAttributeScores,
+  canApplyAbilityScoreImprovementASI,
+  getAbilityScoreImprovementASIBlockedReasons,
+  getAbilityScoreImprovementFeatIdsFromGains,
+  getAllFightingStyleFeatIds,
+  getExpertiseSelectionPrerequisiteMessage,
+  normalizeFeatName,
+  parseToolProficiencyChoose,
+  type CharacterFormData,
+  type RuleItemResponse,
+} from '@rpgforce-ai/shared';
 import { RequirementAlert, SelectionSection } from '../shared/selection';
 import { SkilledFeatPanel } from '../panels/skilled-feat';
 import { AbilityScoreIncreasePicker } from '../shared/ability-score-increase-picker';
@@ -73,10 +85,7 @@ export function AdditionalFeatView({
   const descTop = (norm.desc ?? raw.desc ?? '') as string;
   const contentMd =
     (benefitDescs.length > 0
-      ? [
-          prerequisite?.trim() ? `**Prerequisite:** ${prerequisite.trim()}` : '',
-          ...benefitDescs,
-        ]
+      ? [prerequisite?.trim() ? `**Prerequisite:** ${prerequisite.trim()}` : '', ...benefitDescs]
           .filter(Boolean)
           .join('\n\n')
       : null) ||
@@ -102,7 +111,10 @@ export function AdditionalFeatView({
         const toolLine = profLines.find((l) => /^Tool Proficien/i.test(l));
         if (toolLine) {
           const valueStr = toolLine.slice(toolLine.indexOf(':') + 1).trim();
-          const segments = valueStr.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean);
+          const segments = valueStr
+            .split(/\s*,\s*/)
+            .map((s) => s.trim())
+            .filter(Boolean);
           for (const seg of segments) {
             const parsed = parseToolProficiencyChoose(seg);
             if (!parsed || parsed.chooseN <= 0) continue;

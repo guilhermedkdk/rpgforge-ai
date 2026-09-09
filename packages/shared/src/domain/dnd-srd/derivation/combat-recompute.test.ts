@@ -56,14 +56,14 @@ describe('applyCombatFromAttributes (backend authoritative recompute core)', () 
 
   it('adds +level max HP for Dwarven Toughness (a race TRAIT, not a class feature)', () => {
     const r = applyCombatFromAttributes(
-      fighter({ featureDetails: [{ name: 'Dwarven Toughness', desc: '', source: 'race' }] }),
+      fighter({ featureDetails: [{ name: 'Dwarven Toughness', desc: '', source: 'race' }] })
     );
     expect(r.maxHp).toBe(BASE_MAX_HP + 5);
   });
 
   it('adds +level max HP for Draconic Resilience (a subclass feature)', () => {
     const r = applyCombatFromAttributes(
-      fighter({ featureDetails: [{ name: 'Draconic Resilience', desc: '', source: 'subclass' }] }),
+      fighter({ featureDetails: [{ name: 'Draconic Resilience', desc: '', source: 'subclass' }] })
     );
     expect(r.maxHp).toBe(BASE_MAX_HP + 5);
   });
@@ -75,7 +75,7 @@ describe('applyCombatFromAttributes (backend authoritative recompute core)', () 
           { name: 'Dwarven Toughness', desc: '', source: 'race' },
           { name: 'Draconic Resilience', desc: '', source: 'subclass' },
         ],
-      }),
+      })
     );
     expect(r.maxHp).toBe(BASE_MAX_HP + 10);
   });
@@ -84,7 +84,7 @@ describe('applyCombatFromAttributes (backend authoritative recompute core)', () 
     const alert = featItem('feat-alert', 'Alert');
     const r = applyCombatFromAttributes(
       fighter({ abilityScoreImprovementByGain: [{ kind: 'feat', featId: 'feat-alert' }] }),
-      [alert],
+      [alert]
     );
     expect(r.initiative).toBe('5'); // Dex(+2) + proficiency bonus at level 5 (+3)
   });

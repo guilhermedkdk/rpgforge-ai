@@ -33,7 +33,7 @@ function buildFeatIdByName(featsList: RuleItemResponse[]): Map<string, string> {
 
 export function buildOwnedFeatIdsSet(
   data: CharacterFormData,
-  featsList: RuleItemResponse[],
+  featsList: RuleItemResponse[]
 ): Set<string> {
   const featIdByName = buildFeatIdByName(featsList);
   const featureDetailFeatIds = (data.featureDetails ?? [])
@@ -75,7 +75,7 @@ export function buildEffectiveAttributeScores(data: CharacterFormData): Record<s
       effectiveEpicBoonAbilityScore,
       hasPrimalChampion,
       hasBodyAndMind,
-      data.grapplerAbilityScore,
+      data.grapplerAbilityScore
     );
   }
   return scores;
@@ -89,7 +89,7 @@ export function evaluateFeatPrerequisite(
   textRaw: string,
   data: CharacterFormData,
   effectiveAttributeScores: Record<string, number>,
-  featureNamesLower?: Set<string>,
+  featureNamesLower?: Set<string>
 ): string[] {
   const text = textRaw.trim();
   if (!text) return [];
@@ -104,7 +104,7 @@ export function evaluateFeatPrerequisite(
   const attrsPattern = '(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)';
   const attrRegex = new RegExp(
     `((?:${attrsPattern})(?:\\s+or\\s+(?:${attrsPattern}))*)\\s*(\\d+)\\+`,
-    'gi',
+    'gi'
   );
   for (const m of text.matchAll(attrRegex)) {
     const expr = String(m[1] ?? '').trim();
@@ -118,7 +118,9 @@ export function evaluateFeatPrerequisite(
   if (featureNamesLower) {
     const featureReqRegex = /([A-Za-z][A-Za-z\s'-]+?)\s+Feature/gi;
     for (const m of text.matchAll(featureReqRegex)) {
-      const reqFeature = String(m[1] ?? '').trim().toLowerCase();
+      const reqFeature = String(m[1] ?? '')
+        .trim()
+        .toLowerCase();
       if (!reqFeature) continue;
       const ok = [...featureNamesLower].some((n) => n === reqFeature || n.includes(reqFeature));
       if (!ok) unmet.push(`${String(m[1]).trim()} Feature`);
@@ -152,7 +154,7 @@ export function getFeatCategory(feat: RuleItemResponse): FeatCategory {
   const type = String(
     (feat.normalized as { type?: unknown } | undefined)?.type ??
       (feat.raw as { type?: unknown } | undefined)?.type ??
-      '',
+      ''
   )
     .trim()
     .toLowerCase();
@@ -171,7 +173,8 @@ export function getFeatCategory(feat: RuleItemResponse): FeatCategory {
 }
 
 export const isOriginFeat = (feat: RuleItemResponse): boolean => getFeatCategory(feat) === 'origin';
-export const isGeneralFeat = (feat: RuleItemResponse): boolean => getFeatCategory(feat) === 'general';
+export const isGeneralFeat = (feat: RuleItemResponse): boolean =>
+  getFeatCategory(feat) === 'general';
 export const isFightingStyleFeat = (feat: RuleItemResponse): boolean =>
   getFeatCategory(feat) === 'fighting-style';
 export const isEpicBoonFeat = (feat: RuleItemResponse): boolean =>
@@ -186,13 +189,13 @@ export const isEpicBoonFeat = (feat: RuleItemResponse): boolean =>
  */
 export function reconcileFeatPrerequisites(
   data: CharacterFormData,
-  featsList: RuleItemResponse[] | undefined,
+  featsList: RuleItemResponse[] | undefined
 ): CharacterFormData {
   if (!featsList || featsList.length === 0) return data;
   const featById = new Map(featsList.map((f) => [f.id, f]));
   const scores = buildEffectiveAttributeScores(data);
   const featureNamesLower = new Set(
-    (data.featureDetails ?? []).map((f) => f.name.trim().toLowerCase()),
+    (data.featureDetails ?? []).map((f) => f.name.trim().toLowerCase())
   );
   const prereqUnmet = (featId: string | null | undefined): boolean => {
     if (!featId) return false;
@@ -209,7 +212,7 @@ export function reconcileFeatPrerequisites(
   const asiGains = data.abilityScoreImprovementByGain ?? [];
   if (asiGains.some((g) => g?.kind === 'feat' && prereqUnmet(g.featId))) {
     patch.abilityScoreImprovementByGain = asiGains.map((g) =>
-      g?.kind === 'feat' && prereqUnmet(g.featId) ? null : g,
+      g?.kind === 'feat' && prereqUnmet(g.featId) ? null : g
     );
   }
   if (prereqUnmet(data.versatileFeatId)) patch.versatileFeatId = null;
@@ -219,12 +222,12 @@ export function reconcileFeatPrerequisites(
   }
   // Only the class whose own pick lost its prerequisite is cleared; the others keep theirs.
   const fightingStyles = data.fightingStyleByClass ?? {};
-  if (
-    Object.values(fightingStyles).some((p) => p.mode === 'FEAT' && prereqUnmet(p.featId))
-  ) {
+  if (Object.values(fightingStyles).some((p) => p.mode === 'FEAT' && prereqUnmet(p.featId))) {
     patch.fightingStyleByClass = Object.fromEntries(
       Object.entries(fightingStyles).map(([classKey, p]) =>
-        p.mode === 'FEAT' && prereqUnmet(p.featId) ? [classKey, { ...p, featId: null }] : [classKey, p]
+        p.mode === 'FEAT' && prereqUnmet(p.featId)
+          ? [classKey, { ...p, featId: null }]
+          : [classKey, p]
       )
     );
   }
@@ -232,7 +235,7 @@ export function reconcileFeatPrerequisites(
   const eldritch = data.eldritchInvocationSelections ?? [];
   if (eldritch.some((s) => s.featId && prereqUnmet(s.featId))) {
     patch.eldritchInvocationSelections = eldritch.filter(
-      (s) => !(s.featId && prereqUnmet(s.featId)),
+      (s) => !(s.featId && prereqUnmet(s.featId))
     );
   }
 

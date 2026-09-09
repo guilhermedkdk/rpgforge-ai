@@ -1,17 +1,10 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { RuleitemsService } from './ruleitems.service';
 import { RuleItemQueryDto } from './dto/ruleitem-query.dto';
 import { RuleItemBatchDto } from './dto/ruleitem-batch.dto';
 import { RuleItemSearchDto } from './dto/ruleitem-search.dto';
+import { SEARCH_THROTTLE } from '../../shared/throttling/throttle-tiers';
 
 type RuleItemKind = import('@rpgforce-ai/shared').RuleItemKind;
 
@@ -56,11 +49,12 @@ export class RuleitemsController {
         limit: q.limit,
         offset: q.offset,
         includeRaw: q.includeRaw,
-      })),
+      }))
     );
   }
 
   @Post('search')
+  @Throttle(SEARCH_THROTTLE)
   @HttpCode(HttpStatus.OK)
   async search(@Body() body: RuleItemSearchDto) {
     return this.ruleitemsService.search({
@@ -73,10 +67,7 @@ export class RuleitemsController {
 
   @Get(':idOrSlug')
   @HttpCode(HttpStatus.OK)
-  async findOne(
-    @Param('idOrSlug') idOrSlug: string,
-    @Query('packId') packId?: string,
-  ) {
+  async findOne(@Param('idOrSlug') idOrSlug: string, @Query('packId') packId?: string) {
     return this.ruleitemsService.findByIdOrSlug(idOrSlug, packId);
   }
 }

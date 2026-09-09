@@ -1,7 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { computeGrantedSpellPlacements, mergeGrantedSpellPlacements, stableSpellsByLevelKey, type GrantedSpellPlacement, type RuleItemResponse, type CharacterFormData } from '@rpgforce-ai/shared';
+import {
+  computeGrantedSpellPlacements,
+  mergeGrantedSpellPlacements,
+  stableSpellsByLevelKey,
+  type GrantedSpellPlacement,
+  type RuleItemResponse,
+  type CharacterFormData,
+} from '@rpgforce-ai/shared';
 
 interface UseGrantedSpellsArgs {
   data: CharacterFormData;

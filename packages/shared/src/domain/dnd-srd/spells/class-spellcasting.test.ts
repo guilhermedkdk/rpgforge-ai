@@ -39,8 +39,20 @@ const WIZARD_PREPARED_ROWS = CLERIC_PREPARED_ROWS;
 
 /** Slot columns as the pack labels them, so the prepared-level cap can be read off the table. */
 const SLOT_COLUMNS = [
-  { label: '1st-Level Slots', rows: [{ level: 1, value: '2' }, { level: 3, value: '4' }] },
-  { label: '2nd-Level Slots', rows: [{ level: 3, value: '2' }, { level: 4, value: '3' }] },
+  {
+    label: '1st-Level Slots',
+    rows: [
+      { level: 1, value: '2' },
+      { level: 3, value: '4' },
+    ],
+  },
+  {
+    label: '2nd-Level Slots',
+    rows: [
+      { level: 3, value: '2' },
+      { level: 4, value: '3' },
+    ],
+  },
   { label: '3rd-Level Slots', rows: [{ level: 5, value: '2' }] },
 ];
 
@@ -164,10 +176,7 @@ describe('getCastingClasses', () => {
       ['Wizard', 3, 3, 6],
     ]);
     expect(casters.map((c) => c.spellcastingAbility)).toEqual(['Wisdom', 'Intelligence']);
-    expect(casters.map((c) => c.spellTagKey)).toEqual([
-      'spell:class:cleric',
-      'spell:class:wizard',
-    ]);
+    expect(casters.map((c) => c.spellTagKey)).toEqual(['spell:class:cleric', 'spell:class:wizard']);
   });
 
   // The book's own caveat: the multiclass table can grant slots above what a class may prepare.
@@ -236,7 +245,12 @@ describe('getCastingClasses', () => {
     const data = clericWizard();
     data.featureDetails = [
       ...data.featureDetails,
-      { name: 'Divine Order', desc: '', source: 'class', sourceClassId: CLERIC_ID } as FeatureDetail,
+      {
+        name: 'Divine Order',
+        desc: '',
+        source: 'class',
+        sourceClassId: CLERIC_ID,
+      } as FeatureDetail,
     ];
     data.raceTraitSelections = { ...data.raceTraitSelections, 'Divine Order': 'thaumaturge' };
 
@@ -304,9 +318,9 @@ describe('attributePickedSpells', () => {
     expect(ownership.pickedCantrips.get(WIZARD_ID)).toBe(2);
     expect(ownership.ownerByRow.get(spellRowKey(1, 'Bless'))).toBe(CLERIC_ID);
     expect(ownership.ownerByRow.get(spellRowKey(1, 'Detect Magic'))).toBeTruthy();
-    expect(ownership.pickedPrepared.get(CLERIC_ID)! + ownership.pickedPrepared.get(WIZARD_ID)!).toBe(
-      2
-    );
+    expect(
+      ownership.pickedPrepared.get(CLERIC_ID)! + ownership.pickedPrepared.get(WIZARD_ID)!
+    ).toBe(2);
   });
 
   it('ignores granted rows: they never spend an allowance', () => {

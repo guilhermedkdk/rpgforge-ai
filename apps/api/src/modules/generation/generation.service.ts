@@ -23,7 +23,7 @@ export class GenerationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly runs: GenerationRunStore,
-    @Inject(PACK_GENERATION_ADAPTERS) adapters: PackGenerationAdapter[],
+    @Inject(PACK_GENERATION_ADAPTERS) adapters: PackGenerationAdapter[]
   ) {
     this.adaptersBySlug = new Map(adapters.map((a) => [a.packSlug, a]));
   }
@@ -31,10 +31,10 @@ export class GenerationService {
   async generateQuestions(
     userId: string,
     packId: string,
-    prompt: string,
+    prompt: string
   ): Promise<GenerateQuestionsResponse> {
     const adapter = await this.adapterFor(packId);
-    const { note, questions } = await adapter.generateQuestions({ packId, prompt });
+    const { note, questions } = await adapter.generateQuestions({ packId, prompt, userId });
 
     // Opens the interaction record. It stays server-side until the draft is saved as a sheet, so an
     // abandoned wizard never reaches the database.
@@ -49,7 +49,9 @@ export class GenerationService {
     return { generationId, note, questions };
   }
 
-  async generateCharacter(req: GenerateCharacterRequest): Promise<GenerateCharacterResponse> {
+  async generateCharacter(
+    req: GenerateCharacterRequest & { userId?: string | null }
+  ): Promise<GenerateCharacterResponse> {
     const adapter = await this.adapterFor(req.packId);
     const { draft, meta } = await adapter.generateCharacter(req);
 

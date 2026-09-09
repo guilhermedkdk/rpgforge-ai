@@ -4,7 +4,7 @@ import * as React from 'react';
 import { wizardSpellbookMaxByLevel, type CharacterFormData } from '@rpgforce-ai/shared';
 
 const normalizeNamesByLevel = (
-  src: Record<number, string[]> | undefined,
+  src: Record<number, string[]> | undefined
 ): Record<number, string[]> => {
   const out: Record<number, string[]> = {};
   for (let lvl = 1; lvl <= 9; lvl++) {

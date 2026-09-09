@@ -233,18 +233,16 @@ export const MAGICAL_DISCOVERIES_SPELL_PICKS = 2;
 /** The three class lists Magical Discoveries may draw from. */
 export const MAGICAL_DISCOVERIES_SPELL_LISTS = ['Cleric', 'Druid', 'Wizard'] as const;
 
-/**
- * Evocation Savant: how many Evocation spells the Evoker gains free in the spellbook: 2 on taking
- * the subclass (level 3) + 1 at each new slot level unlocked after that. The Wizard unlocks new
- * slots at 3 (2nd), 5 (3rd), 7 (4th), 9 (5th), 11, 13, 15 and 17 (per the class table), and the
- * level-3 one is the grant of the initial two.
- */
 /** Base free Evocation spells granted at the subclass (level 3), each capped to level ≤ 2. */
 export const EVOCATION_SAVANT_BASE_FREE_COUNT = 2;
 
 /** Max spell level of the base free grant ("no higher than level 2"). */
 export const EVOCATION_SAVANT_BASE_MAX_LEVEL = 2;
 
+/**
+ * Evocation Savant: 2 free spellbook spells on taking the subclass (level 3), plus 1 at each new
+ * slot level after it. The Wizard unlocks those at 5, 7, 9, 11, 13, 15 and 17.
+ */
 export function evocationSavantFreeSpellCount(characterLevel: number): number {
   const NEW_SLOT_LEVELS_AFTER_SUBCLASS = [5, 7, 9, 11, 13, 15, 17];
   return (
@@ -259,7 +257,10 @@ export function evocationSavantFreeSpellCount(characterLevel: number): number {
  * So picks ABOVE level 2 are capped at this count.
  */
 export function evocationSavantIncrementalFreeCount(characterLevel: number): number {
-  return Math.max(0, evocationSavantFreeSpellCount(characterLevel) - EVOCATION_SAVANT_BASE_FREE_COUNT);
+  return Math.max(
+    0,
+    evocationSavantFreeSpellCount(characterLevel) - EVOCATION_SAVANT_BASE_FREE_COUNT
+  );
 }
 
 /** Highest spell level castable by a full caster (Wizard): ceil(level/2), capped at 9. */

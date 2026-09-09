@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Swords, Flame, Pen } from 'lucide-react';
+import { Check, Swords, Split, Pen } from 'lucide-react';
 
 export type CreationStep = 'pack' | 'mode' | 'editor';
 
@@ -11,7 +11,7 @@ interface StepNavigatorProps {
 
 const steps: { id: CreationStep; label: string; icon: typeof Swords }[] = [
   { id: 'pack', label: 'Sistema', icon: Swords },
-  { id: 'mode', label: 'Método', icon: Flame },
+  { id: 'mode', label: 'Método', icon: Split },
   { id: 'editor', label: 'Criação', icon: Pen },
 ];
 
@@ -36,7 +36,7 @@ export const StepNavigator = ({ currentStep, onNavigate }: StepNavigatorProps) =
           <div key={step.id} className="flex items-center">
             {index > 0 && (
               <div
-                className={`mx-2 h-px w-6 transition-colors sm:mx-3 sm:w-10 ${
+                className={`mx-1 h-px w-4 transition-colors sm:mx-3 sm:w-10 ${
                   isCompleted ? 'bg-primary/50' : 'bg-border'
                 }`}
               />
@@ -68,8 +68,10 @@ export const StepNavigator = ({ currentStep, onNavigate }: StepNavigatorProps) =
                 )}
               </div>
 
+              {/* Shown at every width: three icons with no captions leave a phone user unable to
+                  tell what the steps even are. The connectors shrink instead. */}
               <span
-                className={`hidden text-sm font-medium transition-colors sm:inline ${
+                className={`text-xs font-medium transition-colors sm:text-sm ${
                   isCompleted
                     ? 'text-primary group-hover:text-primary/80'
                     : isCurrent

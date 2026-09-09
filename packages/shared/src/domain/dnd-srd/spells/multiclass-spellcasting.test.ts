@@ -63,7 +63,7 @@ describe('MULTICLASS_SPELL_SLOTS', () => {
     for (let level = 1; level < 20; level += 1) {
       for (let slot = 0; slot < 9; slot += 1) {
         expect(MULTICLASS_SPELL_SLOTS[level][slot]).toBeGreaterThanOrEqual(
-          MULTICLASS_SPELL_SLOTS[level - 1][slot],
+          MULTICLASS_SPELL_SLOTS[level - 1][slot]
         );
       }
     }
@@ -119,7 +119,14 @@ describe('multiclass prerequisites use effective ability scores', () => {
     const data = {
       ...createDefaultCharacterData(),
       // Raw 12 would fail the prerequisite on its own.
-      attributes: { Strength: 12, Dexterity: 10, Constitution: 10, Intelligence: 11, Wisdom: 10, Charisma: 10 },
+      attributes: {
+        Strength: 12,
+        Dexterity: 10,
+        Constitution: 10,
+        Intelligence: 11,
+        Wisdom: 10,
+        Charisma: 10,
+      },
       backgroundAbilityScoreIncrease: { Strength: 1 },
       abilityScoreImprovementByGain: [
         { kind: 'increase_scores' as const, byAbility: { Intelligence: 2 } },

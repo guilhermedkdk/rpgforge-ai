@@ -25,7 +25,7 @@ interface FeatureColumnTableViewProps {
 export function FeatureColumnTableView({ feat }: FeatureColumnTableViewProps) {
   const segments = React.useMemo(
     () => splitDescByColumnTables(feat.desc ?? '', feat.tableData ?? []),
-    [feat.desc, feat.tableData],
+    [feat.desc, feat.tableData]
   );
   const segmentClass = '[&_p]:mb-1.5 [&_p:last-child]:mb-0';
   return (
@@ -37,7 +37,7 @@ export function FeatureColumnTableView({ feat }: FeatureColumnTableViewProps) {
           </div>
         ) : (
           <LevelValueTable key={i} rows={seg.table.rows} />
-        ),
+        )
       )}
     </div>
   );
