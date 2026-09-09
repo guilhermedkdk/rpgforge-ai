@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronRight, Heart, History, Scroll, Shield, Star } from 'lucide-react';
+import { ChevronRight, Globe, Heart, History, Scroll, Shield, Star } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { CharacterSheetSummary } from '@rpgforce-ai/shared';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { systemRegistry } from '@/components/systems/registry';
 
 // Date only on the card; the full timestamp stays in the `title` for whoever needs it.
@@ -36,10 +38,30 @@ interface SheetListCardProps {
   sheet: CharacterSheetSummary;
   packName: string | null;
   packSlug: string | null;
+  /** Where the card leads. Defaults to the owner's editable sheet. */
+  href?: string;
+  /** Replaces the "last updated" stamp; the explore feed puts the author there instead. */
+  footerRight?: ReactNode;
+  /** Marks a sheet the owner has published. Off on the explore feed, where every card is public. */
+  showPublicBadge?: boolean;
+  /**
+   * Control pinned to the card's top-right corner (the favourite toggle). Rendered as a SIBLING of
+   * the link, not inside it: a button nested in an anchor is invalid, and the corner is the chevron's
+   * spot, so the chevron steps aside — both point at the same place and the bookmark does more.
+   */
+  action?: ReactNode;
 }
 
 /** Sheet card for the "Minhas Fichas" grid: the whole card is the link that opens the sheet. */
-export const SheetListCard = ({ sheet, packName, packSlug }: SheetListCardProps) => {
+export const SheetListCard = ({
+  sheet,
+  packName,
+  packSlug,
+  href,
+  footerRight,
+  showPublicBadge = false,
+  action,
+}: SheetListCardProps) => {
   const preview = sheet.preview;
   const title = sheet.name.trim() || 'Sem nome';
   // Class and species art are pack-specific, so they come from the system registry, not from this
@@ -77,9 +99,9 @@ export const SheetListCard = ({ sheet, packName, packSlug }: SheetListCardProps)
         .join(' · ')
     : preview?.subclassName;
 
-  return (
+  const card = (
     <Link
-      href={`/sheets/${encodeURIComponent(sheet.id)}`}
+      href={href ?? `/sheets/${encodeURIComponent(sheet.id)}`}
       aria-label={`Abrir ficha ${title}`}
       className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
@@ -121,7 +143,31 @@ export const SheetListCard = ({ sheet, packName, packSlug }: SheetListCardProps)
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-serif text-lg font-bold text-foreground">{title}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="min-w-0 truncate font-serif text-lg font-bold text-foreground">
+              {title}
+            </h3>
+            {/* A MARK, not a badge: the card already wears three bordered capsules under the
+                title, and a fourth one there both shouted and stole the width the name needed
+                (measured: "Serafin Lógrath" truncated to two syllables with it). The tooltip says
+                WHERE it was published, since "publicada" alone leaves the reader asking. */}
+            {showPublicBadge && sheet.isPublic ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="shrink-0 cursor-pointer text-primary">
+                    <Globe className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">
+                      Publicada: qualquer pessoa pode ver esta ficha, e ela aparece na página
+                      Explorar.
+                    </span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-56">
+                  Publicada: qualquer pessoa pode ver esta ficha, e ela aparece na página Explorar.
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
           {/* proportional-nums: a multiclass subtitle ends each class with its level right before
               the `·`, and this font's tabular figures leave a lone `1` ~2px of trailing air,
               pushing the separator off centre (measured). Nothing here lines up in a column. */}
@@ -132,10 +178,15 @@ export const SheetListCard = ({ sheet, packName, packSlug }: SheetListCardProps)
             <p className="truncate text-xs text-muted-foreground/80">{subclassLine}</p>
           )}
         </div>
-        <ChevronRight
-          className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary"
-          aria-hidden="true"
-        />
+        {action ? (
+          // Keeps the row's geometry: the corner control sits in the overlay, this reserves its width.
+          <span className="mt-1 h-5 w-9 shrink-0" aria-hidden="true" />
+        ) : (
+          <ChevronRight
+            className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary"
+            aria-hidden="true"
+          />
+        )}
       </div>
 
       <div className="relative mt-auto pt-5">
@@ -152,15 +203,25 @@ export const SheetListCard = ({ sheet, packName, packSlug }: SheetListCardProps)
           <span className="min-w-0 truncate text-xs font-semibold tracking-wide text-foreground/80">
             {packName ?? 'Sistema de regras'}
           </span>
-          <span
-            className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
-            title={`Atualizado em ${formatUpdatedAt(sheet.updatedAt)}`}
-          >
-            <History className="h-3 w-3" aria-hidden="true" />
-            {formatUpdatedAtDate(sheet.updatedAt)}
-          </span>
+          {footerRight ?? (
+            <span
+              className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
+              title={`Atualizado em ${formatUpdatedAt(sheet.updatedAt)}`}
+            >
+              <History className="h-3 w-3" aria-hidden="true" />
+              {formatUpdatedAtDate(sheet.updatedAt)}
+            </span>
+          )}
         </div>
       </div>
     </Link>
+  );
+
+  if (!action) return card;
+  return (
+    <div className="relative h-full">
+      {card}
+      <div className="absolute right-4 top-4 z-10">{action}</div>
+    </div>
   );
 };

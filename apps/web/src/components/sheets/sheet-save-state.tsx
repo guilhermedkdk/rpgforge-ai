@@ -5,6 +5,7 @@ import { Check, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { SheetChip } from '@/components/sheets/sheet-chip';
 
 /** What the sheet's save state looks like right now. */
 export type SheetSaveState = 'clean' | 'dirty' | 'saving' | 'saved';
@@ -25,28 +26,29 @@ export const resolveSheetSaveState = (opts: {
  */
 export const SheetSaveStateChip = ({ state }: { state: SheetSaveState }) => {
   if (state === 'saving') {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Spinner size="sm" />
-        Salvando
-      </span>
-    );
+    return <SheetChip icon={<Spinner size="sm" />}>Salvando</SheetChip>;
   }
 
+  // Short on purpose: it sits next to the visibility chip, and "Alterações não salvas" made that row
+  // read as a sentence instead of two states. The floating bar spells it out where it is actionable.
   if (state === 'dirty') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
-        <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-        Alterações não salvas
-      </span>
+      <SheetChip
+        tone="attention"
+        icon={<span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />}
+        title="Você tem alterações que ainda não foram salvas"
+      >
+        Não salvo
+      </SheetChip>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-      <Check className={cn('h-3.5 w-3.5', state === 'saved' && 'text-primary')} aria-hidden />
+    <SheetChip
+      icon={<Check className={cn('h-3 w-3', state === 'saved' && 'text-primary')} aria-hidden />}
+    >
       Salvo
-    </span>
+    </SheetChip>
   );
 };
 
@@ -68,7 +70,7 @@ export const UnsavedChangesBar = ({
   onDiscard,
   footer,
 }: UnsavedChangesBarProps) => (
-  <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+  <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 print:hidden">
     <div
       className="pointer-events-auto flex flex-col gap-2 rounded-full border border-border bg-card/95 px-3 py-2 shadow-lg backdrop-blur animate-in fade-in slide-in-from-bottom-2 duration-200 data-[has-footer=true]:rounded-2xl"
       data-has-footer={footer ? 'true' : 'false'}

@@ -67,7 +67,10 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.72 0.14 45);
-  --chart-1: oklch(0.646 0.222 41.116);
+  /* Single-series charts. Same hue as --primary, one step darker so it clears 3:1 against the card;
+     validated per mode (light band L 0.43-0.77, dark 0.48-0.67). --chart-2..5 are still the untuned
+     shadcn defaults and must be validated before anything uses them. */
+  --chart-1: oklch(0.6 0.14 45);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
@@ -102,7 +105,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.72 0.14 45);
-  --chart-1: oklch(0.488 0.243 264.376);
+  /* Chosen for the dark surface, not flipped: the shadcn default here was a different HUE. */
+  --chart-1: oklch(0.66 0.14 45);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
@@ -180,4 +184,189 @@ body {
    (they have their own animations). */
 @utility content-reveal {
   @apply animate-in fade-in slide-in-from-bottom-2 duration-500;
+}
+
+/* The PDF is the browser printing this same sheet, so these rules only undo what the interactive
+   layout does for the screen. */
+@media print {
+  @page {
+    size: A4;
+    margin: 6mm;
+  }
+
+  html:not(.dark),
+  html:not(.dark) body {
+    background: #fff !important;
+  }
+
+  /* Print the sheet's own colors instead of the browser's ink-saving approximation. */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Tuned pair: 1200 x 0.623 is exactly the A4 content width (748px) and the largest scale where
+     spellcasting still fits one page (0.668 spills it, 0.706 breaks page 1). `zoom`, not
+     `transform`: zoom scales layout, so page breaks keep working. */
+  .print-sheet {
+    width: 1200px !important;
+    zoom: 0.623;
+  }
+
+  /* Its header printed alone at the foot of page 1. The sibling margin goes too: a forced break
+     keeps it, and it was enough to spill onto a third page. */
+  .print-sheet [data-sheet-page='2'] {
+    break-before: page;
+    margin-top: 0 !important;
+  }
+
+  /* Trailing page padding sits past the last block and claimed a blank sheet. */
+  .print-sheet > div,
+  body main {
+    padding-bottom: 0 !important;
+  }
+
+  /* Media queries see the paper, not the width above, so the `lg:` grid is restated here.
+     Mirrors character-sheet.tsx. */
+  .print-sheet [class*='lg:grid-cols-'] {
+    grid-template-columns: 1.9fr 2.8fr 3.5fr 3.2fr !important;
+    align-items: stretch !important;
+  }
+  .print-sheet [class*='lg:row-span-2'] {
+    grid-row: span 2 / span 2 !important;
+  }
+  .print-sheet [class*='lg:col-span-2'] {
+    grid-column: 1 / span 2 !important;
+    grid-row-start: 2 !important;
+  }
+  .print-sheet [class*='md:grid-cols-3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .print-sheet [class*='lg:p-5'] {
+    padding: 1.25rem !important;
+  }
+
+  /* Every `lg:` utility the sheet's own layout depends on. Missing one is SILENT: the block keeps
+     its small-screen shape on paper while the site shows the wide one, which is the opposite of
+     what this export promises. `~=` matches the whole class, so `lg:flex` cannot catch
+     `lg:flex-col`. */
+  .print-sheet [class~='lg:h-full'] {
+    height: 100% !important;
+  }
+  .print-sheet [class~='lg:flex'] {
+    display: flex !important;
+  }
+  .print-sheet [class~='lg:flex-col'] {
+    flex-direction: column !important;
+  }
+  .print-sheet [class~='lg:items-center'] {
+    align-items: center !important;
+  }
+  .print-sheet [class~='lg:justify-between'] {
+    justify-content: space-between !important;
+  }
+  .print-sheet [class~='lg:gap-0'] {
+    gap: 0 !important;
+  }
+  .print-sheet [class~='lg:flex-1'] {
+    flex: 1 1 0% !important;
+  }
+  .print-sheet [class~='lg:flex-[2]'] {
+    flex: 2 1 0% !important;
+  }
+
+  /* Absolute rails on screen so they cannot resize the left column; on paper they need height. */
+  .print-sheet [class*='lg:absolute'] {
+    position: static !important;
+    inset: auto !important;
+  }
+
+  /* Internal scrollers print at full height. Targeted, so `truncate` still ellipsizes. */
+  .print-sheet [class*='overflow-y-auto'],
+  .print-sheet [class*='overflow-y-hidden'],
+  .print-sheet [class*='overflow-x-hidden'] {
+    overflow: visible !important;
+  }
+
+  /* A textarea does not grow with its content, so the backstory would print cut off. */
+  .print-sheet textarea {
+    field-sizing: content;
+    resize: none;
+  }
+
+  /* An editing cue, not part of the character. */
+  .print-sheet [class*='border-dashed'] {
+    border-style: solid !important;
+    border-color: var(--border) !important;
+  }
+  .print-sheet [class*='max-h-'] {
+    max-height: none !important;
+  }
+
+  /* Keep a card whole rather than cut in half by a page break. */
+  .print-sheet [class*='rounded-lg'] {
+    break-inside: avoid;
+  }
+
+  /* Affordances that do nothing on paper: steppers, removals, the add buttons. */
+  .print-sheet [aria-label^='Increase'],
+  .print-sheet [aria-label^='Decrease'],
+  .print-sheet [aria-label^='Remove'],
+  .print-sheet [aria-label^='Add '],
+  .print-sheet [aria-label^='Adicionar'] {
+    display: none !important;
+  }
+
+  /* The dev-server overlay is not part of the sheet. */
+  nextjs-portal {
+    display: none !important;
+  }
+
+  /* A focus ring or a hover surface left over from the click that opened the dialog. */
+  .print-sheet * {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
+/* A published sheet: the same DOM the owner edits, with writes already impossible (its onChange is
+   a no-op). These rules only stop it inviting a click that cannot do anything. */
+.static-sheet [aria-label^='Increase'],
+.static-sheet [aria-label^='Decrease'],
+.static-sheet [aria-label^='Remove'],
+.static-sheet [aria-label^='Add '],
+.static-sheet [aria-label^='Adicionar'] {
+  display: none !important;
+}
+
+/* Nothing here acts on a click, so nothing may look clickable. */
+.static-sheet * {
+  cursor: default !important;
+}
+
+/* Controls do not respond either. The two description popovers opt back in below. */
+.static-sheet button,
+.static-sheet input,
+.static-sheet textarea,
+.static-sheet select {
+  pointer-events: none;
+}
+
+.static-sheet [aria-label^='Spell details'],
+.static-sheet [aria-label^='Weapon details'] {
+  pointer-events: auto;
+  cursor: pointer !important;
+}
+
+/* An editing cue, not part of the character. */
+.static-sheet [class*='border-dashed'] {
+  border-style: solid !important;
+  border-color: var(--border) !important;
+}
+
+/* A chevron promises something opens; nothing here does. */
+.static-sheet button svg[class*='chevron'] {
+  display: none !important;
 }

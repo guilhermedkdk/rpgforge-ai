@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Plus, Menu, User, Settings, LogOut, Scroll, BookOpen, Flame } from 'lucide-react';
+import { Plus, Menu, User, Settings, LogOut, Scroll, BookOpen, Compass, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,73 +10,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { RPGForgeMark } from '@/components/brand/rpgforge-mark';
+import { ProfileAvatar } from '@/components/profile/profile-avatar';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { ThemeToggle } from './theme-toggle';
 
+/**
+ * The main navigation.
+ *
+ * `requiresAuth` hides a destination a visitor cannot reach: "Minhas Fichas" only redirected them to
+ * login. "Criar" stays, on purpose — the creation flow works without an account and only asks for one
+ * when there is something to save.
+ */
+const NAV_LINKS = [
+  { href: '/sheets', label: 'Minhas Fichas', icon: Scroll, requiresAuth: true },
+  { href: '/explore', label: 'Explorar', icon: Compass, requiresAuth: false },
+  { href: '/library', label: 'Biblioteca', icon: BookOpen, requiresAuth: false },
+  { href: '/create', label: 'Criar', icon: Plus, requiresAuth: false },
+] as const;
+
 export const Header = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const { user, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  const visibleLinks = NAV_LINKS.filter((link) => !link.requiresAuth || user);
 
   const handleLogout = async () => {
     await logout();
   };
 
-  const getUserInitials = () => {
-    if (!user?.email) return 'U';
-    return user.email.charAt(0).toUpperCase();
-  };
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 print:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
         <Link href={user ? '/sheets' : '/'} className="flex items-center gap-2">
-          <Flame className="h-7 w-7 text-primary" aria-hidden="true" />
+          {/* The mark stands IN FOR the word "AI", which is why it carries those letters. Reading
+              it aloud still gives "RPGForge AI", so the accessible name below says exactly that. */}
           <span className="font-serif text-xl font-bold tracking-wide text-foreground">
-            RPGForge <span className="text-primary">AI</span>
+            RPGForge
           </span>
+          <RPGForgeMark className="h-9 w-9 text-primary" />
+          <span className="sr-only">AI</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex" aria-label="Navegação principal">
-          <Link
-            href="/sheets"
-            className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary"
-          >
-            <Scroll className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
-            Minhas Fichas
-          </Link>
-          <Link
-            href="/library"
-            className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary"
-          >
-            <BookOpen className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
-            Biblioteca
-          </Link>
-          <Link
-            href="/create"
-            className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary"
-          >
-            <Plus className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
-            Criar
-          </Link>
+          {visibleLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary"
+              >
+                <Icon className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="hidden flex-1 max-w-md lg:flex">
-          <div className="relative w-full">
-            <Search
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              type="search"
-              placeholder="Buscar fichas, tags, classes…"
-              className="w-full bg-secondary pl-10 placeholder:text-muted-foreground"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Buscar fichas, tags, classes"
-            />
-          </div>
-        </div>
         <div className="flex items-center gap-3">
           <ThemeToggle />
 
@@ -88,20 +75,20 @@ export const Header = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative h-9 w-9 rounded-full"
+                    className="relative hidden h-9 w-9 rounded-full md:flex"
                     aria-label="Menu do usuário"
                   >
-                    <Avatar className="h-9 w-9 border border-border">
-                      <AvatarImage src="" alt={user.email} />
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <ProfileAvatar
+                      avatarId={user.avatarId}
+                      avatarUrl={user.avatarUrl}
+                      name={user.displayName || user.username}
+                      className="h-9 w-9 border border-border"
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center gap-2">
+                    <Link href={`/u/${user.username}`} className="flex items-center gap-2">
                       <User className="h-4 w-4" aria-hidden="true" />
                       Perfil
                     </Link>
@@ -112,6 +99,16 @@ export const Header = () => {
                       Configurações
                     </Link>
                   </DropdownMenuItem>
+                  {/* Only for admins: the route itself is guarded server-side, this just hides a
+                      door nobody else can open. */}
+                  {user.role === 'ADMIN' ? (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="flex items-center gap-2">
+                        <Gauge className="h-4 w-4" aria-hidden="true" />
+                        Painel
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="flex items-center gap-2 text-destructive focus:text-destructive"
@@ -123,10 +120,19 @@ export const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
+          ) : isLoading ? (
+            /* Restoring a session takes a round trip, and sometimes a token refresh on top. Drawing
+               "Entrar" meanwhile states something not yet known, and states it wrongly for everyone
+               who IS signed in: they watch the header call them a visitor and then correct itself. */
+            <div className="hidden items-center gap-2 md:flex" aria-hidden="true">
+              <div className="h-8 w-[4.5rem] animate-pulse rounded-md bg-muted" />
+              <div className="h-8 w-24 animate-pulse rounded-md bg-muted" />
+            </div>
           ) : (
             <>
-              {' '}
-              <div className="hidden items-center gap-2 sm:flex">
+              {/* From `md` only: below it the hamburger is on screen and offers the same two, and
+                  showing both meant the same pair of actions twice in one viewport. */}
+              <div className="hidden items-center gap-2 md:flex">
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/auth/login">Entrar</Link>
                 </Button>
@@ -144,49 +150,104 @@ export const Header = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-72">
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+              {/* pt-14 clears the close button, which floats at the top right. */}
               <div className="flex flex-col gap-6 px-4 pt-14 pb-6">
-                {' '}
-                <div className="relative">
-                  <Search
-                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    type="search"
-                    placeholder="Buscar fichas, tags, classes…"
-                    className="w-full bg-secondary pl-10"
-                    aria-label="Buscar fichas"
-                  />
-                </div>
+                {/* Who you are comes first: below `md` this panel is the ONLY menu, so it answers
+                    "which account am I in" before it offers anywhere to go. `pr-10` keeps a long
+                    name clear of the close button. */}
+                {user ? (
+                  <div className="flex items-center gap-3 pr-10">
+                    <ProfileAvatar
+                      avatarId={user.avatarId}
+                      avatarUrl={user.avatarUrl}
+                      name={user.displayName || user.username}
+                      className="h-10 w-10 shrink-0 border border-border"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {user.displayName || user.username}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* One list, because they are all just places to go. The avatar trigger is hidden at
+                    this width, so everything its dropdown offers has to be reachable here. */}
                 <nav className="flex flex-col gap-4" aria-label="Menu mobile">
-                  <Link
-                    href="/sheets"
-                    className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
-                  >
-                    <Scroll className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
-                    Minhas Fichas
-                  </Link>
-                  <Link
-                    href="/library"
-                    className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
-                  >
-                    <BookOpen className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
-                    Biblioteca
-                  </Link>
-                  <Link
-                    href="/create"
-                    className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
-                  >
-                    <Plus className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
-                    Criar
-                  </Link>
+                  {visibleLinks.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                      >
+                        <Icon className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                  {user ? (
+                    <>
+                      <Link
+                        href={`/u/${user.username}`}
+                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                      >
+                        <User className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                        Perfil
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                      >
+                        <Settings className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                        Configurações
+                      </Link>
+                      {user.role === 'ADMIN' ? (
+                        <Link
+                          href="/admin"
+                          className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                        >
+                          <Gauge className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                          Painel
+                        </Link>
+                      ) : null}
+                    </>
+                  ) : null}
                 </nav>
-                <Button asChild className="w-full hover:bg-primary/90">
-                  <Link href="/create">
-                    <Flame className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Forjar Nova Ficha
-                  </Link>
-                </Button>
+
+                {/* Signing in is an ACTION, not a fourth destination: as a plain row it carried the
+                    same weight as "Explorar", which is not what the header says at any other width. */}
+                {/* Kept out of the list above: leaving is not a destination. */}
+                {user ? (
+                  <div className="border-t border-border pt-6">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex cursor-pointer items-center gap-3 text-left text-base font-medium text-destructive hover:opacity-80"
+                    >
+                      <LogOut className="h-5 w-5" aria-hidden="true" />
+                      Sair
+                    </button>
+                  </div>
+                ) : isLoading ? (
+                  /* Same reason as the desktop slot: the two rows above simply do not appear while
+                     the session is unknown, but these ones would claim it is already known. */
+                  <div className="flex flex-col gap-2 border-t border-border pt-6" aria-hidden="true">
+                    <div className="h-9 w-full animate-pulse rounded-md bg-muted" />
+                    <div className="h-9 w-full animate-pulse rounded-md bg-muted" />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 border-t border-border pt-6">
+                    <Button variant="outline" asChild className="w-full">
+                      <Link href="/auth/login">Entrar</Link>
+                    </Button>
+                    <Button asChild className="w-full">
+                      <Link href="/auth/register">Criar conta</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </SheetContent>
           </Sheet>

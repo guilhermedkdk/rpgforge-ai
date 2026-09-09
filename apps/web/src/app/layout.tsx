@@ -13,7 +13,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1a1a2e',
+  // The app's own background, so the browser chrome on mobile matches the page instead of the
+  // leftover placeholder navy that never existed in the palette.
+  themeColor: '#0a0a0a',
 };
 
 export default function RootLayout({

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { isHandingOffToProvider } from '@/lib/provider-handoff';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,10 +16,9 @@ import {
 /**
  * Warns before leaving a page that holds unsaved changes.
  *
- * Two escape routes have to be covered: closing/reloading the tab (`beforeunload`, where the browser
- * owns the prompt) and clicking any in-app link (App Router has no navigation-block API, so the click
- * is intercepted in the capture phase and replayed after the user confirms). `guard` wraps the page's
- * own actions, e.g. the back link.
+ * Two routes to cover: closing the tab (`beforeunload`) and any in-app link (App Router has no
+ * navigation-block API, so the click is intercepted in the capture phase and replayed on confirm).
+ * It stands down for the provider round trip, the one departure the app itself arranges.
  */
 export const useUnsavedChangesGuard = (dirty: boolean) => {
   const router = useRouter();
@@ -29,6 +29,9 @@ export const useUnsavedChangesGuard = (dirty: boolean) => {
   useEffect(() => {
     if (!dirty) return;
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Signing in with a provider is OUR navigation, and the draft is handed across it. Warning
+      // there would claim work is about to be lost when it is about to be restored.
+      if (isHandingOffToProvider()) return;
       e.preventDefault();
     };
     window.addEventListener('beforeunload', onBeforeUnload);

@@ -35,13 +35,46 @@ export interface CharacterSheetSummary {
   schemaVersion: number;
   createdAt: string;
   updatedAt: string;
+  /** Sheets are private until the owner publishes them. */
+  isPublic: boolean;
   /** Only sent by the list endpoint. */
   preview?: CharacterSheetPreview;
+}
+
+/** Who a published sheet belongs to. Never carries the e-mail: a profile is public, an e-mail is not. */
+export interface SheetOwner {
+  username: string;
+  displayName: string | null;
+}
+
+export interface PublicSheetSummary extends CharacterSheetSummary {
+  owner: SheetOwner;
+  /** ISO date the sheet was published; the explore feed orders by it. */
+  publishedAt: string;
+  /** How many people bookmarked it. */
+  favoriteCount: number;
+  /** Whether the CURRENT viewer did; always false for a visitor with no session. */
+  isFavorited: boolean;
+}
+
+export interface PublicSheetListResponse {
+  items: PublicSheetSummary[];
+  /** Matching rows in total, so the page can say how much is left. */
+  total: number;
 }
 
 export interface CharacterSheetResponse extends CharacterSheetSummary {
   userId: string;
   data: Record<string, unknown>;
+}
+
+/** A published sheet read by anyone: the same payload the owner gets, plus who wrote it. */
+export interface PublicSheetWithRulesResponse extends CharacterSheetWithRulesResponse {
+  owner: SheetOwner;
+  /** How many people bookmarked it. */
+  favoriteCount: number;
+  /** Whether the CURRENT viewer did; always false for a visitor with no session. */
+  isFavorited: boolean;
 }
 
 export interface CharacterSheetWithRulesResponse {

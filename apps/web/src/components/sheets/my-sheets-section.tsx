@@ -81,6 +81,7 @@ export const MySheetsSection = () => {
             return (
               <li key={sheet.id} className="min-w-0">
                 <SheetListCard
+                  showPublicBadge
                   sheet={sheet}
                   packName={pack?.name ?? null}
                   packSlug={pack?.slug ?? null}

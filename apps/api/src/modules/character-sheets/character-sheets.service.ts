@@ -7,12 +7,16 @@ import {
   type CharacterSheetSummary,
   type CharacterSheetWithRulesResponse,
   type PackResponse,
+  type PublicSheetListResponse,
+  type PublicSheetSummary,
+  type PublicSheetWithRulesResponse,
 } from '@rpgforce-ai/shared';
 import { mapToRuleItemResponse } from '../ruleitems/ruleitems.service';
 import { validateCharacterSheetData } from './character-sheet-data.validation';
 import { CharacterRecomputeService } from './character-recompute.service';
 import { GenerationRunService } from '../generation/generation-run.service';
 import { CharacterPreviewService, type SheetPreviewInput } from './character-preview.service';
+import { SheetFavoritesService } from './sheet-favorites.service';
 
 function extractRuleItemIds(data: Record<string, unknown>): string[] {
   const ids = new Set<string>();
@@ -66,6 +70,7 @@ export class CharacterSheetsService {
     private readonly prisma: PrismaService,
     private readonly recompute: CharacterRecomputeService,
     private readonly previews: CharacterPreviewService,
+    private readonly favorites: SheetFavoritesService,
     private readonly generationRuns: GenerationRunService
   ) {}
 
@@ -76,6 +81,7 @@ export class CharacterSheetsService {
     name: string;
     data: Prisma.JsonValue;
     schemaVersion: number;
+    isPublic: boolean;
     createdAt: Date;
     updatedAt: Date;
   }) {
@@ -86,6 +92,7 @@ export class CharacterSheetsService {
       name: row.name,
       data: row.data as Record<string, unknown>,
       schemaVersion: row.schemaVersion,
+      isPublic: row.isPublic,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -128,33 +135,191 @@ export class CharacterSheetsService {
         packId: true,
         name: true,
         schemaVersion: true,
+        isPublic: true,
         createdAt: true,
         updatedAt: true,
         data: true,
       },
     });
 
-    // One preview batch per pack: catalogs are per-pack, so they load once instead of once per sheet.
-    const byPack = new Map<string, SheetPreviewInput[]>();
-    for (const row of rows) {
-      const list = byPack.get(row.packId) ?? [];
-      list.push({ id: row.id, data: row.data, schemaVersion: row.schemaVersion });
-      byPack.set(row.packId, list);
-    }
-    const previewMaps = await Promise.all(
-      [...byPack.entries()].map(([packId, sheets]) => this.previews.buildPreviews(packId, sheets))
-    );
-    const previewById = new Map(previewMaps.flatMap((m) => [...m.entries()]));
+    const previewById = await this.previewsByPack(rows);
 
     return rows.map((r) => ({
       id: r.id,
       packId: r.packId,
       name: r.name,
       schemaVersion: r.schemaVersion,
+      isPublic: r.isPublic,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
       preview: previewById.get(r.id),
     }));
+  }
+
+  /**
+   * Publishing is a separate write from saving the sheet: it never touches `data`, so it cannot run
+   * the recompute or trip the save validation. An incomplete sheet can be published and stay so.
+   */
+  async setVisibility(userId: string, id: string, isPublic: boolean) {
+    const row = await this.prisma.characterSheet.findUnique({
+      where: { id },
+      select: { id: true, userId: true, isPublic: true, publishedAt: true },
+    });
+    if (!row) throw new NotFoundException('Character sheet not found');
+    if (row.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this character sheet');
+    }
+
+    const updated = await this.prisma.characterSheet.update({
+      where: { id },
+      data: {
+        isPublic,
+        // Re-publishing moves the sheet back to the top of the feed, which is what the act means.
+        publishedAt: isPublic ? new Date() : null,
+      },
+      select: { id: true, isPublic: true, publishedAt: true },
+    });
+    return {
+      id: updated.id,
+      isPublic: updated.isPublic,
+      publishedAt: updated.publishedAt?.toISOString() ?? null,
+    };
+  }
+
+  /** The explore feed: every published sheet, newest publication first. */
+  async listPublic(params: {
+    limit?: number;
+    offset?: number;
+    q?: string;
+    packId?: string;
+    /** Present only when the request carried a valid token; the feed itself is open. */
+    viewerId?: string | null;
+  }): Promise<PublicSheetListResponse> {
+    const limit = Math.min(Math.max(params.limit ?? 24, 1), 60);
+    const offset = Math.max(params.offset ?? 0, 0);
+    const q = params.q?.trim();
+
+    const where: Prisma.CharacterSheetWhereInput = {
+      isPublic: true,
+      ...(params.packId ? { packId: params.packId } : {}),
+      ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.characterSheet.findMany({
+        where,
+        orderBy: { publishedAt: 'desc' },
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          packId: true,
+          name: true,
+          schemaVersion: true,
+          isPublic: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          data: true,
+          user: { select: { username: true, displayName: true } },
+        },
+      }),
+      this.prisma.characterSheet.count({ where }),
+    ]);
+
+    const items = await this.toPublicSummaries(rows, params.viewerId);
+    return { items, total };
+  }
+
+  /** The sheets this person bookmarked, in the same shape the explore feed uses. */
+  async listFavoritesFor(userId: string): Promise<PublicSheetSummary[]> {
+    const rows = await this.favorites.listFor(userId);
+    return this.toPublicSummaries(rows, userId);
+  }
+
+  // Rows -> public summaries, with the previews, the bookmark counts and the viewer's own state
+  // resolved in one batch each rather than per sheet.
+  private async toPublicSummaries(
+    rows: Array<{
+      id: string;
+      packId: string;
+      name: string;
+      schemaVersion: number;
+      isPublic: boolean;
+      publishedAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+      data: Prisma.JsonValue;
+      user: { username: string; displayName: string | null };
+    }>,
+    viewerId?: string | null
+  ): Promise<PublicSheetSummary[]> {
+    const ids = rows.map((r) => r.id);
+    const [previewById, favoriteCounts, favoritedIds] = await Promise.all([
+      this.previewsByPack(rows),
+      this.favorites.countsFor(ids),
+      this.favorites.favoritedIdsAmong(viewerId, ids),
+    ]);
+
+    return rows.map((r) => ({
+      id: r.id,
+      packId: r.packId,
+      name: r.name,
+      schemaVersion: r.schemaVersion,
+      isPublic: r.isPublic,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+      publishedAt: (r.publishedAt ?? r.updatedAt).toISOString(),
+      owner: { username: r.user.username, displayName: r.user.displayName },
+      preview: previewById.get(r.id),
+      favoriteCount: favoriteCounts.get(r.id) ?? 0,
+      isFavorited: favoritedIds.has(r.id),
+    }));
+  }
+
+  /** What a visitor sees on someone's profile: that user's published sheets only. */
+  async findPublicForUser(userId: string): Promise<CharacterSheetSummary[]> {
+    const rows = await this.prisma.characterSheet.findMany({
+      where: { userId, isPublic: true },
+      orderBy: { publishedAt: 'desc' },
+      select: {
+        id: true,
+        packId: true,
+        name: true,
+        schemaVersion: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true,
+        data: true,
+      },
+    });
+    const previewById = await this.previewsByPack(rows);
+    return rows.map((r) => ({
+      id: r.id,
+      packId: r.packId,
+      name: r.name,
+      schemaVersion: r.schemaVersion,
+      isPublic: r.isPublic,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+      preview: previewById.get(r.id),
+    }));
+  }
+
+  // One preview batch per pack: the catalogs are per-pack, so they load once instead of once per sheet.
+  private async previewsByPack(
+    rows: Array<{ id: string; packId: string; data: Prisma.JsonValue; schemaVersion: number }>
+  ) {
+    const byPack = new Map<string, SheetPreviewInput[]>();
+    for (const row of rows) {
+      const list = byPack.get(row.packId) ?? [];
+      list.push({ id: row.id, data: row.data, schemaVersion: row.schemaVersion });
+      byPack.set(row.packId, list);
+    }
+    const maps = await Promise.all(
+      [...byPack.entries()].map(([packId, sheets]) => this.previews.buildPreviews(packId, sheets))
+    );
+    return new Map(maps.flatMap((m) => [...m.entries()]));
   }
 
   async findOneForUser(userId: string, id: string) {
@@ -176,6 +341,48 @@ export class CharacterSheetsService {
     if (row.userId !== userId)
       throw new ForbiddenException('You do not have access to this character sheet');
 
+    return this.loadWithRules(row);
+  }
+
+  /**
+   * The same payload the owner gets, for anyone. An unpublished sheet answers 404, never 403: a
+   * private sheet must not be distinguishable from one that does not exist.
+   */
+  async findPublicWithRules(
+    id: string,
+    /** Present only when the request carried a valid token; the route itself is open. */
+    viewerId?: string | null
+  ): Promise<PublicSheetWithRulesResponse> {
+    const row = await this.prisma.characterSheet.findUnique({
+      where: { id },
+      include: { user: { select: { username: true, displayName: true } } },
+    });
+    if (!row || !row.isPublic) throw new NotFoundException('Character sheet not found');
+
+    const [loaded, counts, favorited] = await Promise.all([
+      this.loadWithRules(row),
+      this.favorites.countsFor([row.id]),
+      this.favorites.favoritedIdsAmong(viewerId, [row.id]),
+    ]);
+    return {
+      ...loaded,
+      owner: { username: row.user.username, displayName: row.user.displayName },
+      favoriteCount: counts.get(row.id) ?? 0,
+      isFavorited: favorited.has(row.id),
+    };
+  }
+
+  private async loadWithRules(row: {
+    id: string;
+    userId: string;
+    packId: string;
+    name: string;
+    data: Prisma.JsonValue;
+    schemaVersion: number;
+    isPublic: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }): Promise<CharacterSheetWithRulesResponse> {
     const referencedIds = extractRuleItemIds(row.data as Record<string, unknown>);
 
     const includeWithTags = { tags: { include: { tag: true } } } as const;
