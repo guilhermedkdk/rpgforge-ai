@@ -1,5 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { isProtectedRoute } from '@/lib/route-config';
+import { notifySessionExpired } from './session-events';
 
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') return '/api';
@@ -34,12 +34,10 @@ const performRefresh = async (): Promise<void> => {
       }
     );
   } catch (error) {
-    if (typeof window !== 'undefined') {
-      const pathname = window.location.pathname;
-
-      if (isProtectedRoute(pathname)) {
-        window.location.href = '/auth/login';
-      }
+    // Only a refused refresh ends the session. Anything else means the API did not answer, and the
+    // caller retries rather than tearing a working session down over a blip.
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      notifySessionExpired();
     }
     throw error;
   }

@@ -11,7 +11,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthCard } from '@/components/auth/auth-card';
-import { resolveLoginError, type AuthFormErrorInfo } from '@/lib/auth-errors';
+import { OAuthButtons } from '@/components/auth/oauth-buttons';
+import { oauthErrorMessage, resolveLoginError, type AuthFormErrorInfo } from '@/lib/auth-errors';
+import type { EmbeddedAuthFormProps } from './auth-form-props';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -20,11 +22,33 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export const LoginForm = () => {
+export const LoginForm = ({
+  description,
+  onAuthenticated,
+  onSwitchMode,
+  redirectTo,
+  onBeforeStart,
+  initialError,
+  titleAs,
+  descriptionAs,
+}: EmbeddedAuthFormProps = {}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<AuthFormErrorInfo | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [callbackError, setCallbackError] = useState<string | null>(initialError ?? null);
+  const [redirect, setRedirect] = useState<string | undefined>(undefined);
   const { login } = useAuth();
+
+  // Only the standalone pages read their context from the query string, and only after mount: the
+  // server pass has no location, and seeding state from it would hydrate to different markup. The
+  // dialog is told both of these instead, so it keeps working on a URL with nothing in it.
+  const isEmbedded = onAuthenticated !== undefined;
+  useEffect(() => {
+    if (isEmbedded) return;
+    const params = new URLSearchParams(window.location.search);
+    setCallbackError(oauthErrorMessage(params.get('error'), params.get('provider')));
+    setRedirect(params.get('redirect') ?? undefined);
+  }, [isEmbedded]);
 
   const {
     register,
@@ -51,7 +75,8 @@ export const LoginForm = () => {
     setSubmitError(null);
 
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, onAuthenticated ? { stayOnPage: true } : undefined);
+      onAuthenticated?.();
     } catch (err) {
       setSubmitError(resolveLoginError(err));
       setAttempt((current) => current + 1);
@@ -63,14 +88,25 @@ export const LoginForm = () => {
   // Editing any field drops the submit error instead of leaving stale red on screen
   const handleFieldChange = () => {
     if (submitError) setSubmitError(null);
+    if (callbackError) setCallbackError(null);
   };
 
   return (
     <AuthCard
       title="Entrar"
-      description="Entre na sua conta para continuar"
-      error={submitError?.message}
+      description={description ?? 'Entre na sua conta para continuar'}
+      error={submitError?.message ?? callbackError}
+      titleAs={titleAs}
+      descriptionAs={descriptionAs}
     >
+      <div className="mb-4">
+        <OAuthButtons
+          redirect={redirectTo ?? redirect}
+          disabled={isLoading}
+          onBeforeStart={onBeforeStart}
+        />
+      </div>
+
       {/* noValidate: the browser's native bubble would preempt our own messages */}
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -123,9 +159,19 @@ export const LoginForm = () => {
 
         <div className="text-center text-sm">
           <span className="text-muted-foreground">Não tem uma conta? </span>
-          <Link href="/auth/register" className="font-medium text-primary hover:underline">
-            Cadastre-se
-          </Link>
+          {onSwitchMode ? (
+            <button
+              type="button"
+              onClick={onSwitchMode}
+              className="cursor-pointer font-medium text-primary hover:underline"
+            >
+              Cadastre-se
+            </button>
+          ) : (
+            <Link href="/auth/register" className="font-medium text-primary hover:underline">
+              Cadastre-se
+            </Link>
+          )}
         </div>
       </form>
     </AuthCard>

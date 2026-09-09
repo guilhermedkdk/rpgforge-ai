@@ -11,21 +11,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
-import { getAccessTokenExpiresIn, getRefreshTokenExpiresIn } from './auth.config';
+import { clearAuthCookies, setAuthCookies } from './auth-cookies';
+import { AUTH_THROTTLE } from '../../shared/throttling/throttle-tiers';
 import type { User } from '@rpgforce-ai/shared';
-
-const BASE_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  path: '/',
-};
 
 @Controller('auth')
 export class AuthController {
@@ -34,41 +29,24 @@ export class AuthController {
     private readonly configService: ConfigService
   ) {}
 
-  private getAccessTokenMaxAge(): number {
-    return getAccessTokenExpiresIn(this.configService) * 1000;
-  }
-
-  private getRefreshTokenMaxAge(): number {
-    return getRefreshTokenExpiresIn(this.configService) * 1000;
-  }
-
-  private setAuthCookies(response: Response, accessToken: string, refreshToken: string) {
-    response.cookie('accessToken', accessToken, {
-      ...BASE_COOKIE_OPTIONS,
-      maxAge: this.getAccessTokenMaxAge(),
-    });
-    response.cookie('refreshToken', refreshToken, {
-      ...BASE_COOKIE_OPTIONS,
-      maxAge: this.getRefreshTokenMaxAge(),
-    });
-  }
-
   @Post('register')
+  @Throttle(AUTH_THROTTLE)
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.register(registerDto.email, registerDto.password);
 
-    this.setAuthCookies(response, result.accessToken, result.refreshToken);
+    setAuthCookies(response, this.configService, result.accessToken, result.refreshToken);
 
     return { user: result.user };
   }
 
   @Post('login')
+  @Throttle(AUTH_THROTTLE)
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.login(loginDto.email, loginDto.password);
 
-    this.setAuthCookies(response, result.accessToken, result.refreshToken);
+    setAuthCookies(response, this.configService, result.accessToken, result.refreshToken);
 
     return { user: result.user };
   }
@@ -84,7 +62,7 @@ export class AuthController {
 
     const result = await this.authService.refreshToken(refreshToken);
 
-    this.setAuthCookies(response, result.accessToken, result.refreshToken);
+    setAuthCookies(response, this.configService, result.accessToken, result.refreshToken);
 
     return { user: result.user };
   }
@@ -105,8 +83,7 @@ export class AuthController {
       await this.authService.logout(refreshToken);
     }
 
-    response.clearCookie('accessToken', { path: '/' });
-    response.clearCookie('refreshToken', { path: '/' });
+    clearAuthCookies(response);
 
     return { message: 'Logged out successfully' };
   }
