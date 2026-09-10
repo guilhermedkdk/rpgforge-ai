@@ -135,15 +135,21 @@ export class SheetPdfService implements OnModuleDestroy {
 
     try {
       context = await browser.createBrowserContext();
-      await context.setCookie({
-        name: 'accessToken',
+      // Both names carry the same render token. The API authorizes on `accessToken`, but the web's
+      // route gate only checks that a `refreshToken` cookie EXISTS, and without one the render is
+      // redirected to /auth/login and never reaches the sheet.
+      const renderCookie = {
         value: accessToken,
         domain: url.hostname,
         path: '/',
         httpOnly: true,
         secure: url.protocol === 'https:',
-        sameSite: 'Lax',
-      });
+        sameSite: 'Lax' as const,
+      };
+      await context.setCookie(
+        { name: 'accessToken', ...renderCookie },
+        { name: 'refreshToken', ...renderCookie }
+      );
 
       page = await context.newPage();
       await page.setViewport({ width: 1440, height: 1000 });
@@ -159,8 +165,10 @@ export class SheetPdfService implements OnModuleDestroy {
         theme
       );
 
+      // `domcontentloaded`, not `networkidle2`: readiness is decided below by the sheet's own
+      // signals, so waiting for the network to fall quiet first is the same wait paid twice.
       await page.goto(url.toString(), {
-        waitUntil: 'networkidle2',
+        waitUntil: 'domcontentloaded',
         timeout: NAVIGATION_TIMEOUT_MS,
       });
       // The sheet says when its catalogs are in; the height check then covers the derivation that

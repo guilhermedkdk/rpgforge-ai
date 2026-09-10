@@ -156,6 +156,12 @@ export function SheetManager({
   // globals.css, which is also what Ctrl+P uses.
   const handleExportPdf = async () => {
     setExporting(true);
+    // The wait is the render itself and runs for tens of seconds, so it has to be named: a bare
+    // spinner for that long reads as a stuck button.
+    const toastId = toast.loading('Gerando o PDF da sua ficha', {
+      description:
+        'Pode levar até 30 segundos. Ele sai idêntico à ficha do site, e é isso que leva tempo.',
+    });
     try {
       // The file matches the sheet the reader has on screen; Ctrl+P stays light, since that one
       // ends up on paper (see usePrintLightTheme).
@@ -173,8 +179,10 @@ export function SheetManager({
       // Revoked on the next frame: Safari aborts the download if the URL dies during the click.
       requestAnimationFrame(() => URL.revokeObjectURL(url));
       setMenuOpen(false);
+      toast.success('PDF pronto', { id: toastId, description: 'O download começou.' });
     } catch {
       toast.error('Não foi possível gerar o PDF', {
+        id: toastId,
         description: 'Tente novamente. Você também pode usar Ctrl+P para salvar a ficha.',
       });
     } finally {
