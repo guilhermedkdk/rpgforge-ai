@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { generationApi } from '@/lib/api/generation';
+import { AI_BUDGET_EXHAUSTED } from '@rpgforce-ai/shared';
 import type {
   GenerationAnswer,
   GenerateQuestionsResponse,
@@ -11,11 +12,27 @@ import type {
 
 const isUnauthorized = (e: unknown): boolean => isAxiosError(e) && e.response?.status === 401;
 
+const apiCode = (e: unknown): string =>
+  isAxiosError(e)
+    ? String((e.response?.data as { message?: unknown } | undefined)?.message ?? '')
+    : '';
+
 // The API's `message` is dev-facing (and in English): messages are chosen here, by status
 function errorMessage(e: unknown, fallback: string): string {
-  if (isAxiosError(e) && e.response?.status === 429) {
+  const status = isAxiosError(e) ? e.response?.status : undefined;
+
+  if (status === 429) {
     return 'Muitas gerações em pouco tempo. Aguarde alguns minutos e tente de novo.';
   }
+
+  // 503 is the deployment's own limit, not the person's pace, so it must not say "tente de novo":
+  // the budget one stays closed until someone raises it.
+  if (status === 503) {
+    return apiCode(e) === AI_BUDGET_EXHAUSTED
+      ? 'A criação com IA está temporariamente fora do ar. Você ainda pode montar a ficha manualmente.'
+      : 'A IA está indisponível neste momento. Tente de novo em alguns minutos.';
+  }
+
   return fallback;
 }
 

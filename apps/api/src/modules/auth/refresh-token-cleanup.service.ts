@@ -15,7 +15,9 @@ export class RefreshTokenCleanupService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  // Scheduled inside the hours the deployment is awake, in UTC. A free instance sleeps overnight in
+  // Sao Paulo, and a job that fires while it is down does not queue: it simply never runs.
+  @Cron(CronExpression.EVERY_DAY_AT_1PM)
   async purgeExpired(): Promise<number> {
     const { count } = await this.prisma.refreshToken.deleteMany({
       where: { expiresAt: { lt: new Date() } },

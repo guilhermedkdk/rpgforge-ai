@@ -20,14 +20,14 @@ enum OAuthProvider {
 }
 
 model User {
-  id    String @id @default(uuid())
-  email String @unique
+  id          String   @id @default(uuid())
+  email       String   @unique
   /// Null for an account that only ever signed in through a provider. Anything comparing a password
   /// must handle that: a null here is "no password set", never "any password matches".
-  password String?
-  role     UserRole @default(USER)
+  password    String?
+  role        UserRole @default(USER)
   /// Public handle: the profile lives at /u/{username}. Derived from the email on register.
-  username String   @unique
+  username    String   @unique
   /// Shown wherever there is room for a name; the email is never public.
   displayName String?
   /// The avatar CHOICE, and the only place it lives: a gallery id (see PROFILE_AVATAR_IDS), or
@@ -37,12 +37,13 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  refreshTokens   RefreshToken[]
-  oauthAccounts   OAuthAccount[]
-  characterSheets CharacterSheet[]
-  generationRuns  GenerationRun[]
-  aiUsage         AiUsage[]
-  favorites       SheetFavorite[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  oauthAccounts       OAuthAccount[]
+  characterSheets     CharacterSheet[]
+  generationRuns      GenerationRun[]
+  aiUsage             AiUsage[]
+  favorites           SheetFavorite[]
 
   @@map("users")
 }
@@ -50,21 +51,21 @@ model User {
 /// One paid AI call: which one, how many tokens it burned and what that cost.
 /// Written for EVERY call, saved draft or not, because an abandoned wizard costs the same money.
 model AiUsage {
-  id String @id @default(uuid())
+  id                 String   @id @default(uuid())
   /// Null for calls with nobody behind them (the ingestion CLI, an anonymous search).
-  userId String?
+  userId             String?
   /// 'generation.questions' | 'generation.character' | 'search.embedding'
-  operation        String
-  model            String
-  promptTokens     Int
-  completionTokens Int
+  operation          String
+  model              String
+  promptTokens       Int
+  completionTokens   Int
   // Part of promptTokens served from the provider's prompt cache, billed at ~90% off.
-  cachedPromptTokens Int @default(0)
-  totalTokens      Int
+  cachedPromptTokens Int      @default(0)
+  totalTokens        Int
   /// Integer micro-dollars (1 USD = 1_000_000), so no float drift across millions of rows. Zero
   /// when the model has no price configured: the token counts stay true either way.
-  costMicroUsd Int
-  createdAt    DateTime @default(now())
+  costMicroUsd       Int
+  createdAt          DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -90,19 +91,19 @@ model SheetFavorite {
 
 /// A provider identity linked to an account. One row per provider per user.
 model OAuthAccount {
-  id       String        @id @default(uuid())
-  userId   String
-  provider OAuthProvider
+  id                String        @id @default(uuid())
+  userId            String
+  provider          OAuthProvider
   /// The provider's stable subject (`sub` for Google). This, never the e-mail, is what identifies
   /// the account on sign-in: an address can be reassigned, the subject cannot.
   providerAccountId String
   /// The address at the provider when the link was made. Display only.
-  email     String?
+  email             String?
   /// This provider's picture, refreshed on every sign-in through it. Each provider keeps its own,
   /// so unlinking one never leaves another's account showing a dead hotlink.
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  avatarUrl         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -132,6 +133,28 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id String @id @default(uuid())
+
+  /// SHA-256 of the token, never the token itself: the token alone sets a new password, so a
+  /// database dump must not hand out account takeovers.
+  tokenHash String @unique
+
+  userId    String
+  expiresAt DateTime
+
+  /// When the token set a password. Kept rather than deleted so a second click on the same link
+  /// can say the link was already used instead of pretending it never existed.
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 enum RuleItemKind {
@@ -185,18 +208,18 @@ model Pack {
 }
 
 model CharacterSheet {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   userId        String
   packId        String
   name          String
   data          Json
-  schemaVersion Int      @default(1)
+  schemaVersion Int       @default(1)
   // Sheets are private until the owner publishes them; publishedAt orders the explore feed by the
   // moment of publishing, which is not the moment of the last edit.
   isPublic      Boolean   @default(false)
   publishedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   pack Pack @relation(fields: [packId], references: [id], onDelete: Restrict)

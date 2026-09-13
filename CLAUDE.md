@@ -19,9 +19,9 @@ Users: type a prompt → answer 3–5 clarifying questions → receive a structu
 - **No copyrighted content.** Only D&D SRD 5.2 (CC BY 4.0). Attribution is mandatory.
 - **Schema-first development:** define Zod schemas in `packages/shared` first, then build around them.
 - **No homebrew, no user-created packs** in this phase.
-- **A provider identity is NEVER auto-linked to an account that has a password.** No e-mail
-  verification exists here, so a matching address proves nothing: confirm with the password first.
-  See `docs/DECISIONS.md`.
+- **A provider identity is NEVER linked to an account that has a password without proof.** A
+  matching address proves nothing by itself. The proofs are the account's password, or the
+  provider's verified address, and the second one must REPLACE the password. See `docs/DECISIONS.md`.
 - **Multiclassing is supported** (SRD 5.2). A character carries `identity.classes[]`, each with its
   own level and subclass; `classes[0]` is the INITIAL class and its position is load-bearing (it is
   the only one granting saving throws, the full starting proficiencies, starting equipment and the

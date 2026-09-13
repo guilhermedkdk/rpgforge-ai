@@ -169,6 +169,49 @@ export class OAuthService {
   }
 
   /**
+   * Recovers a password account through a provider identity instead of through the password.
+   *
+   * The provider is the proof. `emailVerified` is checked before a pending link is ever written, so
+   * holding that cookie means Google or Discord has confirmed this person controls the address,
+   * which is exactly what a reset link by e-mail establishes. The old password is REPLACED and
+   * every session dropped: nothing here ever confirmed it, and leaving it alive would leave whoever
+   * set it a way back in. The link is written first, so a provider identity that turns out to be
+   * claimed leaves the account untouched.
+   */
+  async resetPasswordThroughProvider(
+    pending: OAuthPendingLink,
+    newPassword: string
+  ): Promise<IssuedSession> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: pending.email },
+      select: { id: true, password: true },
+    });
+
+    if (!user?.password) {
+      throw new UnauthorizedException('Não foi possível recuperar essa conta');
+    }
+
+    await this.linkAccount(user.id, pending.provider, {
+      providerAccountId: pending.providerAccountId,
+      email: pending.email,
+      emailVerified: true,
+      name: pending.name,
+      picture: pending.picture,
+    });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: user.id }, data: { password: hashed } }),
+      this.prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
+      // A link already sitting in the inbox must not outlive the password it was asked for.
+      this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } }),
+    ]);
+
+    return this.auth.issueSession(user.id);
+  }
+
+  /**
    * Removes a provider from an account.
    *
    * Refuses when it is the last way in: an account with no password and no provider left could not

@@ -51,13 +51,6 @@ export const buildCallbackUrl = (
   return `${base.replace(/\/+$/, '')}/api/auth/oauth/${provider}/callback`;
 };
 
-/** Where the web app lives, for the redirects the callback ends on. */
-export const readFrontendUrl = (configService: ConfigService): string =>
-  (configService.get<string>('FRONTEND_URL')?.trim() || 'http://localhost:4000').replace(
-    /\/+$/,
-    ''
-  );
-
 /**
  * A signing key for the short-lived OAuth cookies, derived from `JWT_SECRET`.
  *

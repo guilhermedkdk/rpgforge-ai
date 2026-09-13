@@ -17,3 +17,10 @@ export const getAccessTokenExpiresIn = (configService: ConfigService): number =>
 
 export const getRefreshTokenExpiresIn = (configService: ConfigService): number =>
   getRequiredSeconds(configService, 'JWT_REFRESH_EXPIRES_IN');
+
+/** Where the web app lives, for every link and redirect the API hands out. */
+export const readFrontendUrl = (configService: ConfigService): string =>
+  (configService.get<string>('FRONTEND_URL')?.trim() || 'http://localhost:4000').replace(
+    /\/+$/,
+    ''
+  );

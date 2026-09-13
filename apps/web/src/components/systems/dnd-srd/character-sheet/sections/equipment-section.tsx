@@ -62,7 +62,8 @@ import {
   numberInputNoSpinner,
 } from '../constants';
 import {
-  removeEquipmentItem,
+  mergeInventoryRows,
+  removeEquipmentItems,
   changeEquipmentQuantity,
   addEquipmentItem,
   applyClassEquipmentChoice,
@@ -353,16 +354,19 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
       })),
       ...manualLines.map((line, i) => ({ line, index: manualIndices[i], scope: 'class' as const })),
     ];
-    return rows
+    const resolved = rows
       .map((row) => {
-        const resolved = resolveToolPlaceholder(row.line);
-        return resolved === null ? null : { ...row, line: resolved };
+        const line = resolveToolPlaceholder(row.line);
+        return line === null ? null : { ...row, line };
       })
       .filter(
         (row): row is { line: string; index: number; scope: 'class' | 'background' } => row !== null
       )
-      .filter(({ line }) => !isEquipmentLineGP(line))
-      .sort((a, b) => getLineCategoryOrder(a.line) - getLineCategoryOrder(b.line));
+      .filter(({ line }) => !isEquipmentLineGP(line));
+
+    return mergeInventoryRows(resolved).sort(
+      (a, b) => getLineCategoryOrder(a.line) - getLineCategoryOrder(b.line)
+    );
   }, [
     inPlay,
     classLines,
@@ -729,7 +733,9 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
     keyPrefix: string,
     idx: number,
     editable: boolean,
-    editIndex?: number
+    editIndex?: number,
+    /** Every line this row stands for. Only the saved sheet merges rows, so creation passes none. */
+    editIndices?: number[]
   ) => {
     const { quantity, name } = parseEquipmentLine(line);
     const displayName = getEquipmentDisplayName(quantity, name);
@@ -771,7 +777,9 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
             <button
               type="button"
               onClick={() =>
-                removeEquipmentItem(data, onChange, editIndex!, { refundSpentGP: !inPlay })
+                removeEquipmentItems(data, onChange, editIndices ?? [editIndex!], {
+                  refundSpentGP: !inPlay,
+                })
               }
               className="cursor-pointer shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Remove ${name} from equipment`}
@@ -936,7 +944,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
           <div className="rounded-md border border-border bg-muted/40" role="listitem">
             <div className="flex flex-col gap-0.5 px-2 py-1.5">
               <div role="group" aria-label="Equipment">
-                {playRows.map(({ line, index, scope }) =>
+                {playRows.map(({ line, index, indices, scope }) =>
                   isMusicalInstrumentPlaceholder(line)
                     ? renderMusicalInstrumentChoice(
                         `play-${scope}`,
@@ -947,7 +955,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
                       )
                     : isHolySymbolPlaceholder(line)
                       ? renderHolySymbolChoice(`play-${scope}`, index, scope)
-                      : renderItemRow(line, 'play', index, true, index)
+                      : renderItemRow(line, 'play', index, true, index, indices)
                 )}
               </div>
               {playRows.length === 0 ? (

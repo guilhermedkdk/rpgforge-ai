@@ -17,6 +17,15 @@ export const AUTH_THROTTLE = {
   long: { ttl: minutes(15), limit: 30 },
 };
 
+/**
+ * Password reset requests: each one spends an e-mail from a sender with a daily cap, and the route
+ * takes an address from anyone. Tight on purpose, since nobody needs a third link in five minutes.
+ */
+export const PASSWORD_RESET_THROTTLE = {
+  short: { ttl: minutes(5), limit: 3 },
+  long: { ttl: hours(1), limit: 10 },
+};
+
 /** AI generation: every call spends OpenAI credit (~US$0.01 per finished draft). */
 export const GENERATION_THROTTLE = {
   short: { ttl: minutes(1), limit: 5 },

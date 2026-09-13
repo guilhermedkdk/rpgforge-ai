@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { RuleItemKind as PrismaRuleItemKind } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { EmbeddingsService } from '../embeddings/embeddings.service';
 import { isUuid } from '../../shared/utils/is-uuid';
+import { toProviderFailure } from '../../shared/openai/openai-error';
 import type {
   RuleItemResponse,
   RuleItemListParams,
@@ -50,6 +51,8 @@ export function mapToRuleItemResponse(item: {
 
 @Injectable()
 export class RuleitemsService {
+  private readonly logger = new Logger(RuleitemsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly embeddingsService: EmbeddingsService
@@ -175,7 +178,14 @@ export class RuleitemsService {
 
   /** Semantic search: embed the query, rank by vector similarity, then fetch+map full rows. */
   async search(params: RuleItemSearchParams): Promise<RuleItemSearchResult[]> {
-    const [queryEmbedding] = await this.embeddingsService.embedTexts([params.query]);
+    let queryEmbedding: number[];
+    try {
+      [queryEmbedding] = await this.embeddingsService.embedTexts([params.query]);
+    } catch (caught) {
+      // Wrapped here and not inside `embedTexts`, because the ingestion script shares it and a CLI
+      // run wants the provider's own message.
+      throw toProviderFailure(caught, this.logger, 'rule item search');
+    }
     const kinds = params.kind
       ? Array.isArray(params.kind)
         ? params.kind

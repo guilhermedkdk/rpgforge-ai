@@ -1,0 +1,42 @@
+name: Keepalive
+
+# Wakes the API once a day, and nothing else.
+#
+# The free Render instance hibernates after 15 minutes, and waking it takes ~42s: longer than the
+# 30s ceiling of every free uptime pinger, so none of them can ever be the one to wake it. This job
+# does that first wake; the external pinger then holds the instance awake through the day, where it
+# only ever meets an instance that is already running.
+on:
+  schedule:
+    # 08:50 UTC is 05:50 in Sao Paulo, ten minutes before the external pinger's window opens.
+    # GitHub delays scheduled runs under load, which costs nothing for a single daily wake.
+    - cron: '50 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    env:
+      HEALTH_URL: https://rpgforce-ai.onrender.com/health
+    steps:
+      - name: Wake the API
+        run: |
+          for attempt in 1 2 3; do
+            # `Accept` must never include text/html: Render answers a request for a hibernating
+            # service with a 258 KB "waking up" page instead of holding the connection open.
+            result=$(curl -sS -o /dev/null -w '%{http_code} %{time_total}' \
+              --max-time 120 \
+              -H 'Accept: application/json' \
+              "$HEALTH_URL" || echo '000 0')
+            code=${result% *}
+            echo "attempt $attempt: HTTP $code in ${result#* }s"
+
+            if [ "$code" = "200" ]; then
+              exit 0
+            fi
+
+            sleep 30
+          done
+
+          echo "The API did not answer. It is down, or Render refused to route to it."
+          exit 1

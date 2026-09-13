@@ -96,3 +96,13 @@ export interface GenerateCharacterResponse {
   /** Echoed back so the save can link the sheet to the interaction that produced it. */
   generationId?: string;
 }
+
+/**
+ * What the AI routes answer with as `message` on a 503.
+ *
+ * Never 429: that status means the CALLER is going too fast, and its copy tells them to wait a few
+ * minutes. These two mean the deployment cannot serve AI at all, which waiting does not fix, so
+ * they must not borrow that message.
+ */
+export const AI_BUDGET_EXHAUSTED = 'AI_BUDGET_EXHAUSTED';
+export const AI_PROVIDER_UNAVAILABLE = 'AI_PROVIDER_UNAVAILABLE';

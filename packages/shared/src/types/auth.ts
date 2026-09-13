@@ -64,3 +64,18 @@ export interface LoginRequest {
   email: string;
   password: string;
 }
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+/** What `POST /auth/password/forgot` answers, whatever the address turns out to be. */
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+/** The token comes from the link in the e-mail; it is the only credential the route asks for. */
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}

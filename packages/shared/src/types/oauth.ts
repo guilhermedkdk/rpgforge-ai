@@ -81,3 +81,8 @@ export interface ConfirmOAuthLinkResponse {
 export interface OAuthProvidersResponse {
   providers: OAuthProviderId[];
 }
+
+/** Recovers the account behind a pending link without its old password. */
+export interface ResetPasswordThroughProviderRequest {
+  newPassword: string;
+}

@@ -1,6 +1,8 @@
 import {
   parseEquipmentLine,
   formatEquipmentLine,
+  HOLY_SYMBOL_PLACEHOLDER_LINE,
+  MUSICAL_INSTRUMENT_PLACEHOLDER_LINE,
   splitEquipmentBySource,
   optionTextToLines,
   isEquipmentLineGP,
@@ -43,39 +45,91 @@ function sourceMapAfterIndexOp(
   return op([...map]);
 }
 
+/**
+ * One row of the saved sheet's inventory. `indices` holds every equipment line the row stands for,
+ * so removing it takes them all; `index` is the single line the stepper writes to.
+ */
+export type InventoryRow = {
+  line: string;
+  index: number;
+  indices: number[];
+  scope: 'class' | 'background';
+};
+
+/**
+ * Collapses equipment lines into one row per item.
+ *
+ * The saved sheet is an inventory, so an item both the class and the background granted belongs on
+ * one row. Creation keeps them apart because its bundle blocks are what the reader chooses between,
+ * which is why this is a view concern and the persisted entries stay keyed by source.
+ *
+ * A placeholder never merges: it is a pending CHOICE resolved per source, and one picker cannot
+ * answer for two.
+ */
+export function mergeInventoryRows(
+  rows: Array<{ line: string; index: number; scope: 'class' | 'background' }>
+): InventoryRow[] {
+  const merged: InventoryRow[] = [];
+  const byName = new Map<string, InventoryRow>();
+  for (const row of rows) {
+    const { quantity, name } = parseEquipmentLine(row.line);
+    const key = name.trim().toLowerCase();
+    const isChoice =
+      key === HOLY_SYMBOL_PLACEHOLDER_LINE || key === MUSICAL_INSTRUMENT_PLACEHOLDER_LINE;
+    const target = isChoice ? undefined : byName.get(key);
+    if (!target) {
+      const fresh: InventoryRow = { ...row, indices: [row.index] };
+      merged.push(fresh);
+      if (!isChoice) byName.set(key, fresh);
+      continue;
+    }
+    target.line = formatEquipmentLine(parseEquipmentLine(target.line).quantity + quantity, name);
+    target.indices.push(row.index);
+    // The stepper writes to the LAST contributing line, so a decrease spends the most recent grant
+    // before it touches what the class gave.
+    target.index = row.index;
+  }
+  return merged;
+}
+
 type EquipmentSpendAdjustOptions = {
   /** When false (sheet view), removals / qty decreases do not lower `equipmentSpentGP`. Default true. */
   refundSpentGP?: boolean;
 };
 
-export function removeEquipmentItem(
+/**
+ * Removes one or more equipment lines in a single pass. The saved sheet merges the rows for one item,
+ * and that row can stand for a line from each bundle, so removal has to be one operation: repeating
+ * a single-index version would feed it a stale `data` and shift the indices under itself.
+ */
+export function removeEquipmentItems(
   data: CharacterFormData,
   onChange: (d: CharacterFormData) => void,
-  index: number,
+  indices: number[],
   options?: EquipmentSpendAdjustOptions
 ) {
   const refundSpentGP = options?.refundSpentGP !== false;
+  const doomed = new Set(indices);
   const lines = (data.equipment ?? '')
     .split(/\n/)
     .map((s) => s.trim())
     .filter(Boolean);
-  const line = lines[index];
-  const purchasedEquipment = data.purchasedEquipment ?? [];
-  const idx = purchasedEquipment.findIndex((p) => p.line === line);
+
   let equipmentSpentGP = data.equipmentSpentGP ?? 0;
-  let nextPurchased = purchasedEquipment;
-  if (idx >= 0) {
-    const { costGP } = purchasedEquipment[idx];
-    if (refundSpentGP) equipmentSpentGP = Math.max(0, equipmentSpentGP - costGP);
-    nextPurchased = purchasedEquipment.filter((_, i) => i !== idx);
+  let nextPurchased = data.purchasedEquipment ?? [];
+  for (const index of indices) {
+    const idx = nextPurchased.findIndex((p) => p.line === lines[index]);
+    if (idx < 0) continue;
+    if (refundSpentGP) equipmentSpentGP = Math.max(0, equipmentSpentGP - nextPurchased[idx].costGP);
+    nextPurchased = nextPurchased.filter((_, i) => i !== idx);
   }
-  const nextLines = lines.filter((_, i) => i !== index);
+
   const nextSourceByLine = sourceMapAfterIndexOp(data, lines.length, (map) =>
-    map.filter((_, i) => i !== index)
+    map.filter((_, i) => !doomed.has(i))
   );
   onChange({
     ...data,
-    equipment: nextLines.join('\n'),
+    equipment: lines.filter((_, i) => !doomed.has(i)).join('\n'),
     ...(nextSourceByLine ? { equipmentSourceByLine: nextSourceByLine } : {}),
     equipmentSpentGP,
     purchasedEquipment: nextPurchased,

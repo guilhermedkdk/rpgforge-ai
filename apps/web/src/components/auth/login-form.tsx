@@ -146,6 +146,14 @@ export const LoginForm = ({
             disabled={isLoading}
             aria-invalid={errors.password || isFlagged('password') ? 'true' : 'false'}
           />
+          <div className="flex justify-end">
+            <Link
+              href="/auth/forgot-password"
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </div>
         </div>
 
         <Button

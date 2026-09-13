@@ -10,6 +10,9 @@ import { getAccessTokenExpiresIn } from './auth.config';
 import { OAuthController } from './oauth/oauth.controller';
 import { OAuthService } from './oauth/oauth.service';
 import { OAuthProviderRegistry } from './oauth/providers/oauth-provider.registry';
+import { PasswordResetController } from './password-reset/password-reset.controller';
+import { PasswordResetService } from './password-reset/password-reset.service';
+import { PasswordResetCleanupService } from './password-reset/password-reset-cleanup.service';
 
 @Module({
   imports: [
@@ -24,13 +27,15 @@ import { OAuthProviderRegistry } from './oauth/providers/oauth-provider.registry
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, OAuthController],
+  controllers: [AuthController, OAuthController, PasswordResetController],
   providers: [
     AuthService,
     RefreshTokenCleanupService,
     JwtStrategy,
     OAuthService,
     OAuthProviderRegistry,
+    PasswordResetService,
+    PasswordResetCleanupService,
   ],
   exports: [AuthService, OAuthService, JwtModule, PassportModule],
 })

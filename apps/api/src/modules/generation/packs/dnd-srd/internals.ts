@@ -504,7 +504,9 @@ export function buildLoadoutUser(conceptText: string, menus: LoadoutMenus): stri
       'is discarded). If you chose the "take the gold" equipment bundle, that gold IS the character\'s ' +
       'equipment: you MUST buy a weapon and armor it can actually use, plus a pack, or the sheet ' +
       'arrives with nothing. If you chose a gear bundle instead, buy only a few useful extras and ' +
-      'keep the rest of the coin:\n' +
+      'keep the rest of the coin. The bundles you pick already carry the gear listed beside them ' +
+      'above, so spend on what the character still lacks; a second copy only earns its coin when ' +
+      'more of it is genuinely useful, like ammunition, rations, oil or torches. Available:\n' +
       (menus.shop.items.length
         ? menus.shop.items.map((i) => `  - ${i.name} (${i.costGP} GP)`).join('\n')
         : '  (nothing affordable)'),

@@ -28,7 +28,8 @@ import { AuthService } from '../auth.service';
 import { setAuthCookies } from '../auth-cookies';
 import { readAccessTokenClaims } from '../access-token';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { buildCallbackUrl, oauthCookieSecret, readFrontendUrl } from './oauth.config';
+import { readFrontendUrl } from '../auth.config';
+import { buildCallbackUrl, oauthCookieSecret } from './oauth.config';
 import {
   clearPendingLink,
   clearTransaction,
@@ -42,6 +43,7 @@ import {
 import { OAuthService } from './oauth.service';
 import { OAuthProviderRegistry } from './providers/oauth-provider.registry';
 import { ConfirmOAuthLinkDto } from './dto/confirm-oauth-link.dto';
+import { ResetPasswordThroughProviderDto } from './dto/reset-password-through-provider.dto';
 
 /** Where a signed-in user lands when the flow did not say otherwise. */
 const DEFAULT_REDIRECT = '/sheets';
@@ -124,6 +126,33 @@ export class OAuthController {
     }
 
     const session = await this.oauth.confirmPendingLink(pending, dto.password);
+
+    clearPendingLink(response);
+    setAuthCookies(response, this.configService, session.accessToken, session.refreshToken);
+
+    return { user: session.user, redirect: safeRedirectPath(pending.redirect, DEFAULT_REDIRECT) };
+  }
+
+  /**
+   * Recovers the account behind a pending link by setting a new password, no old one required.
+   *
+   * This is the "forgot my password" exit from the link screen: the provider has already verified
+   * the address, so there is nothing left for the old password to prove.
+   */
+  @Post('link/reset-password')
+  @Throttle(AUTH_THROTTLE)
+  @HttpCode(HttpStatus.OK)
+  async resetPasswordThroughProvider(
+    @Req() request: Request,
+    @Body() dto: ResetPasswordThroughProviderDto,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<{ user: User; redirect: string }> {
+    const pending = readPendingLink(request, this.jwtService, this.pendingLinkSecret());
+    if (!pending) {
+      throw new UnauthorizedException('A vinculação expirou. Comece de novo.');
+    }
+
+    const session = await this.oauth.resetPasswordThroughProvider(pending, dto.newPassword);
 
     clearPendingLink(response);
     setAuthCookies(response, this.configService, session.accessToken, session.refreshToken);

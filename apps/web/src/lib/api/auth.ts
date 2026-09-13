@@ -3,6 +3,9 @@ import type {
   AuthResponse,
   RegisterRequest,
   LoginRequest,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResetPasswordRequest,
   ConfirmOAuthLinkResponse,
   OAuthProviderId,
   OAuthProvidersResponse,
@@ -32,6 +35,18 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     await apiClient.post('/auth/logout');
+  },
+
+  /** Asks for a reset link. The answer is the same whether or not the address has an account. */
+  forgotPassword: async (data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> => {
+    const response = await apiClient.post<ForgotPasswordResponse>('/auth/password/forgot', data);
+    return response.data;
+  },
+
+  /** Spends the link. The response already carries the session cookies. */
+  resetPassword: async (data: ResetPasswordRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/password/reset', data);
+    return response.data;
   },
 };
 
@@ -70,6 +85,15 @@ export const oauthApi = {
     const response = await apiClient.post<ConfirmOAuthLinkResponse>('/auth/oauth/link', {
       password,
     });
+    return response.data;
+  },
+
+  /** Recovers the account behind a pending link, with the provider standing in for the password. */
+  resetPasswordThroughProvider: async (newPassword: string): Promise<ConfirmOAuthLinkResponse> => {
+    const response = await apiClient.post<ConfirmOAuthLinkResponse>(
+      '/auth/oauth/link/reset-password',
+      { newPassword }
+    );
     return response.data;
   },
 

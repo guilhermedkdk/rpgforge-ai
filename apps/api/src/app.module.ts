@@ -13,6 +13,7 @@ import { GenerationModule } from './modules/generation/generation.module';
 import { ThrottlingModule } from './shared/throttling/throttling.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PrismaService } from './shared/prisma.service';
+import { MailService } from './shared/mail/mail.service';
 
 @Global()
 @Module({
@@ -33,7 +34,7 @@ import { PrismaService } from './shared/prisma.service';
     IngestionModule,
   ],
   controllers: [AppController],
-  providers: [PrismaService],
-  exports: [PrismaService],
+  providers: [PrismaService, MailService],
+  exports: [PrismaService, MailService],
 })
 export class AppModule {}

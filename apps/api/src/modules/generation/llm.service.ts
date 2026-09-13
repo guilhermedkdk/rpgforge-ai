@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import type { z } from 'zod';
 import { AiUsageService, type AiOperation } from '../ai-usage/ai-usage.service';
+import { toProviderFailure } from '../../shared/openai/openai-error';
 
 /**
  * Isolated so swapping the generation model (or provider) is a one-line change, like EmbeddingsService.
@@ -42,14 +43,21 @@ export class LlmService {
     operation: AiOperation;
     userId?: string | null;
   }): Promise<z.infer<S>> {
-    const completion = await this.client.chat.completions.parse({
-      model: GENERATION_MODEL,
-      messages: [
-        { role: 'system', content: params.system },
-        { role: 'user', content: params.user },
-      ],
-      response_format: zodResponseFormat(params.schema, params.schemaName),
-    });
+    let completion;
+    try {
+      completion = await this.client.chat.completions.parse({
+        model: GENERATION_MODEL,
+        messages: [
+          { role: 'system', content: params.system },
+          { role: 'user', content: params.user },
+        ],
+        response_format: zodResponseFormat(params.schema, params.schemaName),
+      });
+    } catch (caught) {
+      // A provider error is not a bug here, and an untranslated one reaches the browser as a 500
+      // that tells the user to try again: for a spent budget that advice is wrong forever.
+      throw toProviderFailure(caught, this.logger, params.schemaName);
+    }
 
     // Recorded before the refusal/parse checks below: a refused answer was still billed.
     await this.aiUsage.record({
