@@ -17,9 +17,9 @@ const ENHANCED_BY_LABEL = 'Enhanced by';
 // Deliberately lowercase and unpadded: three stacked badges (Eldritch Blast with Agonizing Blast +
 // Eldritch Spear + Repelling Blast) is the widest real case, and uppercase truncated the spell name.
 const badgeClass =
-  'inline-flex items-center rounded border border-primary/40 bg-primary/10 px-0.5 text-[10px] font-semibold whitespace-nowrap text-primary';
+  'inline-flex items-center rounded border border-primary/40 bg-primary/10 px-0.5 text-3xs font-semibold whitespace-nowrap text-primary-ink';
 
-const headingClass = 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground';
+const headingClass = 'text-3xs font-semibold uppercase tracking-widest text-muted-foreground';
 
 // Full-name + effect breakdown, shared by the row tooltip and the detail popover section below.
 function SpellModifierList({

@@ -49,17 +49,17 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
 
       <div className="flex flex-wrap items-center gap-1.5">
         {categoryLabel && (
-          <span className="rounded-full bg-background/60 border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="rounded-full bg-background/60 border border-border/60 px-1.5 py-0.5 text-3xs font-medium text-muted-foreground">
             {categoryLabel}
           </span>
         )}
-        {weightText && <span className="text-[11px] text-muted-foreground">{weightText}</span>}
+        {weightText && <span className="text-2xs text-muted-foreground">{weightText}</span>}
       </div>
 
       {weaponObj && (
         <div className="flex flex-col gap-1 border-t border-border/40 pt-2">
           {!!weaponObj.damageDice && (
-            <p className="text-[11px]">
+            <p className="text-2xs">
               <span className="text-muted-foreground">Damage: </span>
               <span className="font-medium text-foreground">
                 {String(weaponObj.damageDice)}
@@ -70,7 +70,7 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
             </p>
           )}
           {properties.length > 0 && (
-            <p className="text-[11px]">
+            <p className="text-2xs">
               <span className="text-muted-foreground">Properties: </span>
               <span className="font-medium text-foreground">{properties.join(', ')}</span>
             </p>
@@ -81,13 +81,13 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
       {armorObj && (
         <div className="flex flex-col gap-1 border-t border-border/40 pt-2">
           {typeof armorObj.acDisplay === 'string' && (
-            <p className="text-[11px]">
+            <p className="text-2xs">
               <span className="text-muted-foreground">CA: </span>
               <span className="font-medium text-foreground">{armorObj.acDisplay}</span>
             </p>
           )}
           {armorObj.strengthScoreRequired != null && (
-            <p className="text-[11px]">
+            <p className="text-2xs">
               <span className="text-muted-foreground">Str required: </span>
               <span className="font-medium text-foreground">
                 {String(armorObj.strengthScoreRequired)}
@@ -95,13 +95,13 @@ export function ItemTooltipContent({ item }: { item: RuleItemResponse }) {
             </p>
           )}
           {armorObj.grantsStealthDisadvantage === true && (
-            <p className="text-[11px] text-destructive/80">Stealth disadvantage</p>
+            <p className="text-2xs text-destructive/80">Stealth disadvantage</p>
           )}
         </div>
       )}
 
       {desc && (
-        <p className="border-t border-border/40 pt-2 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="border-t border-border/40 pt-2 text-2xs leading-relaxed text-muted-foreground">
           {desc}
         </p>
       )}

@@ -82,7 +82,7 @@ export const ProfileForm = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-serif">
-          <UserRound className="h-4 w-4 text-primary" aria-hidden="true" />
+          <UserRound className="h-4 w-4 text-primary-ink" aria-hidden="true" />
           Perfil
         </CardTitle>
         <CardDescription>Como você aparece para outras pessoas.</CardDescription>

@@ -127,12 +127,12 @@ export function ClassLevelPanel({
           ))}
         </ul>
         {atCap && (
-          <p className="mt-2 px-1 text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-2 px-1 text-2xs leading-snug text-muted-foreground">
             Level {MAX_CHARACTER_LEVEL} is the cap: lower a class to raise another.
           </p>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onManageClasses} className="font-medium text-primary">
+        <DropdownMenuItem onSelect={onManageClasses} className="font-medium text-primary-ink">
           <Plus className="h-3.5 w-3.5" aria-hidden />
           Add another class
         </DropdownMenuItem>

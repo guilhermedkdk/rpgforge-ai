@@ -50,7 +50,7 @@ export function PersonalitySection({ data, onChange }: PersonalitySectionProps) 
         <div key={field} className="flex flex-col gap-1">
           <Label
             htmlFor={id}
-            className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+            className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground"
           >
             {label}
           </Label>

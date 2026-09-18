@@ -53,7 +53,7 @@ export const AppearanceCard = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-serif">
-          <Sun className="h-4 w-4 text-primary" aria-hidden="true" />
+          <Sun className="h-4 w-4 text-primary-ink" aria-hidden="true" />
           Aparência
         </CardTitle>
         <CardDescription>Vale para este navegador.</CardDescription>
@@ -82,7 +82,7 @@ export const AppearanceCard = () => {
                   <Icon
                     className={cn(
                       'h-3.5 w-3.5',
-                      selected ? 'text-primary' : 'text-muted-foreground'
+                      selected ? 'text-primary-ink' : 'text-muted-foreground'
                     )}
                     aria-hidden="true"
                   />
@@ -95,7 +95,7 @@ export const AppearanceCard = () => {
                     {option.label}
                   </span>
                   {selected ? (
-                    <Check className="ml-auto h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    <Check className="ml-auto h-3.5 w-3.5 text-primary-ink" aria-hidden="true" />
                   ) : null}
                 </span>
               </button>

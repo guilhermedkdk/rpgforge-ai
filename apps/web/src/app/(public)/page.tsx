@@ -1,22 +1,11 @@
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Compass } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
-import { LoadingScreen } from '@/components/ui/loading-screen';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/header';
 import { SiteFooter } from '@/components/layout/footer';
 import { HeroVideo } from '@/components/marketing/hero-video';
-import { PublicSheetCard } from '@/components/sheets/public-sheet-card';
-import { publicSheetsApi } from '@/lib/api/public-sheets';
-import { packsApi } from '@/lib/api/packs';
-
-/** Enough to fill two rows on a wide screen without turning the landing page into the explore page. */
-const SHOWCASE_COUNT = 6;
+import { LandingShowcase } from '@/components/marketing/landing-showcase';
 
 const STEPS = [
   {
@@ -40,47 +29,33 @@ const STEPS = [
   },
 ];
 
-export default function Home() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.push('/sheets');
-    }
-  }, [user, isLoading, router]);
-
-  // The landing page is for signed-out visitors; showing published sheets here is the same open
-  // feed /explore reads, so it costs nothing extra and it is real content instead of a mockup.
-  const { data: packs } = useQuery({ queryKey: ['packs'], queryFn: packsApi.getAll });
-  const { data: showcase } = useQuery({
-    queryKey: ['public-sheets', 'landing'],
-    queryFn: () => publicSheetsApi.list({ limit: SHOWCASE_COUNT, offset: 0 }),
-    enabled: !isLoading && !user,
-  });
-
-  const packById = new Map((packs ?? []).map((pack) => [pack.id, pack]));
-  const sheets = showcase?.items ?? [];
-
-  // Redirect guard, not a data-loading gate: avoids a flash of the marketing page before /sheets.
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
-  if (user) {
-    return null;
+/**
+ * The signed-out landing page, rendered on the server.
+ *
+ * The pitch owes nothing to the session, so nothing here waits for it; the showcase owns its own
+ * data as an island.
+ *
+ * A signed-in visitor never sees this page at all: the session rides in an httpOnly cookie on this
+ * origin (the API answers through the `/api/*` rewrite), so the redirect happens on the server
+ * before a byte of HTML is sent. Cookie presence is a routing hint, not proof; an expired token
+ * lands on `/sheets`, which does its own check.
+ */
+export default async function Home() {
+  const cookieStore = await cookies();
+  if (cookieStore.has('refreshToken')) {
+    redirect('/sheets');
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
 
-      <main className="flex-1 content-reveal">
+      <main className="flex-1">
         <section className="mx-auto w-full max-w-5xl px-4 pt-16 pb-14 text-center md:pt-24">
           <h1 className="font-serif text-4xl font-bold leading-tight text-foreground md:text-6xl">
             Descreva o personagem.
             <br />
-            <span className="text-primary">Receba a ficha pronta.</span>
+            <span className="text-primary-ink">Receba a ficha pronta.</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
@@ -91,22 +66,16 @@ export default function Home() {
 
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/create">
-                Criar minha ficha
-                <ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" />
-              </Link>
+              <Link href="/create">Criar minha ficha</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/explore">
-                <Compass className="mr-1 h-4 w-4" aria-hidden="true" />
-                Ver o que a comunidade forjou
-              </Link>
+              <Link href="/explore">Ver o que a comunidade forjou</Link>
             </Button>
           </div>
         </section>
 
         <section className="mx-auto w-full max-w-5xl px-4 pb-16">
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/50">
+          <div className="video-bezel overflow-hidden rounded-xl border border-border p-2 shadow-2xl shadow-black/50 sm:p-3">
             <HeroVideo />
           </div>
         </section>
@@ -123,11 +92,15 @@ export default function Home() {
             <ol className="mt-10 grid gap-8 md:grid-cols-3 md:grid-rows-[auto_auto_1fr_auto] md:gap-y-3">
               {STEPS.map((step, index) => (
                 <li key={step.title} className="grid gap-3 md:row-span-4 md:grid-rows-subgrid">
+                  {/* The sequence is the information here, so the marker is earned; the die face is
+                      what makes it this product's marker and not a numbered list's. */}
                   <span
-                    className="font-serif text-3xl font-bold text-primary/40"
+                    className="die-face die-face-on-band h-14 w-14 justify-self-start"
                     aria-hidden="true"
                   >
-                    {index + 1}
+                    <span className="font-serif text-2xl font-bold text-primary-ink">
+                      {index + 1}
+                    </span>
                   </span>
                   <h3 className="font-serif text-lg font-semibold text-foreground">{step.title}</h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">{step.body}</p>
@@ -142,40 +115,26 @@ export default function Home() {
           </div>
         </section>
 
-        {sheets.length > 0 ? (
-          <section className="mx-auto w-full max-w-7xl px-4 py-16">
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">
-                  Fichas publicadas agora
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Personagens de verdade, forjados por quem usa o RPGForge.
-                </p>
-              </div>
-              <Button variant="ghost" asChild>
-                <Link href="/explore">
-                  Ver todas
-                  <ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" />
-                </Link>
+        <LandingShowcase />
+
+        {/* Unconditional on purpose: the showcase above it is not, so without this the page can end
+            on a link that sends the visitor away, or on nothing to click at all. */}
+        <section className="border-t border-border bg-card/40">
+          <div className="mx-auto w-full max-w-5xl px-4 py-16 text-center">
+            <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">
+              Seu próximo personagem está a uma frase de distância
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Conte quem ele é. O RPGForge escolhe dentro das regras, faz as contas e entrega a
+              ficha pronta para editar.
+            </p>
+            <div className="mt-7 flex justify-center">
+              <Button size="lg" asChild>
+                <Link href="/create">Criar minha ficha</Link>
               </Button>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {sheets.map((sheet) => {
-                const pack = packById.get(sheet.packId);
-                return (
-                  <PublicSheetCard
-                    key={sheet.id}
-                    sheet={sheet}
-                    packName={pack?.name ?? null}
-                    packSlug={pack?.slug ?? null}
-                  />
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
+          </div>
+        </section>
       </main>
 
       <SiteFooter />

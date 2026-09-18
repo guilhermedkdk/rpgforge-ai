@@ -80,7 +80,7 @@ export default function PublicSheetPage() {
                     href={`/u/${encodeURIComponent(data.owner.username)}`}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <UserRound className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    <UserRound className="h-3.5 w-3.5 text-primary-ink" aria-hidden="true" />
                     {ownerLabel}
                   </Link>
                   <span>

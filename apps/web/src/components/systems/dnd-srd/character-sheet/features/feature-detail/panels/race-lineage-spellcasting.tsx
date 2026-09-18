@@ -22,7 +22,7 @@ export function RaceLineageSpellcastingAbilityPicker({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground">
         Spellcasting Ability
       </p>
       <div className="flex gap-2">
@@ -42,7 +42,7 @@ export function RaceLineageSpellcastingAbilityPicker({
             className={cn(
               'flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-sm font-medium transition-colors',
               selected === ability
-                ? 'border-primary/70 bg-primary/5 text-primary'
+                ? 'border-primary/70 bg-primary/5 text-primary-ink'
                 : 'border-border bg-card text-foreground hover:bg-muted/40'
             )}
           >

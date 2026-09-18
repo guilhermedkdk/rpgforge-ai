@@ -28,7 +28,7 @@ export function Section({
       )}
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {icon && <span className="text-primary">{icon}</span>}
+          {icon && <span className="text-primary-ink">{icon}</span>}
           {typeof title === 'string' ? (
             <h3 className="font-serif text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               {title}

@@ -47,7 +47,7 @@ export const Header = () => {
           <span className="font-serif text-xl font-bold tracking-wide text-foreground">
             RPGForge
           </span>
-          <RPGForgeMark className="h-9 w-9 text-primary" />
+          <RPGForgeMark className="h-9 w-9 text-primary-ink" />
           <span className="sr-only">AI</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex" aria-label="Navegação principal">
@@ -57,9 +57,9 @@ export const Header = () => {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary"
+                className="group flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary-ink"
               >
-                <Icon className="h-4 w-4 group-hover:text-primary" aria-hidden="true" />
+                <Icon className="h-4 w-4 group-hover:text-primary-ink" aria-hidden="true" />
                 {link.label}
               </Link>
             );
@@ -181,9 +181,9 @@ export const Header = () => {
                       <Link
                         key={link.href}
                         href={link.href}
-                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary-ink"
                       >
-                        <Icon className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                        <Icon className="h-5 w-5 group-hover:text-primary-ink" aria-hidden="true" />
                         {link.label}
                       </Link>
                     );
@@ -192,24 +192,24 @@ export const Header = () => {
                     <>
                       <Link
                         href={`/u/${user.username}`}
-                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary-ink"
                       >
-                        <User className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                        <User className="h-5 w-5 group-hover:text-primary-ink" aria-hidden="true" />
                         Perfil
                       </Link>
                       <Link
                         href="/settings"
-                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                        className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary-ink"
                       >
-                        <Settings className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                        <Settings className="h-5 w-5 group-hover:text-primary-ink" aria-hidden="true" />
                         Configurações
                       </Link>
                       {user.role === 'ADMIN' ? (
                         <Link
                           href="/admin"
-                          className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary"
+                          className="group flex items-center gap-3 text-base font-medium text-foreground/80 hover:text-primary-ink"
                         >
-                          <Gauge className="h-5 w-5 group-hover:text-primary" aria-hidden="true" />
+                          <Gauge className="h-5 w-5 group-hover:text-primary-ink" aria-hidden="true" />
                           Painel
                         </Link>
                       ) : null}

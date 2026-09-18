@@ -107,7 +107,7 @@ const Tile = ({
         aria-pressed={selected}
         aria-label={label}
         className={cn(
-          'flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-secondary transition-all',
+          'flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-secondary transition-[box-shadow]',
           // The ring is the selection: a border would resize the tile and shift the whole row.
           selected
             ? 'ring-2 ring-primary ring-offset-2 ring-offset-card'

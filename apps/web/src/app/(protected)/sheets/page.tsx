@@ -16,7 +16,7 @@ export default function SheetsPage() {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         <div className="mb-6 flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <Scroll className="h-6 w-6 text-primary" aria-hidden="true" />
+            <Scroll className="h-6 w-6 text-primary-ink" aria-hidden="true" />
             <h1 className="font-serif text-2xl font-bold text-foreground">Minhas Fichas</h1>
           </div>
           <p className="text-sm text-muted-foreground">

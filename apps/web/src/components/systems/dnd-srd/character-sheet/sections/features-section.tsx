@@ -232,11 +232,11 @@ export function FeaturesSection({ data, onChange, pendingFlags }: FeaturesSectio
                         needsChoice
                           ? needsChoiceHighlight(featureFlagged)
                           : 'border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80',
-                        isOpen && 'bg-primary/10 text-primary'
+                        isOpen && 'bg-primary/10 text-primary-ink'
                       );
                       const defaultButtonClass = cn(
                         'flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 overflow-hidden rounded-full border border-transparent bg-secondary/60 px-2.5 py-0.5 text-xs text-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        isOpen && 'bg-primary/20 text-primary'
+                        isOpen && 'bg-primary/20 text-primary-ink'
                       );
                       const buttonClass =
                         isChoiceFeature && needsChoice ? choiceButtonClass : defaultButtonClass;
@@ -307,7 +307,7 @@ export function FeaturesSection({ data, onChange, pendingFlags }: FeaturesSectio
                         needsChoice
                           ? cn('border', needsChoiceHighlight(pendingFlags.isFlagged(featKey)))
                           : 'border border-transparent bg-secondary/60 text-foreground hover:bg-secondary/80',
-                        isOpen && 'bg-primary/20 text-primary'
+                        isOpen && 'bg-primary/20 text-primary-ink'
                       )}
                       aria-label={`View details for ${feat.name}`}
                       aria-pressed={isOpen}

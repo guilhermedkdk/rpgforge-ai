@@ -76,7 +76,7 @@ export const SpendBreakdown = ({
                     style={{ width: `${percent}%`, backgroundColor: 'var(--chart-1)' }}
                     aria-hidden="true"
                   />
-                  <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/80">
+                  <span className="shrink-0 text-3xs tabular-nums text-muted-foreground/80">
                     {slice.calls} {slice.calls === 1 ? 'chamada' : 'chamadas'} ·{' '}
                     {formatCompact(slice.tokens)} tokens
                   </span>

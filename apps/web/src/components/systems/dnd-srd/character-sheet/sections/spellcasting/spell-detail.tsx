@@ -171,7 +171,7 @@ export function SelectableSpellRow({
           <span
             className={cn(
               'text-sm font-medium',
-              isRowSelected ? 'text-primary' : 'text-foreground'
+              isRowSelected ? 'text-primary-ink' : 'text-foreground'
             )}
           >
             {spell.name}

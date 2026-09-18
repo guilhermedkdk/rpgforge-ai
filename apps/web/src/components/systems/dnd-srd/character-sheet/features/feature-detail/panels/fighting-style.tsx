@@ -144,7 +144,7 @@ export function FightingStylePanel({
             className={cn(
               'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               fsMode === 'OPTION'
-                ? 'bg-primary/15 text-primary'
+                ? 'bg-primary/15 text-primary-ink'
                 : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={fsMode === 'OPTION'}
@@ -160,7 +160,7 @@ export function FightingStylePanel({
             className={cn(
               'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               fsMode === 'FEAT'
-                ? 'bg-primary/15 text-primary'
+                ? 'bg-primary/15 text-primary-ink'
                 : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={fsMode === 'FEAT'}

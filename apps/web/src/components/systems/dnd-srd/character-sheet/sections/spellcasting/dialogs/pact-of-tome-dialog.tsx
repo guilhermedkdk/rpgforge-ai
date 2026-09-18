@@ -65,7 +65,7 @@ function SpellSection({
             className={cn(
               'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold tabular-nums',
               count >= max
-                ? 'border-primary/40 bg-primary/10 text-primary'
+                ? 'border-primary/40 bg-primary/10 text-primary-ink'
                 : 'border-border bg-muted/40 text-foreground'
             )}
           >

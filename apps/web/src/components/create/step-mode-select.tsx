@@ -58,7 +58,7 @@ export const StepModeSelect = ({ selectedMode, onSelect }: StepModeSelectProps) 
     <>
       <div className="mb-8 text-center">
         <div className="mb-4 flex justify-center">
-          <Split className="h-12 w-12 text-primary" aria-hidden="true" />
+          <Split className="h-12 w-12 text-primary-ink" aria-hidden="true" />
         </div>
         <h1 className="font-serif text-3xl font-bold text-foreground text-balance">
           Como você quer forjar?
@@ -76,7 +76,7 @@ export const StepModeSelect = ({ selectedMode, onSelect }: StepModeSelectProps) 
               type="button"
               onClick={() => onSelect(mode.id)}
               aria-pressed={isSelected}
-              className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card p-6 text-left transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:min-h-[280px] ${
+              className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card p-6 text-left transition-[border-color,box-shadow] duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:min-h-[280px] ${
                 isSelected
                   ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/40'
                   : 'border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5'
@@ -114,7 +114,7 @@ export const StepModeSelect = ({ selectedMode, onSelect }: StepModeSelectProps) 
                         key={highlight.label}
                         className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs text-muted-foreground"
                       >
-                        <HighlightIcon className="h-3 w-3 text-primary" aria-hidden="true" />
+                        <HighlightIcon className="h-3 w-3 text-primary-ink" aria-hidden="true" />
                         {highlight.label}
                       </span>
                     );

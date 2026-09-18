@@ -45,7 +45,7 @@ const stepButtonClass =
 const rowActionClass =
   'flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-input bg-secondary/50 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-const fieldLabelClass = 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground';
+const fieldLabelClass = 'text-3xs font-semibold uppercase tracking-widest text-muted-foreground';
 
 /** The card's "+N HP" reads the SAME formula the HP math applies, so the two can't drift. */
 const hpPerLevelFromDie = (hitDie: string): number | null => {
@@ -280,15 +280,15 @@ export function ClassesManagerDialog({
                       {/* Which role this class plays, stated instead of implied by row order. */}
                       <span
                         className={cn(
-                          'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                          'rounded-full border px-2 py-0.5 text-3xs font-semibold uppercase tracking-wider',
                           index === 0
-                            ? 'border-primary/45 bg-primary/10 text-primary'
+                            ? 'border-primary/45 bg-primary/10 text-primary-ink'
                             : 'border-border bg-secondary/60 text-muted-foreground'
                         )}
                       >
                         {index === 0 ? 'Initial class' : 'Multiclass'}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         {index === 0
                           ? 'saving throws, full proficiencies, starting equipment'
                           : 'reduced proficiencies, no starting equipment'}
@@ -446,7 +446,7 @@ export function ClassesManagerDialog({
               // cards IS multiclassing, nor what it costs.
               <div className="rounded-md border border-dashed border-primary/35 bg-primary/5 p-3">
                 <div className="flex items-center gap-2">
-                  <Split className="h-4 w-4 shrink-0 rotate-90 text-primary" aria-hidden />
+                  <Split className="h-4 w-4 shrink-0 rotate-90 text-primary-ink" aria-hidden />
                   <p className="text-sm font-semibold">Add another class (multiclass)</p>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -517,13 +517,13 @@ export function ClassesManagerDialog({
                       </span>
 
                       {flavor && (
-                        <span className="line-clamp-3 text-[11.5px] leading-snug text-muted-foreground">
+                        <span className="line-clamp-3 text-2xs leading-snug text-muted-foreground">
                           {flavor}
                         </span>
                       )}
 
                       {/* Labelled rows: "d8 · Charisma" alone reads as jargon with no anchor. */}
-                      <span className="flex flex-col gap-1 text-[11.5px]">
+                      <span className="flex flex-col gap-1 text-2xs">
                         <span className="flex items-baseline justify-between gap-2">
                           <span className="text-muted-foreground">Primary ability</span>
                           <span className="text-right font-medium">{primary || '·'}</span>

@@ -78,7 +78,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
     <div className="flex flex-col content-reveal">
       <div className="mb-6 shrink-0 text-center">
         <div className="mb-4 flex justify-center">
-          <Swords className="h-10 w-10 text-primary" aria-hidden="true" />
+          <Swords className="h-10 w-10 text-primary-ink" aria-hidden="true" />
         </div>
         <h1 className="font-serif text-3xl font-bold text-foreground text-balance">
           Escolha o Sistema
@@ -99,7 +99,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
                   key={pack.id}
                   type="button"
                   aria-pressed={isSelected}
-                  className={`group relative w-full overflow-hidden rounded-xl border bg-card text-left transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  className={`group relative w-full overflow-hidden rounded-xl border bg-card text-left transition-[border-color,box-shadow,opacity] duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     !isSupported
                       ? 'cursor-not-allowed border-border opacity-50'
                       : isSelected
@@ -152,7 +152,7 @@ export const PackSelector = ({ selectedPackId, onSelect }: PackSelectorProps) =>
             <button
               type="button"
               onClick={handleViewDetails}
-              className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 px-3 py-2 text-sm text-primary transition-colors hover:border-primary/50 hover:bg-primary/5 lg:hidden"
+              className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 px-3 py-2 text-sm text-primary-ink transition-colors hover:border-primary/50 hover:bg-primary/5 lg:hidden"
               aria-label="Ver detalhes do sistema selecionado"
             >
               <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -203,7 +203,7 @@ const PackPreview = ({ pack }: { pack: PackResponse }) => {
   return (
     <>
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary-ink">
           <PackIcon slug={pack.slug} className="h-6 w-6" />
         </div>
         <div>

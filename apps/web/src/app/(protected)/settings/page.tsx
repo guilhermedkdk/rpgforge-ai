@@ -47,7 +47,7 @@ export default function SettingsPage() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         <div className="mb-6 flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <SettingsIcon className="h-6 w-6 text-primary" aria-hidden="true" />
+            <SettingsIcon className="h-6 w-6 text-primary-ink" aria-hidden="true" />
             <h1 className="font-serif text-2xl font-bold text-foreground">Configurações</h1>
           </div>
           <p className="text-sm text-muted-foreground">

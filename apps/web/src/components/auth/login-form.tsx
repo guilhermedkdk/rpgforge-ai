@@ -171,12 +171,12 @@ export const LoginForm = ({
             <button
               type="button"
               onClick={onSwitchMode}
-              className="cursor-pointer font-medium text-primary hover:underline"
+              className="cursor-pointer font-medium text-primary-ink hover:underline"
             >
               Cadastre-se
             </button>
           ) : (
-            <Link href="/auth/register" className="font-medium text-primary hover:underline">
+            <Link href="/auth/register" className="font-medium text-primary-ink hover:underline">
               Cadastre-se
             </Link>
           )}

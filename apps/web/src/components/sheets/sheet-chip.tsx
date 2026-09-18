@@ -14,7 +14,7 @@ type ChipTone = 'neutral' | 'primary' | 'attention';
 
 const TONE_CLASS: Record<ChipTone, string> = {
   neutral: 'border-border bg-muted/50 text-muted-foreground',
-  primary: 'border-primary/40 bg-primary/10 text-primary',
+  primary: 'border-primary/40 bg-primary/10 text-primary-ink',
   attention: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400',
 };
 

@@ -46,16 +46,16 @@ export const StepNavigator = ({ currentStep, onNavigate }: StepNavigatorProps) =
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onNavigate(step.id)}
-              className={`group flex items-center gap-2 rounded-full transition-all ${
+              className={`group flex items-center gap-2 rounded-full transition-colors ${
                 isClickable ? 'cursor-pointer' : 'cursor-default'
               }`}
               aria-current={isCurrent ? 'step' : undefined}
               aria-label={`${step.label}${isCompleted ? ' (concluída, clique para voltar)' : isCurrent ? ' (atual)' : ''}`}
             >
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                   isCompleted
-                    ? 'bg-primary/20 text-primary group-hover:bg-primary/30'
+                    ? 'bg-primary/20 text-primary-ink group-hover:bg-primary/30'
                     : isCurrent
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-secondary text-muted-foreground'
@@ -73,7 +73,7 @@ export const StepNavigator = ({ currentStep, onNavigate }: StepNavigatorProps) =
               <span
                 className={`text-xs font-medium transition-colors sm:text-sm ${
                   isCompleted
-                    ? 'text-primary group-hover:text-primary/80'
+                    ? 'text-primary-ink group-hover:text-primary-ink/80'
                     : isCurrent
                       ? 'text-foreground'
                       : 'text-muted-foreground'

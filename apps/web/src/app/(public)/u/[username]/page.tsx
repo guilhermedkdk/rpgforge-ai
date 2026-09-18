@@ -152,7 +152,7 @@ export default function ProfilePage() {
             ) : (
               <section className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                  <Scroll className="h-4 w-4 text-primary" aria-hidden="true" />
+                  <Scroll className="h-4 w-4 text-primary-ink" aria-hidden="true" />
                   <h2 className="font-serif text-lg font-semibold text-foreground">
                     Fichas públicas
                   </h2>

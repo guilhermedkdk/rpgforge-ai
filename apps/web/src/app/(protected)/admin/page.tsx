@@ -45,7 +45,7 @@ export default function AdminPage() {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         <div className="mb-6 flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <Gauge className="h-6 w-6 text-primary" aria-hidden="true" />
+            <Gauge className="h-6 w-6 text-primary-ink" aria-hidden="true" />
             <h1 className="font-serif text-2xl font-bold text-foreground">Painel</h1>
           </div>
           {/* The page's one filter shares the subtitle's line: it scopes everything below, and on a

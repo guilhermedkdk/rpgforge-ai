@@ -17,7 +17,7 @@ import type { PackResponse } from '@rpgforce-ai/shared';
 
 const Chip = ({ icon: Icon, label }: { icon: LucideIcon; label: string }) => (
   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs text-muted-foreground">
-    <Icon className="h-3 w-3 text-primary" aria-hidden="true" />
+    <Icon className="h-3 w-3 text-primary-ink" aria-hidden="true" />
     {label}
   </span>
 );
@@ -38,7 +38,7 @@ const SystemCardBody = ({ pack, hasLibrary }: { pack: PackResponse; hasLibrary: 
 
       <div className="relative flex items-start gap-4">
         <div
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground transition-all duration-300 ${
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground transition-colors duration-300 ${
             hasLibrary ? 'group-hover:bg-primary group-hover:text-primary-foreground' : ''
           }`}
         >
@@ -50,7 +50,7 @@ const SystemCardBody = ({ pack, hasLibrary }: { pack: PackResponse; hasLibrary: 
         </div>
         {hasLibrary && (
           <ChevronRight
-            className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary"
+            className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary-ink"
             aria-hidden="true"
           />
         )}
@@ -92,7 +92,7 @@ const SystemCard = ({ pack }: { pack: PackResponse }) => {
     <Link
       href={`/library/${encodeURIComponent(pack.slug)}`}
       aria-label={`Explorar as regras de ${pack.name}`}
-      className={`${shell} border-border transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+      className={`${shell} border-border transition-[border-color,box-shadow] duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
     >
       <SystemCardBody pack={pack} hasLibrary />
     </Link>
@@ -115,7 +115,7 @@ export default function LibraryPage() {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         <div className="mb-6 flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <Library className="h-6 w-6 text-primary" aria-hidden="true" />
+            <Library className="h-6 w-6 text-primary-ink" aria-hidden="true" />
             <h1 className="font-serif text-2xl font-bold text-foreground">
               Biblioteca de Sistemas
             </h1>
@@ -123,7 +123,7 @@ export default function LibraryPage() {
           <p className="text-sm text-muted-foreground">
             Explore as regras, magias, itens e classes de cada sistema disponível no RPGForge. Todo
             o conteúdo vem de documentos de referência abertos. Veja as{' '}
-            <Link href="/legal" className="text-primary hover:underline">
+            <Link href="/legal" className="text-primary-ink hover:underline">
               licenças e atribuições
             </Link>
             .

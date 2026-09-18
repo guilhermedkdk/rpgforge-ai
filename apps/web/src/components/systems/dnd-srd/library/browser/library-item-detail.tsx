@@ -116,7 +116,7 @@ const SpellBody = ({ item }: { item: RuleItemResponse }) => {
           {classNames.map((name) => (
             <span
               key={name}
-              className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+              className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-3xs text-muted-foreground"
             >
               {name}
             </span>
@@ -284,7 +284,7 @@ const RuleBody = ({ pack, item }: { pack: PackResponse; item: RuleItemResponse }
           Part of{' '}
           <Link
             href={`/library/${encodeURIComponent(pack.slug)}/${encodeURIComponent(parent.slug ?? parent.id)}`}
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-primary-ink hover:underline"
           >
             {parent.name}
           </Link>
@@ -363,13 +363,13 @@ export const LibraryItemDetail = ({
       <div>
         <BackLink href={backHref}>{parent ? `Back to ${parent.name}` : 'Back to library'}</BackLink>
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+          <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary-ink">
             {KIND_LABELS[item.kind]}
           </span>
           {chips.map((chip) => (
             <span
               key={chip}
-              className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+              className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-3xs text-muted-foreground"
             >
               {chip}
             </span>
@@ -388,7 +388,7 @@ export const LibraryItemDetail = ({
             href={pack.licenseUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-primary hover:underline"
+            className="text-primary-ink hover:underline"
           >
             {licenseLabel(pack.licenseType)}
           </a>
@@ -396,7 +396,7 @@ export const LibraryItemDetail = ({
           licenseLabel(pack.licenseType)
         )}{' '}
         ·{' '}
-        <Link href="/legal" className="text-primary hover:underline">
+        <Link href="/legal" className="text-primary-ink hover:underline">
           Attribution
         </Link>
       </footer>

@@ -86,7 +86,7 @@ export const PasswordForm = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-serif">
-          <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
+          <KeyRound className="h-4 w-4 text-primary-ink" aria-hidden="true" />
           Senha
         </CardTitle>
         <CardDescription>

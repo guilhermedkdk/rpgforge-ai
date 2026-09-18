@@ -29,7 +29,7 @@ const formatUpdatedAt = (iso: string): string => {
 
 const StatChip = ({ icon: Icon, label }: { icon: LucideIcon; label: string }) => (
   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs text-muted-foreground">
-    <Icon className="h-3 w-3 text-primary" aria-hidden="true" />
+    <Icon className="h-3 w-3 text-primary-ink" aria-hidden="true" />
     {label}
   </span>
 );
@@ -103,7 +103,7 @@ export const SheetListCard = ({
     <Link
       href={href ?? `/sheets/${encodeURIComponent(sheet.id)}`}
       aria-label={`Abrir ficha ${title}`}
-      className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-5 transition-[border-color,box-shadow] duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
     >
       <div
         className="pointer-events-none absolute inset-0 bg-linear-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -112,10 +112,10 @@ export const SheetListCard = ({
 
       <div className="relative flex items-start gap-4">
         {/* The art tile is 96px because detail is invisible at icon size: species art at 32px reads
-            as a blob whatever it depicts. transition-all, not transition-colors: the ring is a
-            box-shadow, so `colors` left it snapping to orange while the background still animated. */}
-        <div className="relative h-24 w-24 shrink-0 rounded-xl bg-linear-to-br from-secondary to-secondary/30 ring-1 ring-border transition-all duration-300 group-hover:ring-primary/30">
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground transition-colors duration-300 group-hover:text-primary">
+            as a blob whatever it depicts. The ring is a box-shadow, not a color, so it must be
+            named in the transition list or it snaps while the background still animates. */}
+        <div className="relative h-24 w-24 shrink-0 rounded-xl bg-linear-to-br from-secondary to-secondary/30 ring-1 ring-border transition-[box-shadow,background-color] duration-300 group-hover:ring-primary/30">
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground transition-colors duration-300 group-hover:text-primary-ink">
             {RaceEmblem && preview?.raceSlug ? (
               <RaceEmblem raceSlug={preview.raceSlug} className="h-16 w-16" />
             ) : ClassEmblem ? (
@@ -126,7 +126,7 @@ export const SheetListCard = ({
           </div>
           {/* Class badge: only when the tile is already showing the species, or it would repeat it. */}
           {RaceEmblem && preview?.raceSlug && ClassEmblem ? (
-            <span className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors duration-300 group-hover:text-primary">
+            <span className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors duration-300 group-hover:text-primary-ink">
               <ClassEmblem classSlug={badgeClassSlug} className="h-6 w-6" />
               {/* The badge names ONE class, so a multiclass sheet counts the ones it is NOT showing.
                   It rides the badge's corner instead of sitting inline: in flow it widens the badge
@@ -154,7 +154,7 @@ export const SheetListCard = ({
             {showPublicBadge && sheet.isPublic ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="shrink-0 cursor-pointer text-primary">
+                  <span className="shrink-0 cursor-pointer text-primary-ink">
                     <Globe className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">
                       Publicada: qualquer pessoa pode ver esta ficha, e ela aparece na página
@@ -175,7 +175,7 @@ export const SheetListCard = ({
             {subtitle}
           </p>
           {subclassLine && (
-            <p className="truncate text-xs text-muted-foreground/80">{subclassLine}</p>
+            <p className="truncate text-xs text-muted-foreground">{subclassLine}</p>
           )}
         </div>
         {action ? (
@@ -183,7 +183,7 @@ export const SheetListCard = ({
           <span className="mt-1 h-5 w-9 shrink-0" aria-hidden="true" />
         ) : (
           <ChevronRight
-            className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary"
+            className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary-ink"
             aria-hidden="true"
           />
         )}

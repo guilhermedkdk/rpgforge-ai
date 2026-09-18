@@ -39,7 +39,7 @@ import { useWizardSpellbook } from './hooks/use-wizard-spellbook';
 import { WizardSpellbookDialog } from './dialogs/wizard-spellbook-dialog';
 
 const allowanceLabelClass =
-  'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground';
+  'text-3xs font-semibold uppercase tracking-widest text-muted-foreground';
 const allowanceChipClass =
   'rounded border border-border bg-secondary/50 px-1.5 py-0.5 text-xs font-bold tabular-nums text-foreground';
 
@@ -115,7 +115,7 @@ function SpellAllowanceCounter({
                   <span
                     className={cn(
                       'shrink-0 tabular-nums',
-                      done ? 'text-muted-foreground' : 'font-semibold text-primary'
+                      done ? 'text-muted-foreground' : 'font-semibold text-primary-ink'
                     )}
                   >
                     {share.picked}/{share.max}
@@ -124,7 +124,7 @@ function SpellAllowanceCounter({
               );
             })}
           </ul>
-          <p className="mt-2 border-t border-border pt-1.5 text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-2 border-t border-border pt-1.5 text-2xs leading-snug text-muted-foreground">
             Each class draws from its own list and its own allowance; one can&apos;t pay for
             another.
           </p>
@@ -138,7 +138,7 @@ function HeaderFieldLabel({ id, children }: { id: string; children: React.ReactN
   return (
     <span className="flex h-5 items-center gap-1.5">
       <span
-        className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+        className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground"
         id={id}
       >
         {children}

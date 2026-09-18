@@ -21,7 +21,12 @@ out
 docs/
 
 # Claude Code
-.claude/settings.local.json
+.claude/
+
+# Impeccable (ferramenta de design): artefatos locais, nao sao codigo
+apps/*/.impeccable/
+apps/*/PRODUCT.md
+apps/*/DESIGN.md
 
 # Debug
 npm-debug.log*

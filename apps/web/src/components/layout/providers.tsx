@@ -11,7 +11,14 @@ import { ThemeProvider } from './theme-provider';
 /** The project's tooltip timing, in one place. */
 const TOOLTIP_DELAY_MS = 300;
 
-export const Providers = ({ children }: { children: React.ReactNode }) => {
+export const Providers = ({
+  children,
+  hasSession,
+}: {
+  children: React.ReactNode;
+  /** Whether the request carried a session cookie. Decided on the server; see the root layout. */
+  hasSession: boolean;
+}) => {
   return (
     <ThemeProvider
       attribute="class"
@@ -21,7 +28,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
+        <AuthProvider hasSession={hasSession}>
           <TooltipProvider delayDuration={TOOLTIP_DELAY_MS} skipDelayDuration={0}>
             <AuthGateProvider>{children}</AuthGateProvider>
           </TooltipProvider>

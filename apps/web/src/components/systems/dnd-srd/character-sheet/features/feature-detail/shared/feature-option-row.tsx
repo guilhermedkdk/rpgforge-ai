@@ -27,7 +27,7 @@ export function featureSelectionRowClass(disabled: boolean, opts?: { alignTop?: 
 /** Left checkbox — same classes as the skills dropdown. */
 export function featureSelectionCheckboxClass(selected: boolean) {
   return cn(
-    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px] leading-none',
+    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs leading-none',
     selected ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground/50'
   );
 }

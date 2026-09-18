@@ -43,7 +43,7 @@ export const ConnectionsCard = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-serif">
-          <Link2 className="h-4 w-4 text-primary" aria-hidden="true" />
+          <Link2 className="h-4 w-4 text-primary-ink" aria-hidden="true" />
           Contas conectadas
         </CardTitle>
         <CardDescription>Entre no RPGForge com um clique, sem digitar senha.</CardDescription>

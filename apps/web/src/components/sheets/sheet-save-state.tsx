@@ -45,7 +45,7 @@ export const SheetSaveStateChip = ({ state }: { state: SheetSaveState }) => {
 
   return (
     <SheetChip
-      icon={<Check className={cn('h-3 w-3', state === 'saved' && 'text-primary')} aria-hidden />}
+      icon={<Check className={cn('h-3 w-3', state === 'saved' && 'text-primary-ink')} aria-hidden />}
     >
       Salvo
     </SheetChip>

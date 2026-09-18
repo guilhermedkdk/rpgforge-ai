@@ -313,13 +313,13 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
           Todos os sistemas
         </BackLink>
         <div className="flex items-center gap-3">
-          <BookOpen className="h-6 w-6 text-primary" aria-hidden="true" />
+          <BookOpen className="h-6 w-6 text-primary-ink" aria-hidden="true" />
           <h1 className="font-serif text-2xl font-bold text-foreground">Biblioteca {pack.name}</h1>
         </div>
         <p className="text-sm text-muted-foreground">
           Explore o catálogo completo do {pack.name}: Classes, Species, Backgrounds, Feats, Spells,
           Equipment e Rules.{' '}
-          <Link href="/legal" className="text-primary hover:underline">
+          <Link href="/legal" className="text-primary-ink hover:underline">
             Licenças e atribuição
           </Link>
         </p>

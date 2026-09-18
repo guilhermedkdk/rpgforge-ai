@@ -12,13 +12,13 @@ export const SiteFooter = () => (
       >
         <Link
           href="/library"
-          className="text-sm text-muted-foreground transition-colors hover:text-primary"
+          className="text-sm text-muted-foreground transition-colors hover:text-primary-ink"
         >
           Biblioteca
         </Link>
         <Link
           href="/legal"
-          className="text-sm text-muted-foreground transition-colors hover:text-primary"
+          className="text-sm text-muted-foreground transition-colors hover:text-primary-ink"
         >
           Licenças
         </Link>

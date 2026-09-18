@@ -29,7 +29,7 @@ export const FilterChipRow = ({
   if (options.length === 0) return null;
   return (
     <div className="flex items-start gap-2" role="group" aria-label={label}>
-      <span className="w-20 shrink-0 pt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <span className="w-20 shrink-0 pt-1 text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </span>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -53,7 +53,7 @@ export const FilterChipRow = ({
             {option.count != null && (
               <span
                 className={cn(
-                  'ml-1 text-[10px]',
+                  'ml-1 text-3xs',
                   selected === option.value ? 'opacity-80' : 'opacity-60'
                 )}
               >

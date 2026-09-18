@@ -87,8 +87,8 @@ export const CollapsibleSectionList = ({
                 )}
                 <span className="min-w-0 flex-1">
                   <span
-                    className={`block truncate font-serif text-sm font-semibold transition-colors duration-300 group-hover:text-primary ${
-                      isOpen ? 'text-primary' : 'text-foreground'
+                    className={`block truncate font-serif text-sm font-semibold transition-colors duration-300 group-hover:text-primary-ink ${
+                      isOpen ? 'text-primary-ink' : 'text-foreground'
                     }`}
                   >
                     {entry.title}
@@ -101,7 +101,7 @@ export const CollapsibleSectionList = ({
                 </span>
                 <ChevronDown
                   className={`h-4 w-4 shrink-0 transition-transform duration-300 ${
-                    isOpen ? 'rotate-180 text-primary' : 'text-muted-foreground/50'
+                    isOpen ? 'rotate-180 text-primary-ink' : 'text-muted-foreground/50'
                   }`}
                   aria-hidden="true"
                 />

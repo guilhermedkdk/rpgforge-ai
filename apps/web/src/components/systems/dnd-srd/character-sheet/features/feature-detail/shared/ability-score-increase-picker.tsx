@@ -33,7 +33,7 @@ export function AbilityScoreIncreasePicker({
 }: AbilityScoreIncreasePickerProps) {
   return (
     <>
-      <p className="mb-2 text-[11px] leading-snug text-muted-foreground">{helperText}</p>
+      <p className="mb-2 text-2xs leading-snug text-muted-foreground">{helperText}</p>
       <div className="grid grid-cols-2 gap-1.5">
         {attributes.map((attr) => {
           const isSelected = selected === attr;
@@ -63,8 +63,8 @@ export function AbilityScoreIncreasePicker({
             >
               <span
                 className={cn(
-                  'text-[11px] font-semibold uppercase tracking-wider',
-                  isSelected ? 'text-primary' : 'text-muted-foreground'
+                  'text-2xs font-semibold uppercase tracking-wider',
+                  isSelected ? 'text-primary-ink' : 'text-muted-foreground'
                 )}
               >
                 {attr.slice(0, 3)}
@@ -73,7 +73,7 @@ export function AbilityScoreIncreasePicker({
                 className={cn(
                   'flex h-6 min-w-9 items-center justify-center rounded-full border-2 px-1.5 text-xs font-bold tabular-nums',
                   isSelected
-                    ? 'border-primary bg-primary/10 text-primary'
+                    ? 'border-primary bg-primary/10 text-primary-ink'
                     : 'border-border bg-card text-foreground'
                 )}
               >

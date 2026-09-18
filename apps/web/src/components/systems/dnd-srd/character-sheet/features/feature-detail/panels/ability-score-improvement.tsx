@@ -158,7 +158,7 @@ export function AbilityScoreImprovementPanel({
               'flex flex-1 items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               'cursor-pointer',
               isScores && asiPrerequisitesMet
-                ? 'bg-primary/15 text-primary'
+                ? 'bg-primary/15 text-primary-ink'
                 : isScores && !asiPrerequisitesMet
                   ? 'bg-destructive/10 text-destructive'
                   : 'bg-background text-muted-foreground hover:bg-muted/50'
@@ -174,7 +174,7 @@ export function AbilityScoreImprovementPanel({
             className={cn(
               'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none',
               isFeat
-                ? 'bg-primary/15 text-primary'
+                ? 'bg-primary/15 text-primary-ink'
                 : 'bg-background text-muted-foreground hover:bg-muted/50'
             )}
             aria-pressed={isFeat}
@@ -233,7 +233,7 @@ export function AbilityScoreImprovementPanel({
                         type="button"
                         onClick={() => bump(-1)}
                         disabled={!canDecrease}
-                        className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                        className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={`Decrease ${attr} bonus`}
                       >
                         <Minus className="h-3 w-3" strokeWidth={2.5} aria-hidden />
@@ -242,7 +242,7 @@ export function AbilityScoreImprovementPanel({
                         className={cn(
                           'flex h-7 min-w-10 items-center justify-center rounded-full border-2 px-2 text-xs font-bold tabular-nums',
                           current > 0
-                            ? 'border-primary bg-primary/10 text-primary'
+                            ? 'border-primary bg-primary/10 text-primary-ink'
                             : 'border-border bg-card text-foreground'
                         )}
                       >
@@ -252,7 +252,7 @@ export function AbilityScoreImprovementPanel({
                         type="button"
                         onClick={() => bump(1)}
                         disabled={!canIncrease}
-                        className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                        className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={`Increase ${attr} bonus`}
                       >
                         <Plus className="h-3 w-3" strokeWidth={2.5} aria-hidden />

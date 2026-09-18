@@ -26,7 +26,7 @@ export const SPELL_LIST_MAX_H_CLASS: Record<number, string> = {
 };
 
 export const spellChipClass =
-  'inline-flex items-center rounded border border-border/60 bg-muted/30 px-2 py-px text-[10px] font-medium text-muted-foreground';
+  'inline-flex items-center rounded border border-border/60 bg-muted/30 px-2 py-px text-3xs font-medium text-muted-foreground';
 
 export const spellDetailMarkdownClass =
   'text-xs leading-relaxed text-muted-foreground [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_strong]:font-semibold [&_strong]:text-foreground';

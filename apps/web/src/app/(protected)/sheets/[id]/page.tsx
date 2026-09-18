@@ -63,6 +63,10 @@ export default function SheetPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      {/* The sheet only exists client-side, so the tab gets its name here. React hoists this into
+          the head and it replaces the layout's static title; several open sheets stay tellable
+          apart, which is the whole point of the route being per-character. */}
+      {data?.sheet.name ? <title>{`${data.sheet.name} | RPGForge AI`}</title> : null}
       <Header />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         {loadErrorView ? (

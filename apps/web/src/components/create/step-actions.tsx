@@ -35,13 +35,13 @@ const StatusReadout = ({ status }: { status: StepActionsStatus }) => {
   if (status.pending === 0) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+        <Check className="h-3.5 w-3.5 text-primary-ink" aria-hidden />
         Pronta para salvar
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-ink">
       <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
       {status.pending === 1 ? 'Falta 1 escolha' : `Faltam ${status.pending} escolhas`}
     </span>

@@ -25,7 +25,7 @@ import { SpellModifierBadges } from './spell-modifier-badges';
 import { SpellRuleItemDetailBody } from './spell-detail';
 import { DEFAULT_ROWS_BY_LEVEL, SPELL_LIST_MAX_H_CLASS } from './spell-display';
 
-const labelClass = 'text-[8px] font-semibold uppercase tracking-widest text-muted-foreground';
+const labelClass = 'text-3xs font-semibold uppercase tracking-widest text-muted-foreground';
 const barHeight = 'h-9';
 const barBg = 'bg-muted/80';
 const barBorder = 'border border-border';
@@ -291,7 +291,7 @@ export function SpellLevelBlock({
                       <span className="ml-auto flex shrink-0 items-center gap-1.5">
                         <SpellModifierBadges modifiers={spellModifiers} spellName={s.name} />
                         {spellAbilityBadge && (
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <span className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground">
                             {spellAbilityBadge}
                           </span>
                         )}
@@ -344,7 +344,7 @@ export function SpellLevelBlock({
                       <button
                         type="button"
                         onClick={onOpenHighElfSwap}
-                        className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-primary focus:outline-none"
+                        className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-primary-ink focus:outline-none"
                         aria-label={`Swap ${s.name} for a different Wizard cantrip`}
                       >
                         <ArrowLeftRight className="h-3 w-3" />

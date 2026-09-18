@@ -143,7 +143,7 @@ export const SpendChart = ({ days, isRefetching = false }: SpendChartProps) => {
                       >
                         <span
                           className={cn(
-                            'w-full rounded-t transition-all',
+                            'w-full rounded-t transition-[opacity,height]',
                             percent === 0 && 'bg-border/60',
                             isActive ? 'opacity-100' : 'opacity-85 group-hover:opacity-100'
                           )}
@@ -185,7 +185,7 @@ export const SpendChart = ({ days, isRefetching = false }: SpendChartProps) => {
             {/* Axis band, inside the same container as the plot: a fixed height that excluded it
                 would give the card its own tiny scrollbar. First and last day only, plus the
                 hovered one, so the labels can never collide. */}
-            <div className="mt-1.5 flex gap-0.5 text-[10px] tabular-nums text-muted-foreground">
+            <div className="mt-1.5 flex gap-0.5 text-3xs tabular-nums text-muted-foreground">
               {days.map((day, index) => (
                 <span key={day.day} className="flex-1 text-center">
                   {index === 0 || index === days.length - 1 || index === hovered

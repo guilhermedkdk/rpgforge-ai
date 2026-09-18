@@ -65,7 +65,7 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
           role="list"
           aria-label="Attack list"
         >
-          <div className="grid grid-cols-12 gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <div className="grid grid-cols-12 gap-1.5 text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
             <span className="col-span-5 text-center">Weapon</span>
             <span className="col-span-3 text-center">Hit</span>
             <span className="col-span-4 text-center">Damage</span>
@@ -160,7 +160,7 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
                     <div className="space-y-0.5">
                       <div className="text-xs font-semibold text-foreground">{weaponName}</div>
                       {damageTypeName && (
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           Damage type: {damageTypeName}
                         </div>
                       )}
@@ -183,12 +183,12 @@ export const AttacksSection = memo(function AttacksSection({ data }: AttacksSect
                                 {detail ? ` (${detail})` : ''}
                               </div>
                               {desc && (
-                                <div className="text-[11px] leading-snug text-muted-foreground">
+                                <div className="text-2xs leading-snug text-muted-foreground">
                                   {desc}
                                 </div>
                               )}
                               {noMasteryMessage && (
-                                <p className="text-[10px] italic text-amber-600 dark:text-amber-500">
+                                <p className="text-3xs italic text-amber-600 dark:text-amber-500">
                                   This property requires weapon mastery to use it.
                                 </p>
                               )}

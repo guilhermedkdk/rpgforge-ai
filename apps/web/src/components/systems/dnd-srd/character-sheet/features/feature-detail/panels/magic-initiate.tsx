@@ -265,7 +265,7 @@ export function MagicInitiatePanel({
 
       {/* Spellcasting Ability */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground">
           Spellcasting Ability
         </p>
         <div className="flex gap-2">
@@ -277,7 +277,7 @@ export function MagicInitiatePanel({
               className={cn(
                 'flex-1 cursor-pointer rounded-md border px-2 py-1.5 text-sm font-medium transition-colors',
                 gain.spellcastingAbility === ability
-                  ? 'border-primary/70 bg-primary/5 text-primary'
+                  ? 'border-primary/70 bg-primary/5 text-primary-ink'
                   : 'border-border bg-card text-foreground hover:bg-muted/40'
               )}
             >
@@ -289,7 +289,7 @@ export function MagicInitiatePanel({
 
       {/* Spell List Selector */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground">
           Spell List
         </p>
         <div className="flex gap-2">
@@ -302,7 +302,7 @@ export function MagicInitiatePanel({
               className={cn(
                 'flex-1 rounded-md border px-2 py-1.5 text-sm font-medium transition-colors',
                 selectedList === list
-                  ? 'border-primary/70 bg-primary/5 text-primary'
+                  ? 'border-primary/70 bg-primary/5 text-primary-ink'
                   : 'border-border bg-card text-foreground',
                 lockedList
                   ? list === lockedList

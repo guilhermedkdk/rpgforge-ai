@@ -29,7 +29,7 @@ export const AuthCard = ({
 }: AuthCardProps) => (
   <div className="rounded-xl border border-border bg-card p-6">
     <div className="mb-6 flex flex-col items-center gap-3 text-center">
-      <RPGForgeMark className="h-11 w-11 text-primary" />
+      <RPGForgeMark className="h-11 w-11 text-primary-ink" />
       <div>
         <Title className="font-serif text-3xl font-bold text-foreground">{title}</Title>
         <Description

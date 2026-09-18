@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,6 +32,7 @@ export const FavoriteButton = ({
 }: FavoriteButtonProps) => {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [favorited, setFavorited] = useState(isFavorited);
   const [count, setCount] = useState(favoriteCount);
@@ -65,7 +66,8 @@ export const FavoriteButton = ({
     event.preventDefault();
     event.stopPropagation();
     if (!user) {
-      router.push('/auth/login?redirect=/explore');
+      // Back to the page they were reading, not to a feed: they wanted to save THIS sheet.
+      router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
     const next = !favorited;
@@ -82,9 +84,13 @@ export const FavoriteButton = ({
       aria-label={favorited ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
       title={favorited ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
       className={cn(
-        'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        // The visible pill stays small, but it sits in the corner of a card that is itself a link,
+        // so a thumb-miss would navigate instead of bookmarking. The pseudo-element widens the tap
+        // target to 44px without widening the control.
+        'relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground',
+        "after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']",
         favorited
-          ? 'border-primary/40 bg-primary/10 text-primary'
+          ? 'border-primary/40 bg-primary/10 text-primary-ink'
           : 'border-border bg-card/90 text-muted-foreground hover:border-primary/40 hover:text-foreground',
         className
       )}

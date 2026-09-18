@@ -164,11 +164,11 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                 </div>
                 <div className="space-y-3">
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-secondary/20 p-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    <span className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Equipped Armor
                     </span>
                     {armorChoices.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-2xs text-muted-foreground">
                         No armor found in your equipment.
                       </p>
                     ) : (
@@ -182,7 +182,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                             type="button"
                             onClick={() => onChange({ ...data, equippedArmorId: null })}
                             className={cn(
-                              'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-2xs text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               data.equippedArmorId == null && 'border-primary/60 bg-primary/10'
                             )}
                             aria-label="No armor equipped"
@@ -225,7 +225,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                                   type="button"
                                   onClick={() => onChange({ ...data, equippedArmorId: armor.id })}
                                   className={cn(
-                                    'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-2xs text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     isSelected && 'border-primary/60 bg-primary/10'
                                   )}
                                   aria-label={`Equip ${armor.name}`}
@@ -239,7 +239,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                                     <button
                                       type="button"
                                       disabled
-                                      className="flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/10 px-2 py-1.5 text-left text-[11px] text-muted-foreground opacity-70"
+                                      className="flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/10 px-2 py-1.5 text-left text-2xs text-muted-foreground opacity-70"
                                       aria-label={`Cannot use ${armor.name}`}
                                       aria-pressed={false}
                                     >
@@ -261,11 +261,11 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-secondary/20 p-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    <span className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Equipped Shield
                     </span>
                     {shieldChoices.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-2xs text-muted-foreground">
                         No shield found in your equipment.
                       </p>
                     ) : (
@@ -279,7 +279,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                             type="button"
                             onClick={() => onChange({ ...data, equippedShieldId: null })}
                             className={cn(
-                              'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-2xs text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               data.equippedShieldId == null && 'border-primary/60 bg-primary/10'
                             )}
                             aria-label="No shield equipped"
@@ -299,7 +299,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                                   type="button"
                                   onClick={() => onChange({ ...data, equippedShieldId: shield.id })}
                                   className={cn(
-                                    'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-[11px] text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-left text-2xs text-foreground transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     isSelected && 'border-primary/60 bg-primary/10'
                                   )}
                                   aria-label={`Equip ${shield.name}`}
@@ -313,7 +313,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
                                     <button
                                       type="button"
                                       disabled
-                                      className="flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/10 px-2 py-1.5 text-left text-[11px] text-muted-foreground opacity-70"
+                                      className="flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/10 px-2 py-1.5 text-left text-2xs text-muted-foreground opacity-70"
                                       aria-label={`Not proficient with ${shield.name}`}
                                       aria-pressed={false}
                                     >
@@ -339,7 +339,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
+            <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Initiative
             </span>
             <input
@@ -354,7 +354,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             />
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
+            <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Speed
             </span>
             <input
@@ -373,11 +373,11 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
         {/* Row 2: Hit Points */}
         <div className="flex flex-col gap-2">
           <div className="flex min-h-18 flex-col justify-center gap-1.5 rounded-lg border border-border bg-card p-2">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
+            <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Hit Points
             </span>
             <div className="flex min-w-0 items-center gap-1.5">
-              <Heart className="ml-1 h-5 w-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
+              <Heart className="ml-1 h-5 w-5 shrink-0 text-primary-ink" strokeWidth={2} aria-hidden />
               <div className="flex min-w-0 flex-1 items-center gap-1">
                 {inPlay ? (
                   <DeferredNumberInput
@@ -428,7 +428,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             </div>
           </div>
           <div className="flex min-h-16 flex-col justify-center gap-1.5 rounded-lg border border-border bg-card p-2">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
+            <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Temporary Hit Points
             </span>
             <div className="flex min-w-0 items-center gap-2">
@@ -475,7 +475,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             `fr` grows to fit its content, which squeezed Death Saving Throws out of its share. */}
         <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)] gap-2">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
+            <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Hit Dice
             </span>
             {/* The column is width-capped so it can't push Death Saving Throws, so a multiclass
@@ -484,7 +484,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
               <span
                 className={cn(
                   'text-center font-bold leading-tight text-foreground',
-                  (data.hitDicePool?.length ?? 0) > 1 ? 'text-[11px]' : 'text-sm'
+                  (data.hitDicePool?.length ?? 0) > 1 ? 'text-2xs' : 'text-sm'
                 )}
               >
                 {data.classRuleItemId ? data.hitDice || '' : '0'}
@@ -492,11 +492,11 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
             </div>
           </div>
           <div className="flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
+            <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground text-center">
               Death Saving Throws
             </span>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] text-muted-foreground">Successes</span>
+              <span className="text-2xs text-muted-foreground">Successes</span>
               <div className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <button
@@ -527,7 +527,7 @@ export function CombatSection({ data, onChange }: CombatSectionProps) {
               </div>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] text-muted-foreground">Failures</span>
+              <span className="text-2xs text-muted-foreground">Failures</span>
               <div className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <button

@@ -283,7 +283,7 @@ export function ProficienciesSection({
                       <>
                         <span
                           className={cn(
-                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs',
                             showChecked
                               ? 'bg-primary border-primary text-primary-foreground'
                               : 'text-muted-foreground/50'
@@ -525,7 +525,7 @@ export function ProficienciesSection({
                               >
                                 <span
                                   className={cn(
-                                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs',
                                     selected
                                       ? 'bg-primary border-primary text-primary-foreground'
                                       : 'text-muted-foreground/50'

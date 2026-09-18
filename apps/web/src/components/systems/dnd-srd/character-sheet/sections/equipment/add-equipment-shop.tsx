@@ -121,7 +121,7 @@ export function AddEquipmentShop({
             </TooltipContent>
           </Tooltip>
           {alreadyHave > 0 && (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-3xs tabular-nums text-muted-foreground">
               ×{alreadyHave}
             </span>
           )}
@@ -193,7 +193,7 @@ export function AddEquipmentShop({
           aria-label={`Available: ${coins.gp} GP, ${coins.sp} SP, ${coins.cp} CP`}
         >
           <div className="flex flex-1 basis-0 items-stretch overflow-hidden rounded-md border border-border bg-muted/40">
-            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-3xs font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">
               <Coins className="h-3 w-3 shrink-0" aria-hidden />
               GP
             </span>
@@ -202,7 +202,7 @@ export function AddEquipmentShop({
             </span>
           </div>
           <div className="flex flex-1 basis-0 items-stretch overflow-hidden rounded-md border border-border bg-muted/40">
-            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-3xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
               <Coins className="h-3 w-3 shrink-0" aria-hidden />
               SP
             </span>
@@ -211,7 +211,7 @@ export function AddEquipmentShop({
             </span>
           </div>
           <div className="flex flex-1 basis-0 items-stretch overflow-hidden rounded-md border border-border bg-muted/40">
-            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-orange-600 dark:text-orange-500">
+            <span className="flex shrink-0 items-center gap-1 rounded-l-md bg-muted/70 px-2 py-1 text-3xs font-medium uppercase tracking-wide text-orange-600 dark:text-orange-500">
               <Coins className="h-3 w-3 shrink-0" aria-hidden />
               CP
             </span>

@@ -31,7 +31,7 @@ export default function LegalPage() {
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
         <div className="mb-6 flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <Scale className="h-6 w-6 text-primary" aria-hidden="true" />
+            <Scale className="h-6 w-6 text-primary-ink" aria-hidden="true" />
             <h1 className="font-serif text-2xl font-bold text-foreground">
               Licenças e Atribuições
             </h1>
@@ -39,7 +39,7 @@ export default function LegalPage() {
           <p className="text-sm text-muted-foreground">
             O RPGForge AI utiliza exclusivamente conteúdo de regras publicado sob licenças abertas.
             Todo o material exibido na{' '}
-            <Link href="/library" className="text-primary hover:underline">
+            <Link href="/library" className="text-primary-ink hover:underline">
               Biblioteca de Regras
             </Link>{' '}
             e nas fichas de personagem provém dos pacotes listados abaixo, com a atribuição exigida
@@ -71,13 +71,13 @@ export default function LegalPage() {
                   </div>
                   {pack.licenseUrl ? (
                     <a href={pack.licenseUrl} target="_blank" rel="noreferrer" className={chipLink}>
-                      <Scale className="h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
+                      <Scale className="h-3 w-3 shrink-0 text-primary-ink" aria-hidden="true" />
                       {licenseLabel(pack.licenseType)}
                       <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
                     </a>
                   ) : (
                     <span className={chipStatic}>
-                      <Scale className="h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
+                      <Scale className="h-3 w-3 shrink-0 text-primary-ink" aria-hidden="true" />
                       {licenseLabel(pack.licenseType)}
                     </span>
                   )}
@@ -89,20 +89,20 @@ export default function LegalPage() {
                   </p>
                 ) : null}
 
-                <blockquote className="mt-4 rounded-lg border-l-2 border-primary/50 bg-muted/30 px-4 py-3 text-sm italic leading-relaxed text-foreground">
+                <blockquote className="mt-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm italic leading-relaxed text-foreground">
                   {pack.attributionText}
                 </blockquote>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {pack.permalink ? (
                     <a href={pack.permalink} target="_blank" rel="noreferrer" className={chipLink}>
-                      <FileText className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-primary-ink" aria-hidden="true" />
                       Documento original
                       <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
                     </a>
                   ) : null}
                   <Link href={`/library/${encodeURIComponent(pack.slug)}`} className={chipLink}>
-                    <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                    <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary-ink" aria-hidden="true" />
                     Explorar conteúdo do pacote
                   </Link>
                 </div>

@@ -24,17 +24,17 @@ export const numberInputNoSpinner =
 export const needsChoiceHighlight = (error: boolean): string =>
   error
     ? 'border-dashed border-destructive/70 bg-destructive/5 text-destructive hover:bg-destructive/10'
-    : 'border-dashed border-primary/70 bg-primary/5 text-primary hover:bg-primary/10';
+    : 'border-dashed border-primary/70 bg-primary/5 text-primary-ink hover:bg-primary/10';
 
 /** Softer (`/60`) border variant of {@link needsChoiceHighlight} for inline pills. */
 export const needsChoiceHighlightSoft = (error: boolean): string =>
   error
     ? 'border-dashed border-destructive/60 bg-destructive/5 text-destructive hover:bg-destructive/10'
-    : 'border-dashed border-primary/60 bg-primary/5 text-primary hover:bg-primary/10';
+    : 'border-dashed border-primary/60 bg-primary/5 text-primary-ink hover:bg-primary/10';
 
 /** Icon/text accent that pairs with the highlights above. */
 export const needsChoiceAccent = (error: boolean): string =>
-  error ? 'text-destructive' : 'text-primary';
+  error ? 'text-destructive' : 'text-primary-ink';
 
 /** Dashed container border for inline pickers (musical instrument / holy symbol). */
 export const needsChoiceBorder = (error: boolean): string =>

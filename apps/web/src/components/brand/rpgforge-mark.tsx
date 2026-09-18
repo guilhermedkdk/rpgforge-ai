@@ -1,3 +1,5 @@
+'use client';
+
 import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +37,11 @@ const FACET_STROKE = 1.8;
 
 interface RPGForgeMarkProps {
   className?: string;
+  /**
+   * The "AI" cut-out. Off where the die is an illustration rather than the brand signing something,
+   * which leaves the central face solid — the facets already stop short of it.
+   */
+  lettering?: boolean;
 }
 
 /**
@@ -44,7 +51,7 @@ interface RPGForgeMarkProps {
  * and it paints with `currentColor`. One drawing at every size: the facets are what make it read as
  * a die rather than a hexagon, and they hold down to the favicon.
  */
-export const RPGForgeMark = ({ className }: RPGForgeMarkProps) => {
+export const RPGForgeMark = ({ className, lettering = true }: RPGForgeMarkProps) => {
   const maskId = useId();
 
   return (
@@ -58,7 +65,7 @@ export const RPGForgeMark = ({ className }: RPGForgeMarkProps) => {
           strokeWidth={FACET_STROKE}
           strokeLinejoin="round"
         />
-        <path d={AI_OUTLINE} fill="black" />
+        {lettering ? <path d={AI_OUTLINE} fill="black" /> : null}
       </mask>
       <rect width="32" height="32" fill="currentColor" mask={`url(#${maskId})`} />
     </svg>

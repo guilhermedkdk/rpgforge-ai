@@ -230,7 +230,7 @@ export function AiWizard({ pack, onExit }: AiWizardProps) {
     <>
       <div className="mb-8 text-center">
         <div className="mb-4 flex justify-center">
-          <Sparkles className="h-12 w-12 text-primary" aria-hidden="true" />
+          <Sparkles className="h-12 w-12 text-primary-ink" aria-hidden="true" />
         </div>
         <h1 className="font-serif text-3xl font-bold text-foreground text-balance">
           {headerTitle}
@@ -275,7 +275,7 @@ function PromptStep({
 }) {
   return (
     <div className="flex flex-col gap-6 content-reveal">
-      <div className="rounded-xl border border-border bg-card shadow-sm transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30">
+      <div className="rounded-xl border border-border bg-card shadow-sm transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30">
         <Textarea
           aria-label="Conceito do personagem"
           value={prompt}
@@ -285,7 +285,7 @@ function PromptStep({
           className="rounded-xl border-0 bg-transparent p-4 shadow-none focus-visible:border-transparent"
         />
         <div className="flex items-center gap-2 border-t border-border px-4 py-2.5">
-          <Feather className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <Feather className="h-3.5 w-3.5 shrink-0 text-primary-ink" aria-hidden="true" />
           <span className="text-xs text-muted-foreground">
             Quanto mais detalhes você der, mais fiel a ficha fica
           </span>
@@ -303,10 +303,10 @@ function PromptStep({
               key={example}
               type="button"
               onClick={() => onPromptChange(example)}
-              className="group flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition-all hover:border-primary/40 hover:shadow-md hover:shadow-primary/5"
+              className="group flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-md hover:shadow-primary/5"
             >
               <Dices
-                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70 transition-colors group-hover:text-primary"
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-ink/70 transition-colors group-hover:text-primary-ink"
                 aria-hidden="true"
               />
               <span className="text-xs leading-relaxed text-muted-foreground transition-colors group-hover:text-foreground">
@@ -345,7 +345,7 @@ function QuestionsStep({
           />
           <div className="relative">
             <div className="mb-2.5 flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary-ink">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
               </div>
               <span className="text-sm font-semibold text-foreground">
@@ -374,7 +374,7 @@ function QuestionsStep({
             }`}
           >
             <div className="mb-3 flex items-center gap-2.5">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary-ink">
                 {index + 1}
               </span>
               <p className="text-sm font-medium text-foreground">{q.question}</p>
@@ -450,7 +450,7 @@ function QuestionField({
               setCustomOpen(false);
               onChange(selected ? '' : option);
             }}
-            className={`group flex w-full cursor-pointer gap-3 rounded-lg border p-3 text-left transition-all ${
+            className={`group flex w-full cursor-pointer gap-3 rounded-lg border p-3 text-left transition-[border-color,background-color,box-shadow] ${
               compact ? 'items-center' : 'items-start'
             } ${
               selected
@@ -494,7 +494,7 @@ function QuestionField({
           setCustomOpen(true);
           if (!isCustom) onChange('');
         }}
-        className={`group flex w-full cursor-pointer items-center gap-3 rounded-lg border border-dashed p-3 text-left transition-all ${
+        className={`group flex w-full cursor-pointer items-center gap-3 rounded-lg border border-dashed p-3 text-left transition-[border-color,background-color] ${
           compact ? 'col-span-full' : ''
         } ${
           isCustom
@@ -503,7 +503,7 @@ function QuestionField({
         }`}
       >
         <Pencil
-          className={`h-4 w-4 shrink-0 ${isCustom ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-primary/60'}`}
+          className={`h-4 w-4 shrink-0 ${isCustom ? 'text-primary-ink' : 'text-muted-foreground/60 group-hover:text-primary-ink/60'}`}
           aria-hidden="true"
         />
         <span
@@ -548,7 +548,7 @@ function AiThinking({ phrases }: { phrases: string[] }) {
           aria-hidden="true"
         />
         <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
-          <Anvil className="h-7 w-7 animate-pulse text-primary" aria-hidden="true" />
+          <Anvil className="h-7 w-7 animate-pulse text-primary-ink" aria-hidden="true" />
         </div>
       </div>
       <p
@@ -575,7 +575,7 @@ function AiSummaryBanner({ result }: { result: GenerateCharacterResponse }) {
       />
       <div className="relative">
         <div className="mb-2.5 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary-ink">
             <Sparkles className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">

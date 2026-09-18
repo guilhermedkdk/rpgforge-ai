@@ -72,7 +72,7 @@ export function WizardSpellbookDialog({
                 className={cn(
                   'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold tabular-nums',
                   spellbook.count >= spellbook.max
-                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    ? 'border-primary/40 bg-primary/10 text-primary-ink'
                     : 'border-border bg-muted/40 text-foreground'
                 )}
               >
@@ -109,7 +109,7 @@ export function WizardSpellbookDialog({
                   <div className="divide-y divide-border/30">
                     {spellbook.listingLevels.map(({ level: listLvl, entries }) => (
                       <div key={`spellbook-list-${listLvl}`} className="px-3 py-2">
-                        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <div className="mb-1.5 text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {getSpellListLevelLabel(listLvl)}
                         </div>
                         <ul className="space-y-1.5">

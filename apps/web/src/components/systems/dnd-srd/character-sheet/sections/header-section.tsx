@@ -26,7 +26,7 @@ import { updateField } from '../helpers';
 import { requiredFieldErrorBorder } from '../constants';
 
 const identityLabelClass =
-  'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground';
+  'text-3xs font-semibold uppercase tracking-widest text-muted-foreground';
 
 const levelStepButtonClass =
   'flex w-6 shrink-0 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent';

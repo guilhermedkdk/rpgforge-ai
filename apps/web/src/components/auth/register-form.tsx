@@ -191,12 +191,12 @@ export const RegisterForm = ({
             <button
               type="button"
               onClick={onSwitchMode}
-              className="cursor-pointer font-medium text-primary hover:underline"
+              className="cursor-pointer font-medium text-primary-ink hover:underline"
             >
               Entrar
             </button>
           ) : (
-            <Link href="/auth/login" className="font-medium text-primary hover:underline">
+            <Link href="/auth/login" className="font-medium text-primary-ink hover:underline">
               Entrar
             </Link>
           )}

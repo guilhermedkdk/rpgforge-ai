@@ -551,7 +551,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
                       >
                         <span
                           className={cn(
-                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs',
                             selected
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'text-muted-foreground/50'
@@ -700,7 +700,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
                       >
                         <span
                           className={cn(
-                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs',
                             selected
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'text-muted-foreground/50'
@@ -1199,7 +1199,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
                 className="cursor-pointer rounded-md border border-border bg-secondary/30 px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`Option ${opt.label}: ${opt.text}`}
               >
-                <span className="font-medium text-primary">Option {opt.label}:</span> {opt.text}
+                <span className="font-medium text-primary-ink">Option {opt.label}:</span> {opt.text}
               </button>
             ))}
           </div>
@@ -1257,7 +1257,7 @@ export function EquipmentSection({ data, onChange, mode, pendingFlags }: Equipme
                 className="cursor-pointer rounded-md border border-border bg-secondary/30 px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`Option ${opt.label}: ${opt.text}`}
               >
-                <span className="font-medium text-primary">Option {opt.label}:</span> {opt.text}
+                <span className="font-medium text-primary-ink">Option {opt.label}:</span> {opt.text}
               </button>
             ))}
           </div>

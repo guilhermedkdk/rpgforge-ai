@@ -43,7 +43,7 @@ export const accordionSelectButtonClass = (isSelected: boolean, disabled?: boole
       ? 'cursor-pointer border-border bg-muted/40 text-muted-foreground hover:bg-muted/60'
       : disabled
         ? 'cursor-not-allowed border-border/60 bg-muted/20 text-muted-foreground/50'
-        : 'cursor-pointer border-primary/70 bg-primary/5 text-primary hover:bg-primary/10'
+        : 'cursor-pointer border-primary/70 bg-primary/5 text-primary-ink hover:bg-primary/10'
   );
 
 interface SpellAccordionRowProps {
@@ -93,7 +93,7 @@ export function SpellAccordionRow({
       >
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
           <span
-            className={cn('text-sm font-medium', isSelected ? 'text-primary' : 'text-foreground')}
+            className={cn('text-sm font-medium', isSelected ? 'text-primary-ink' : 'text-foreground')}
           >
             {spell.name}
           </span>

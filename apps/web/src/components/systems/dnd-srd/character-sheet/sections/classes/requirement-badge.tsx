@@ -30,7 +30,7 @@ export const RequirementBadge = ({
   return (
     <span
       className={cn(
-        'inline-flex w-fit items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] leading-snug',
+        'inline-flex w-fit items-center gap-1.5 rounded-full border px-2 py-0.5 text-2xs leading-snug',
         toneClass[tone],
         className
       )}

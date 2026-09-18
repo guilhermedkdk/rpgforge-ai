@@ -92,7 +92,7 @@ export function AbilityScoresSection({
         aiHintArea="attributes"
         title={
           <div className="flex items-center gap-1">
-            <span className="text-primary">
+            <span className="text-primary-ink">
               <Brain className="h-4 w-4" />
             </span>
             {locked ? (
@@ -150,7 +150,7 @@ export function AbilityScoresSection({
                           className={cn(
                             'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                             abilityMethod === 'standard-array'
-                              ? 'bg-primary/15 text-primary'
+                              ? 'bg-primary/15 text-primary-ink'
                               : 'bg-background text-muted-foreground hover:bg-muted/50'
                           )}
                           aria-pressed={abilityMethod === 'standard-array'}
@@ -164,7 +164,7 @@ export function AbilityScoresSection({
                           className={cn(
                             'flex flex-1 cursor-pointer items-center justify-center py-2 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                             abilityMethod === 'point-buy'
-                              ? 'bg-primary/15 text-primary'
+                              ? 'bg-primary/15 text-primary-ink'
                               : 'bg-background text-muted-foreground hover:bg-muted/50'
                           )}
                           aria-pressed={abilityMethod === 'point-buy'}
@@ -282,7 +282,7 @@ export function AbilityScoresSection({
                                             type="button"
                                             onClick={handleDecrease}
                                             disabled={!canDecrease}
-                                            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
+                                            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
                                             aria-label={`Decrease bonus ${attr}`}
                                           >
                                             <Minus
@@ -298,7 +298,7 @@ export function AbilityScoresSection({
                                             type="button"
                                             onClick={handleIncrease}
                                             disabled={!canIncrease}
-                                            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
+                                            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
                                             aria-label={`Increase bonus ${attr}`}
                                           >
                                             <Plus
@@ -338,7 +338,7 @@ export function AbilityScoresSection({
                 className={cn(
                   'shrink-0 text-sm font-bold tabular-nums',
                   pointsRemaining === 0
-                    ? 'text-primary'
+                    ? 'text-primary-ink'
                     : pointsRemaining < 0
                       ? 'text-destructive'
                       : 'text-foreground'

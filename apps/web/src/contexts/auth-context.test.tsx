@@ -27,9 +27,10 @@ const Probe = () => {
   return <p>{user ? `sessao:${user.username}` : 'sem sessao'}</p>;
 };
 
-const renderProbe = () =>
+/** Defaults to a request that carried the session cookie, which is what every probe test assumes. */
+const renderProbe = (hasSession = true) =>
   render(
-    <AuthProvider>
+    <AuthProvider hasSession={hasSession}>
       <Probe />
     </AuthProvider>
   );
@@ -46,6 +47,15 @@ afterEach(() => {
 });
 
 describe('the session probe at boot', () => {
+  it('never runs when the request carried no session cookie', async () => {
+    renderProbe(false);
+
+    // Settled immediately, with no request: /auth/me and /auth/refresh could only answer 401 here,
+    // and the browser logs those as console errors the page cannot suppress.
+    expect(screen.getByText('sem sessao')).toBeDefined();
+    expect(me).not.toHaveBeenCalled();
+  });
+
   it('shows the session once the API answers', async () => {
     me.mockResolvedValue(session);
 

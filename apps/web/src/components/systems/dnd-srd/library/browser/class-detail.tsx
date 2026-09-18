@@ -292,7 +292,7 @@ export const SubclassDetail = ({
           Subclass of{' '}
           <Link
             href={`/library/${encodeURIComponent(packSlug)}/${encodeURIComponent(parent.slug ?? parent.id)}`}
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-primary-ink hover:underline"
           >
             {parent.name}
           </Link>

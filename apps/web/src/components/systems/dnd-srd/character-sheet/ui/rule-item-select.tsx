@@ -79,7 +79,7 @@ export function RuleItemSelect({
     <div className="flex flex-col">
       <Label
         htmlFor={id}
-        className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+        className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground"
       >
         {label}
       </Label>
@@ -132,7 +132,7 @@ export function RuleItemSelect({
                   onPointerEnter={() => setPreviewId(item.id)}
                   className={cn(
                     'cursor-pointer',
-                    value === item.id && 'bg-primary/10 font-medium text-primary'
+                    value === item.id && 'bg-primary/10 font-medium text-primary-ink'
                   )}
                 >
                   {item.name}
@@ -154,7 +154,7 @@ export function RuleItemSelect({
                           <dl className="mt-2 space-y-1 border-t border-border/50 pt-2">
                             {snippets.map(({ label: dlLabel, value: dlValue }) => (
                               <div key={dlLabel}>
-                                <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <dt className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground">
                                   {dlLabel}
                                 </dt>
                                 <dd className="text-xs text-foreground">{dlValue}</dd>
@@ -167,10 +167,10 @@ export function RuleItemSelect({
                             key={section.title}
                             className="markdown-preview mt-2 border-t border-border/50 pt-2"
                           >
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground">
                               {section.title}
                             </span>
-                            <div className="mt-1 text-xs leading-relaxed text-muted-foreground [&_ul]:list-none [&_ul]:pl-0 [&_li]:mb-2 [&_li]:last:mb-0 [&_h3]:mt-2 [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:text-xs [&_h3]:first:mt-1 [&_h4]:mt-2 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-foreground [&_h4]:text-xs [&_strong]:font-semibold [&_strong]:text-foreground [&_table]:w-full [&_table]:text-[11px] [&_th]:border [&_th]:border-border [&_th]:px-1.5 [&_th]:py-0.5 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-0.5">
+                            <div className="mt-1 text-xs leading-relaxed text-muted-foreground [&_ul]:list-none [&_ul]:pl-0 [&_li]:mb-2 [&_li]:last:mb-0 [&_h3]:mt-2 [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:text-xs [&_h3]:first:mt-1 [&_h4]:mt-2 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-foreground [&_h4]:text-xs [&_strong]:font-semibold [&_strong]:text-foreground [&_table]:w-full [&_table]:text-2xs [&_th]:border [&_th]:border-border [&_th]:px-1.5 [&_th]:py-0.5 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-0.5">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {normalizeFeatureDesc(section.content)}
                               </ReactMarkdown>

@@ -50,12 +50,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({
+  children,
+  hasSession,
+}: {
+  children: React.ReactNode;
+  /** Whether the request carried a session cookie, decided on the server in the root layout. */
+  hasSession: boolean;
+}) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // A request with no session cookie has nothing to probe for: /auth/me and /auth/refresh would both
+  // answer 401, and the browser logs those as console errors the page cannot suppress.
+  const [isLoading, setIsLoading] = useState(hasSession);
   const lastSessionCheckRef = useRef(0);
   const router = useRouter();
   useEffect(() => {
+    if (!hasSession) return;
+
     let cancelled = false;
 
     const loadUser = async () => {
@@ -89,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hasSession]);
 
   // The API client reports an expired session rather than navigating, so the decision lands here:
   // dropping the user is enough, and each route then does its own thing (a guarded page redirects,

@@ -89,7 +89,7 @@ function HintMarker({ content, className }: { content: ReactNode; className?: st
           className={cn(
             // The circle (a separate layer below) is what grows on hover; the "!" stays put so it
             // never jitters off-center. `group` drives the inner layer's hover scale.
-            'group relative flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-[11px] font-black leading-none text-primary-foreground transition-transform duration-300 animate-in zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'group relative flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-2xs font-black leading-none text-primary-foreground transition-transform duration-300 animate-in zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             leaving && 'pointer-events-none scale-0 opacity-0',
             className
           )}

@@ -16,7 +16,7 @@ export const BrowseCard = ({
 }) => (
   <Link
     href={href}
-    className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-4 transition-[border-color,box-shadow] duration-300 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
   >
     <div
       className="pointer-events-none absolute inset-0 bg-linear-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -24,11 +24,11 @@ export const BrowseCard = ({
     />
 
     <div className="relative flex items-start gap-2">
-      <h3 className="line-clamp-2 min-w-0 flex-1 font-serif text-base font-semibold leading-tight text-foreground transition-colors duration-300 group-hover:text-primary">
+      <h3 className="line-clamp-2 min-w-0 flex-1 font-serif text-base font-semibold leading-tight text-foreground transition-colors duration-300 group-hover:text-primary-ink">
         {title}
       </h3>
       <ChevronRight
-        className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary"
+        className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary-ink"
         aria-hidden="true"
       />
     </div>
@@ -38,7 +38,7 @@ export const BrowseCard = ({
         {chips.map((chip) => (
           <span
             key={chip}
-            className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+            className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-3xs text-muted-foreground"
           >
             {chip}
           </span>

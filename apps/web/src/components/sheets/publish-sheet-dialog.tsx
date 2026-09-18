@@ -37,7 +37,7 @@ export const PublishSheetDialog = ({
     <DialogContent>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 font-serif">
-          <Globe className="h-4 w-4 text-primary" aria-hidden="true" />
+          <Globe className="h-4 w-4 text-primary-ink" aria-hidden="true" />
           Publicar ficha
         </DialogTitle>
         <DialogDescription>

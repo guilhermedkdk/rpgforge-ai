@@ -48,7 +48,7 @@ function AbilityScoreBoxInner({
     effectiveScoreProp !== undefined ? effectiveScoreProp : score + backgroundBonus;
   const mod = unassigned && backgroundBonus === 0 ? '—' : formatModifier(effectiveScore);
   const modColor =
-    unassigned && backgroundBonus === 0 ? 'text-muted-foreground/40' : 'text-primary';
+    unassigned && backgroundBonus === 0 ? 'text-muted-foreground/40' : 'text-primary-ink';
 
   const costCurrent = POINT_BUY_COSTS[score] ?? 0;
   const costNext = POINT_BUY_COSTS[score + 1] ?? Infinity;
@@ -83,7 +83,7 @@ function AbilityScoreBoxInner({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
         {label.slice(0, 3)}
       </span>
       <div
@@ -135,7 +135,7 @@ function AbilityScoreBoxInner({
                       disabled={opt.disabled}
                       className={cn(
                         'cursor-pointer text-center',
-                        isSelected && 'bg-primary/10 font-medium text-primary',
+                        isSelected && 'bg-primary/10 font-medium text-primary-ink',
                         opt.disabled && 'cursor-not-allowed opacity-50'
                       )}
                     >
@@ -154,7 +154,7 @@ function AbilityScoreBoxInner({
               type="button"
               onClick={() => onScoreChange(score - 1)}
               disabled={!pointBuyCanDecrease}
-              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
+              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
               aria-label={`Decrease ${label}`}
             >
               <Minus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
@@ -166,7 +166,7 @@ function AbilityScoreBoxInner({
               type="button"
               onClick={() => onScoreChange(score + 1)}
               disabled={!pointBuyCanIncrease}
-              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
+              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-30 [&_svg]:shrink-0"
               aria-label={`Increase ${label}`}
             >
               <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />

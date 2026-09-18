@@ -246,7 +246,7 @@ export const LinkAccountForm = () => {
           <button
             type="button"
             onClick={() => switchTo('recover')}
-            className="cursor-pointer font-medium text-primary hover:underline"
+            className="cursor-pointer font-medium text-primary-ink hover:underline"
           >
             Esqueci minha senha
           </button>

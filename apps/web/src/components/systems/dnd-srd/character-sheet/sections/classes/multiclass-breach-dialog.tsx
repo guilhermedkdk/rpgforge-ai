@@ -14,7 +14,7 @@ import { DndClassEmblem } from '../../../art/class-emblems';
 import type { MulticlassPrerequisiteBreach } from '../../../hooks/use-multiclass-prerequisite-guard';
 
 const sectionLabelClass =
-  'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground';
+  'text-3xs font-semibold uppercase tracking-widest text-muted-foreground';
 
 interface MulticlassBreachDialogProps {
   breach: MulticlassPrerequisiteBreach | null;

@@ -69,7 +69,7 @@ export function SavesSkillsSection({
         <span className="text-2xl font-bold leading-none text-foreground">
           {proficiencyBonus != null ? `+${proficiencyBonus}` : ''}
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
           Proficiency Bonus
         </span>
       </div>
@@ -86,7 +86,7 @@ export function SavesSkillsSection({
               <div key={attr} className="flex items-center gap-2" role="listitem">
                 <span
                   className={cn(
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs',
                     proficient
                       ? 'bg-primary border-primary text-primary-foreground'
                       : 'text-muted-foreground/50'
@@ -139,7 +139,7 @@ export function SavesSkillsSection({
           if (!hasClassSkillChoice || locked) {
             return (
               <div className="flex items-center gap-1">
-                <span className="text-primary">
+                <span className="text-primary-ink">
                   <ListChecks className="h-4 w-4" />
                 </span>
                 <span className="inline-flex items-center font-serif text-sm font-semibold uppercase tracking-wider leading-tight text-muted-foreground rounded-md border border-transparent pt-1.5 pb-1 px-1">
@@ -150,7 +150,7 @@ export function SavesSkillsSection({
           }
           return (
             <div className="flex items-center gap-1">
-              <span className="text-primary">
+              <span className="text-primary-ink">
                 <ListChecks className="h-4 w-4" />
               </span>
               <DropdownMenu
@@ -195,7 +195,7 @@ export function SavesSkillsSection({
                             const full = budget.selectedKeys.length >= budget.chooseN;
                             return (
                               <div key={budget.classRuleItemId}>
-                                <p className="mb-1.5 flex items-baseline justify-between gap-2 text-[11px]">
+                                <p className="mb-1.5 flex items-baseline justify-between gap-2 text-2xs">
                                   <span className="font-semibold text-foreground">
                                     {budget.className}
                                   </span>
@@ -365,7 +365,7 @@ export function SavesSkillsSection({
                 <div key={skill.key} className="flex items-center gap-2" role="listitem">
                   <span
                     className={cn(
-                      'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-[10px]',
+                      'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background text-3xs',
                       hasExpertise
                         ? 'bg-primary border-primary text-primary-foreground'
                         : proficient
@@ -383,7 +383,7 @@ export function SavesSkillsSection({
                   <span className="flex flex-1 items-center justify-between text-sm text-foreground">
                     <span className="flex items-center gap-1.5">
                       <span>{skill.name}</span>
-                      <span className="text-[10px] uppercase text-muted-foreground">
+                      <span className="text-3xs uppercase text-muted-foreground">
                         ({skill.abilityKey})
                       </span>
                     </span>
