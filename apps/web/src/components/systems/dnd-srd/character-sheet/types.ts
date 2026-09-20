@@ -23,6 +23,8 @@ export interface CharacterSheetProps {
   aiDecisions?: AiDecision[] | null;
   /** AI wizard only: per-spell justifications shown as hint icons on spell rows. */
   aiSpellNotes?: AiSpellNote[] | null;
+  /** Whether the hint markers show; the saved sheet's eye owns it. Defaults to true. */
+  aiHintsEnabled?: boolean;
   classes: RuleItemResponse[];
   subclasses?: RuleItemResponse[];
   backgrounds: RuleItemResponse[];

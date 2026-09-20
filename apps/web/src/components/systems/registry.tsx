@@ -5,13 +5,17 @@ import {
   type AiSpellNote,
   type PersistedCharacterData,
   type PackResponse,
+  type RuleItemKind,
   type RuleItemResponse,
   type CharacterSheetWithRulesResponse,
   type PublicSheetWithRulesResponse,
 } from '@rpgforce-ai/shared';
+import type { LucideIcon } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import { DndClassEmblem } from './dnd-srd/art/class-emblems';
+import { DndSystemArt } from './dnd-srd/art/system-art';
 import { DndRaceEmblem } from './dnd-srd/art/race-emblems';
+import { BROWSE_CATEGORIES } from './dnd-srd/library/browser/browse-config';
 import { LoadingState } from '@/components/ui/loading-state';
 
 export interface SheetEditorBaseProps {
@@ -74,6 +78,18 @@ export interface SystemEntry {
   classEmblem?: ComponentType<ClassEmblemProps>;
   /** Optional per-species art; the card's tile shows it and the class emblem becomes a badge. */
   raceEmblem?: ComponentType<RaceEmblemProps>;
+  /** What the library index lists for this pack, each with the rule-item kind it counts. */
+  libraryCategories: readonly LibraryCategory[];
+  /** Decorative art wherever the pack is picked (library index, create wizard); optional. */
+  systemArt?: ComponentType<{ size?: 'sm' | 'md'; className?: string }>;
+}
+
+export interface LibraryCategory {
+  /** The `?cat=` value the pack's library browser understands. */
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  kind: RuleItemKind;
 }
 
 const DndSrdSheetManager = dynamic(
@@ -117,6 +133,7 @@ export const systemRegistry: Record<string, SystemEntry> = {
         pack={data.pack}
         initialData={mergeCharacterFormDataFromApi(data.sheet.data, data.sheet.schemaVersion)}
         initialIsPublic={data.sheet.isPublic}
+        hasAiNotes={data.hasAiNotes ?? false}
         preloadedRuleItems={{
           byId: data.ruleItems,
           abilities: data.abilities,
@@ -142,5 +159,7 @@ export const systemRegistry: Record<string, SystemEntry> = {
     libraryItem: DndSrdLibraryItemDetail,
     classEmblem: DndClassEmblem,
     raceEmblem: DndRaceEmblem,
+    libraryCategories: BROWSE_CATEGORIES,
+    systemArt: DndSystemArt,
   },
 };

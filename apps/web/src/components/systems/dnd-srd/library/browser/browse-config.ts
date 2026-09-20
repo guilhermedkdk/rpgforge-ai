@@ -1,4 +1,5 @@
 import { Award, BookOpen, Backpack, Briefcase, Sparkles, Swords, Users } from 'lucide-react';
+import type { FilterOption } from '@/components/ui/filter-chip-row';
 import type { LucideIcon } from 'lucide-react';
 import type { RuleItemKind, RuleItemResponse } from '@rpgforce-ai/shared';
 
@@ -16,21 +17,54 @@ export interface BrowseCategory {
   label: string;
   icon: LucideIcon;
   searchPlaceholder: string;
+  /** The rule-item kind this category lists; the library index counts it. */
+  kind: RuleItemKind;
 }
 
 export const BROWSE_CATEGORIES: readonly BrowseCategory[] = [
-  { key: 'classes', label: 'Classes', icon: Swords, searchPlaceholder: 'Buscar classes…' },
-  { key: 'species', label: 'Species', icon: Users, searchPlaceholder: 'Buscar species…' },
+  {
+    key: 'classes',
+    label: 'Classes',
+    icon: Swords,
+    searchPlaceholder: 'Buscar classes…',
+    kind: 'CLASS',
+  },
+  {
+    key: 'species',
+    label: 'Species',
+    icon: Users,
+    searchPlaceholder: 'Buscar species…',
+    kind: 'RACE',
+  },
   {
     key: 'backgrounds',
     label: 'Backgrounds',
     icon: Briefcase,
     searchPlaceholder: 'Buscar backgrounds…',
+    kind: 'BACKGROUND',
   },
-  { key: 'feats', label: 'Feats', icon: Award, searchPlaceholder: 'Buscar feats…' },
-  { key: 'spells', label: 'Spells', icon: Sparkles, searchPlaceholder: 'Buscar spells…' },
-  { key: 'equipment', label: 'Equipment', icon: Backpack, searchPlaceholder: 'Buscar equipment…' },
-  { key: 'rules', label: 'Rules', icon: BookOpen, searchPlaceholder: 'Buscar rules…' },
+  { key: 'feats', label: 'Feats', icon: Award, searchPlaceholder: 'Buscar feats…', kind: 'FEAT' },
+  {
+    key: 'spells',
+    label: 'Spells',
+    icon: Sparkles,
+    searchPlaceholder: 'Buscar spells…',
+    kind: 'SPELL',
+  },
+  {
+    key: 'equipment',
+    label: 'Equipment',
+    icon: Backpack,
+    searchPlaceholder: 'Buscar equipment…',
+    kind: 'ITEM',
+  },
+  {
+    key: 'rules',
+    label: 'Rules',
+    icon: BookOpen,
+    searchPlaceholder: 'Buscar rules…',
+    kind: 'RULESET',
+  },
 ];
 
 export const DEFAULT_BROWSE_CATEGORY: BrowseCategoryKey = 'classes';
@@ -70,12 +104,6 @@ export const tagValueForPrefix = (item: RuleItemResponse, prefix: string): strin
 
 export const tagValuesForPrefix = (item: RuleItemResponse, prefix: string): string[] =>
   item.tagKeys.filter((t) => t.startsWith(prefix)).map((t) => t.slice(prefix.length));
-
-export interface FilterOption {
-  value: string;
-  label: string;
-  count: number;
-}
 
 /** Distinct values of a tag prefix across `items`, with counts, sorted by label. */
 export const filterOptionsFromTagPrefix = (

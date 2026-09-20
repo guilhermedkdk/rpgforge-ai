@@ -1,3 +1,5 @@
+import type { RuleItemKind } from './ruleitem';
+
 export type PackLicenseType = 'CC_BY_4_0';
 
 export interface PackResponse {
@@ -15,6 +17,8 @@ export interface PackResponse {
   licenseUrl?: string;
   attributionText: string;
   isEnabled: boolean;
+  /** Rule items per kind. Only the `/packs` routes carry it; a sheet payload's pack does not. */
+  itemCounts?: Partial<Record<RuleItemKind, number>>;
   createdAt: string;
   updatedAt: string;
 }

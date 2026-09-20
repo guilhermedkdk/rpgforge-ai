@@ -4,6 +4,7 @@ import type {
   CharacterSheetSummary,
   CharacterSheetWithRulesResponse,
   PublicSheetSummary,
+  SheetAiNotesResponse,
 } from '@rpgforce-ai/shared';
 
 /** What a favourite toggle answers: the sheet's new state and its new count. */
@@ -29,6 +30,17 @@ export const characterSheetsApi = {
   getByIdWithRules: async (id: string): Promise<CharacterSheetWithRulesResponse> => {
     const response = await apiClient.get<CharacterSheetWithRulesResponse>(
       `/character-sheets/${encodeURIComponent(id)}/with-rules`
+    );
+    return response.data;
+  },
+
+  /**
+   * Kept out of `getByIdWithRules` on purpose: the notes are only rendered when the reader asks for
+   * them, so a sheet's load must not carry them.
+   */
+  getAiNotes: async (id: string): Promise<SheetAiNotesResponse> => {
+    const response = await apiClient.get<SheetAiNotesResponse>(
+      `/character-sheets/${encodeURIComponent(id)}/ai-notes`
     );
     return response.data;
   },

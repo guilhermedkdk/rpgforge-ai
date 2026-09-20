@@ -32,6 +32,8 @@ import {
   useUnsavedChangesGuard,
 } from '@/components/sheets/unsaved-changes-guard';
 import { usePrintLightTheme } from '@/components/sheets/use-print-light-theme';
+import { AiNotesToggle } from '@/components/sheets/ai-notes-toggle';
+import { useSheetAiNotes } from '@/hooks/use-sheet-ai-notes';
 import { CharacterSheet } from '@/components/systems/dnd-srd/character-sheet';
 import type { CharacterFormData, PackResponse } from '@rpgforce-ai/shared';
 import { useSavedSheetView, type SheetPreloadedRuleItems } from './hooks/use-saved-sheet-view';
@@ -44,6 +46,8 @@ interface SheetManagerProps {
   preloadedRuleItems: SheetPreloadedRuleItems;
   /** Whether the sheet is published; the header chip and the publish dialog read it. */
   initialIsPublic?: boolean;
+  /** Whether this sheet came from the AI wizard, which is what puts the notes toggle in the header. */
+  hasAiNotes?: boolean;
   onBack: () => void;
 }
 
@@ -59,6 +63,7 @@ export function SheetManager({
   initialData,
   preloadedRuleItems,
   initialIsPublic = false,
+  hasAiNotes = false,
   onBack,
 }: SheetManagerProps) {
   const router = useRouter();
@@ -77,6 +82,7 @@ export function SheetManager({
     allSpells,
     itemIdByLookupKey,
   } = useSavedSheetView({ pack, initialData, preloadedRuleItems });
+  const aiNotes = useSheetAiNotes(sheetId, hasAiNotes);
   const [dirty, setDirty] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
@@ -270,6 +276,13 @@ export function SheetManager({
               }}
             />
             <SheetSaveStateChip state={resolveSheetSaveState({ dirty, saving, saved })} />
+            {hasAiNotes ? (
+              <AiNotesToggle
+                visible={aiNotes.visible}
+                loading={aiNotes.loading}
+                onToggle={aiNotes.toggle}
+              />
+            ) : null}
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" size="icon" aria-label="Ações da ficha">
@@ -353,6 +366,9 @@ export function SheetManager({
           onChange={onChange}
           mode="play"
           saveAttempted={saveAttempted}
+          aiDecisions={aiNotes.decisions}
+          aiSpellNotes={aiNotes.spellNotes}
+          aiHintsEnabled={aiNotes.visible}
         />
       </div>
 

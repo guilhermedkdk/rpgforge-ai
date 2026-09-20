@@ -16,7 +16,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { LoadingState } from '@/components/ui/loading-state';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PublicSheetCard } from '@/components/sheets/public-sheet-card';
-import { SheetListCard } from '@/components/sheets/sheet-list-card';
+import { OwnedSheetCard } from '@/components/sheets/owned-sheet-card';
 import { usersApi } from '@/lib/api/users';
 import { publicSheetPath } from '@/lib/public-sheet-path';
 import { packsApi } from '@/lib/api/packs';
@@ -71,10 +71,10 @@ export default function ProfilePage() {
       <Grid>
         {sheets.map((sheet) => (
           <li key={sheet.id} className="min-w-0">
-            <SheetListCard
+            <OwnedSheetCard
               sheet={sheet}
               {...packOf(sheet)}
-              showPublicBadge={isSelf}
+              showVisibility={isSelf}
               href={isSelf ? undefined : publicSheetPath(handle, sheet.id)}
             />
           </li>

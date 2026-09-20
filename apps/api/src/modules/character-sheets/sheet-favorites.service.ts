@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { PUBLIC_SHEET_SELECT } from './public-sheet-select';
 
 /**
  * Bookmarked sheets.
@@ -78,22 +79,7 @@ export class SheetFavoritesService {
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
-      select: {
-        characterSheet: {
-          select: {
-            id: true,
-            packId: true,
-            name: true,
-            schemaVersion: true,
-            isPublic: true,
-            publishedAt: true,
-            createdAt: true,
-            updatedAt: true,
-            data: true,
-            user: { select: { username: true, displayName: true } },
-          },
-        },
-      },
+      select: { characterSheet: { select: PUBLIC_SHEET_SELECT } },
     });
     return rows.map((r) => r.characterSheet);
   }

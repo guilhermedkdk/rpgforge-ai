@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
-import type { PackResponse } from '@rpgforce-ai/shared';
+import type { PackResponse, RuleItemKind } from '@rpgforce-ai/shared';
 import { isUuid } from '../../shared/utils/is-uuid';
 
 const mapToPackResponse = (pack: {
@@ -44,10 +44,14 @@ export class PacksService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<PackResponse[]> {
-    const packs = await this.prisma.pack.findMany({
-      orderBy: { name: 'asc' },
-    });
-    return packs.map(mapToPackResponse);
+    const [packs, counts] = await Promise.all([
+      this.prisma.pack.findMany({ orderBy: { name: 'asc' } }),
+      this.itemCountsByPack(),
+    ]);
+    return packs.map((pack) => ({
+      ...mapToPackResponse(pack),
+      itemCounts: counts.get(pack.id) ?? {},
+    }));
   }
 
   async findByIdOrSlug(idOrSlug: string): Promise<PackResponse> {
@@ -59,7 +63,24 @@ export class PacksService {
       throw new NotFoundException(`Pack not found: ${idOrSlug}`);
     }
 
-    return mapToPackResponse(pack);
+    const counts = await this.itemCountsByPack(pack.id);
+    return { ...mapToPackResponse(pack), itemCounts: counts.get(pack.id) ?? {} };
+  }
+
+  // What each pack's catalogue holds, so the library index can say so before anything is opened.
+  private async itemCountsByPack(packId?: string) {
+    const groups = await this.prisma.ruleItem.groupBy({
+      by: ['packId', 'kind'],
+      where: packId ? { packId } : undefined,
+      _count: { _all: true },
+    });
+    const byPack = new Map<string, Partial<Record<RuleItemKind, number>>>();
+    for (const group of groups) {
+      const counts = byPack.get(group.packId) ?? {};
+      counts[group.kind] = group._count._all;
+      byPack.set(group.packId, counts);
+    }
+    return byPack;
   }
 
   async findLegalData(): Promise<

@@ -53,6 +53,12 @@ export class CharacterSheetsController {
     return this.characterSheetsService.findOneWithRules(user.id, id);
   }
 
+  @Get(':id/ai-notes')
+  @HttpCode(HttpStatus.OK)
+  async getAiNotes(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.characterSheetsService.findAiNotes(user.id, id);
+  }
+
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async getOne(@CurrentUser() user: User, @Param('id') id: string) {

@@ -3,17 +3,17 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { BookOpen, Search, SearchX } from 'lucide-react';
+import { BookOpen, SearchX } from 'lucide-react';
 import { ruleItemSpellLevel, type PackResponse, type RuleItemResponse } from '@rpgforce-ai/shared';
 import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
+import { FilterChipRow, type FilterOption } from '@/components/ui/filter-chip-row';
+import { FilterPanel } from '@/components/ui/filter-panel';
 import { LoadingState } from '@/components/ui/loading-state';
 import { cn } from '@/lib/utils';
 import { useBrowseLibrary } from './use-browse-library';
 import { BrowseCard } from './browse-card';
-import { FilterChipRow } from './filter-chip-row';
 import {
   BROWSE_CATEGORIES,
   DEFAULT_BROWSE_CATEGORY,
@@ -27,7 +27,6 @@ import {
   normalizedString,
   plainTextSnippet,
   type BrowseCategoryKey,
-  type FilterOption,
 } from './browse-config';
 import {
   backgroundEntry,
@@ -355,35 +354,21 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
             })}
           </nav>
 
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card/50 p-3 sm:p-4">
-            {/* Same markup as the Explorar search: no `type="search"`, because that is what makes
-                the browser draw its own clear "x" in one field and not the other. */}
-            <div className="relative max-w-md">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={activeCategory?.searchPlaceholder}
-                aria-label={activeCategory?.searchPlaceholder}
-                className="pl-9"
-              />
-            </div>
-
+          <FilterPanel
+            query={query}
+            onQueryChange={setQuery}
+            placeholder={activeCategory?.searchPlaceholder ?? 'Search'}
+          >
             {cat === 'feats' && (
-              <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
-                <FilterChipRow
-                  label="Type"
-                  options={featTypeOptions}
-                  selected={typeFilter}
-                  onSelect={(v) => setFilter('type', v)}
-                />
-              </div>
+              <FilterChipRow
+                label="Type"
+                options={featTypeOptions}
+                selected={typeFilter}
+                onSelect={(v) => setFilter('type', v)}
+              />
             )}
             {cat === 'spells' && (
-              <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
+              <>
                 <FilterChipRow
                   label="Level"
                   options={spellLevelOptions}
@@ -402,10 +387,10 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
                   selected={classFilter}
                   onSelect={(v) => setFilter('class', v)}
                 />
-              </div>
+              </>
             )}
             {cat === 'equipment' && (
-              <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
+              <>
                 <FilterChipRow
                   label="Category"
                   options={itemCategoryOptions}
@@ -426,9 +411,9 @@ export const LibraryBrowser = ({ pack }: { pack: PackResponse }) => {
                     onSelect={(v) => setFilter('rarity', v)}
                   />
                 )}
-              </div>
+              </>
             )}
-          </div>
+          </FilterPanel>
 
           {searched.length === 0 ? (
             <EmptyState

@@ -8,8 +8,10 @@ import {
   type CharacterSheetWithRulesResponse,
   type PackResponse,
   type PublicSheetListResponse,
+  type PublicSheetSort,
   type PublicSheetSummary,
   type PublicSheetWithRulesResponse,
+  type SheetAiNotesResponse,
 } from '@rpgforce-ai/shared';
 import { mapToRuleItemResponse } from '../ruleitems/ruleitems.service';
 import { validateCharacterSheetData } from './character-sheet-data.validation';
@@ -17,6 +19,12 @@ import { CharacterRecomputeService } from './character-recompute.service';
 import { GenerationRunService } from '../generation/generation-run.service';
 import { CharacterPreviewService, type SheetPreviewInput } from './character-preview.service';
 import { SheetFavoritesService } from './sheet-favorites.service';
+import {
+  PUBLIC_SHEET_SELECT,
+  SHEET_OWNER_SELECT,
+  toSheetOwner,
+  type SheetOwnerRow,
+} from './public-sheet-select';
 
 function extractRuleItemIds(data: Record<string, unknown>): string[] {
   const ids = new Set<string>();
@@ -192,6 +200,7 @@ export class CharacterSheetsService {
     offset?: number;
     q?: string;
     packId?: string;
+    sort?: PublicSheetSort;
     /** Present only when the request carried a valid token; the feed itself is open. */
     viewerId?: string | null;
   }): Promise<PublicSheetListResponse> {
@@ -199,36 +208,46 @@ export class CharacterSheetsService {
     const offset = Math.max(params.offset ?? 0, 0);
     const q = params.q?.trim();
 
-    const where: Prisma.CharacterSheetWhereInput = {
+    // The text filter also bounds the chip counts; the pack filter must not, or selecting a system
+    // would zero every other chip.
+    const matching: Prisma.CharacterSheetWhereInput = {
       isPublic: true,
-      ...(params.packId ? { packId: params.packId } : {}),
       ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
     };
+    const where: Prisma.CharacterSheetWhereInput = {
+      ...matching,
+      ...(params.packId ? { packId: params.packId } : {}),
+    };
 
-    const [rows, total] = await Promise.all([
+    // A feed with no bookmarks anywhere would otherwise come back in an arbitrary order, so the
+    // publication date stays the tiebreaker.
+    const orderBy: Prisma.CharacterSheetOrderByWithRelationInput[] =
+      params.sort === 'popular'
+        ? [{ favorites: { _count: 'desc' } }, { publishedAt: 'desc' }]
+        : [{ publishedAt: 'desc' }];
+
+    const [rows, total, packGroups] = await Promise.all([
       this.prisma.characterSheet.findMany({
         where,
-        orderBy: { publishedAt: 'desc' },
+        orderBy,
         skip: offset,
         take: limit,
-        select: {
-          id: true,
-          packId: true,
-          name: true,
-          schemaVersion: true,
-          isPublic: true,
-          publishedAt: true,
-          createdAt: true,
-          updatedAt: true,
-          data: true,
-          user: { select: { username: true, displayName: true } },
-        },
+        select: PUBLIC_SHEET_SELECT,
       }),
       this.prisma.characterSheet.count({ where }),
+      this.prisma.characterSheet.groupBy({
+        by: ['packId'],
+        where: matching,
+        _count: { _all: true },
+      }),
     ]);
 
     const items = await this.toPublicSummaries(rows, params.viewerId);
-    return { items, total };
+    return {
+      items,
+      total,
+      packCounts: packGroups.map((group) => ({ packId: group.packId, count: group._count._all })),
+    };
   }
 
   /** The sheets this person bookmarked, in the same shape the explore feed uses. */
@@ -250,7 +269,7 @@ export class CharacterSheetsService {
       createdAt: Date;
       updatedAt: Date;
       data: Prisma.JsonValue;
-      user: { username: string; displayName: string | null };
+      user: SheetOwnerRow;
     }>,
     viewerId?: string | null
   ): Promise<PublicSheetSummary[]> {
@@ -270,7 +289,7 @@ export class CharacterSheetsService {
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
       publishedAt: (r.publishedAt ?? r.updatedAt).toISOString(),
-      owner: { username: r.user.username, displayName: r.user.displayName },
+      owner: toSheetOwner(r.user),
       preview: previewById.get(r.id),
       favoriteCount: favoriteCounts.get(r.id) ?? 0,
       isFavorited: favoritedIds.has(r.id),
@@ -341,7 +360,24 @@ export class CharacterSheetsService {
     if (row.userId !== userId)
       throw new ForbiddenException('You do not have access to this character sheet');
 
-    return this.loadWithRules(row);
+    const [loaded, hasAiNotes] = await Promise.all([
+      this.loadWithRules(row),
+      this.generationRuns.existsForSheet(row.id),
+    ]);
+    return { ...loaded, hasAiNotes };
+  }
+
+  /** The AI's justifications for a sheet the caller owns; fetched only when the sheet asks for them. */
+  async findAiNotes(userId: string, id: string): Promise<SheetAiNotesResponse> {
+    const row = await this.prisma.characterSheet.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!row) throw new NotFoundException('Character sheet not found');
+    if (row.userId !== userId)
+      throw new ForbiddenException('You do not have access to this character sheet');
+
+    return this.generationRuns.findNotesForSheet(id);
   }
 
   /**
@@ -355,7 +391,7 @@ export class CharacterSheetsService {
   ): Promise<PublicSheetWithRulesResponse> {
     const row = await this.prisma.characterSheet.findUnique({
       where: { id },
-      include: { user: { select: { username: true, displayName: true } } },
+      include: { user: { select: SHEET_OWNER_SELECT } },
     });
     if (!row || !row.isPublic) throw new NotFoundException('Character sheet not found');
 
@@ -366,7 +402,7 @@ export class CharacterSheetsService {
     ]);
     return {
       ...loaded,
-      owner: { username: row.user.username, displayName: row.user.displayName },
+      owner: toSheetOwner(row.user),
       favoriteCount: counts.get(row.id) ?? 0,
       isFavorited: favorited.has(row.id),
     };

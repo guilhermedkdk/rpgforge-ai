@@ -26,7 +26,11 @@ import { useMulticlassPrerequisiteGuard } from '../hooks/use-multiclass-prerequi
 export function CharacterSheet(props: CharacterSheetProps) {
   return (
     <CharacterSheetProvider {...props}>
-      <AiHintsProvider decisions={props.aiDecisions} spellNotes={props.aiSpellNotes}>
+      <AiHintsProvider
+        decisions={props.aiDecisions}
+        spellNotes={props.aiSpellNotes}
+        enabled={props.aiHintsEnabled}
+      >
         <CharacterSheetContent />
       </AiHintsProvider>
     </CharacterSheetProvider>

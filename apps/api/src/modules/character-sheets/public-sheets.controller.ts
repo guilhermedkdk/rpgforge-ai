@@ -25,7 +25,8 @@ export class PublicSheetsController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('q') q?: string,
-    @Query('packId') packId?: string
+    @Query('packId') packId?: string,
+    @Query('sort') sort?: string
   ) {
     // The feed is open; the token is read only to fill in "did I bookmark this?". An anonymous
     // visitor costs no extra query (the helper returns null and the lookup is skipped).
@@ -39,6 +40,7 @@ export class PublicSheetsController {
       offset: offset ? Number(offset) : undefined,
       q,
       packId,
+      sort: sort === 'popular' ? 'popular' : 'recent',
       viewerId: claims?.sub,
     });
   }

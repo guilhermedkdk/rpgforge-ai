@@ -9,8 +9,8 @@ import { PublicSheetCard } from '@/components/sheets/public-sheet-card';
 import { publicSheetsApi } from '@/lib/api/public-sheets';
 import { packsApi } from '@/lib/api/packs';
 
-/** Enough to fill two rows on a wide screen without turning the landing page into the explore page. */
-const SHOWCASE_COUNT = 6;
+/** One row on a wide screen: a sample that points at /explore, not a second explore page. */
+const SHOWCASE_COUNT = 3;
 
 /**
  * The published-sheets band on the landing page.

@@ -45,7 +45,14 @@ export interface CharacterSheetSummary {
 export interface SheetOwner {
   username: string;
   displayName: string | null;
+  /** The avatar CHOICE, resolved on the web through `parseAvatarChoice`. */
+  avatarId: string | null;
+  /** Already resolved server-side: a provider picture, or null for a gallery pick or initials. */
+  avatarUrl: string | null;
 }
+
+/** How the explore feed is ordered. `popular` breaks ties by publication date. */
+export type PublicSheetSort = 'recent' | 'popular';
 
 export interface PublicSheetSummary extends CharacterSheetSummary {
   owner: SheetOwner;
@@ -61,6 +68,11 @@ export interface PublicSheetListResponse {
   items: PublicSheetSummary[];
   /** Matching rows in total, so the page can say how much is left. */
   total: number;
+  /**
+   * Published sheets per pack, counted BEFORE the pack filter is applied, so the system chips keep
+   * their numbers while one of them is selected.
+   */
+  packCounts: Array<{ packId: string; count: number }>;
 }
 
 export interface CharacterSheetResponse extends CharacterSheetSummary {
@@ -85,4 +97,10 @@ export interface CharacterSheetWithRulesResponse {
   languages: RuleItemResponse[];
   /** Tool items grouped by category tag (artisan, musical-instrument, gaming-set). */
   toolItems: RuleItemResponse[];
+  /**
+   * Owner-only: whether an AI generation log exists for this sheet, which is what decides if the
+   * sheet offers its AI notes. The notes themselves are a separate request, so a sheet's load never
+   * pays for them.
+   */
+  hasAiNotes?: boolean;
 }

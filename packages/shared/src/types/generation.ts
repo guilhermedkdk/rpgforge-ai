@@ -90,6 +90,17 @@ export interface GenerateCharacterMeta {
   adjustments: string[];
 }
 
+/**
+ * The AI's justifications for a SAVED sheet, read back from its generation log on demand.
+ *
+ * Only the two note sets: the rest of the log (prompt, questions, answers) is not what the sheet
+ * renders, and keeping this response narrow is what allows the sheet's own load to stay untouched.
+ */
+export interface SheetAiNotesResponse {
+  decisions: AiDecision[];
+  spellNotes: AiSpellNote[];
+}
+
 export interface GenerateCharacterResponse {
   draft: PersistedCharacterData;
   meta: GenerateCharacterMeta;
