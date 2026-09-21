@@ -1,0 +1,18 @@
+name = "rpgforge-keepalive"
+main = "src/index.js"
+compatibility_date = "2026-09-21"
+
+# Cron only: the Worker has no fetch handler, so a workers.dev URL would be a public endpoint that
+# answers nothing.
+workers_dev = false
+
+# UTC. Together these cover 06:00 to 23:59 in Sao Paulo (UTC-3), split because cron cannot wrap
+# midnight in one range. Render free grants 750 instance-hours a month; this window spends ~540.
+[triggers]
+crons = ["*/10 9-23 * * *", "*/10 0-2 * * *"]
+
+[vars]
+HEALTH_URL = "https://rpgforce-ai.onrender.com/health"
+
+[observability]
+enabled = true
